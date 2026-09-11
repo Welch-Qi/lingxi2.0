@@ -200,9 +200,18 @@ for f in "lingxi-docs/02-data" "lingxi-docs/03-api" "lingxi-docs/04-tenant" "lin
   cnt=$(find "${ROOT_DIR}/${f}" -maxdepth 1 -name '*.md' -not -name '_index.md' 2>/dev/null | wc -l | tr -d ' ')
   if [ "${cnt}" -eq 0 ]; then warn "${f} 权威文档未产出（对应任务 M0000-008）"; fi
 done
-for repo in lingxi-server lingxi-web lingxi-ops lingxi-data-worker; do
-  if [ -d "${ROOT_DIR}/${repo}/.git" ]; then ok "${repo} 已初始化 Git"; else warn "${repo} 尚未初始化 Git"; fi
+for repo in "lingxi-server" "lingxi-web" "lingxi-ops" "lingxi-data-worker" "lingxi-docs"; do
+  if [ -d "${ROOT_DIR}/${repo}/.git" ]; then
+    ok "${repo} 已初始化 Git（分支 $(cd "${ROOT_DIR}/${repo}" && git branch --show-current 2>/dev/null)）"
+  else
+    warn "${repo} 尚未初始化 Git"
+  fi
 done
+if [ -d "${ROOT_DIR}/.git" ]; then
+  ok "仓库组根已初始化 Git（umbrella repo，仅跟踪根级约定文件）"
+else
+  warn "仓库组根未初始化 Git——根级 AGENTS/contracts/TASKS 将失去版本追踪"
+fi
 
 # ---------------------------------------------------------------- 汇总
 printf '\n\033[1m校验结果：通过 %s · 失败 %s · 提醒 %s\033[0m\n' "${PASS}" "${FAIL}" "${WARN}"
