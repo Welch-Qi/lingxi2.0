@@ -1,0 +1,94 @@
+/* 全局基础样式。布局一律走 class，禁止在组件内写内联 style 做布局（§4.2.5）。 */
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  font-family: var(--lx-font-body);
+  color: var(--lx-text-primary);
+  background: var(--lx-color-bg);
+}
+
+/* 签名字段：数字采用 Manrope + 等宽数字 */
+.lx-num {
+  font-family: var(--lx-font-numeric);
+  font-variant-numeric: tabular-nums;
+}
+
+.lx-shell { display: flex; min-height: 100vh; }
+
+.lx-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lx-sidenav {
+  width: var(--lx-sidenav-width);
+  flex-shrink: 0;
+  border-right: 1px solid var(--lx-color-border);
+  background: var(--lx-color-surface);
+  backdrop-filter: blur(12px);
+}
+
+.lx-brand { display: flex; align-items: center; gap: var(--lx-space-2); padding: var(--lx-space-4); }
+
+.lx-brand__dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--lx-color-primary);
+  box-shadow: 0 0 0 4px rgba(14, 124, 134, 0.14);
+}
+
+.lx-brand__name { font-weight: 600; letter-spacing: 0.4px; }
+
+.lx-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  height: var(--lx-topbar-height);
+  padding: 0 var(--lx-space-5);
+  border-bottom: 1px solid var(--lx-color-border);
+  background: var(--lx-color-surface);
+  backdrop-filter: blur(12px);
+}
+
+.lx-icon-btn {
+  border: 0; background: transparent; cursor: pointer;
+  color: var(--lx-text-secondary); font-size: 13px;
+}
+
+.lx-content { flex: 1; padding: var(--lx-space-5); overflow: auto; }
+
+.lx-page__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--lx-space-4); }
+.lx-page__title { margin: 0; font-size: 18px; font-weight: 600; }
+.lx-loading { display: flex; flex-direction: column; gap: var(--lx-space-2); align-items: center; padding: var(--lx-space-6); }
+.lx-loading__text { color: var(--lx-text-muted); font-size: 13px; }
+
+/* 次要说明文字（表格内二级信息、状态栏旁注），统一走令牌不写死颜色 */
+.lx-muted { color: var(--lx-text-muted); font-size: 12px; }
+
+.lx-statusbar {
+  display: flex; align-items: center; gap: var(--lx-space-2);
+  height: var(--lx-statusbar-height);
+  padding: 0 var(--lx-space-5);
+  border-top: 1px solid var(--lx-color-border);
+  color: var(--lx-text-muted);
+  font-size: 12px;
+  background: var(--lx-color-surface);
+}
+
+.lx-statusbar__dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--lx-color-success);
+  animation: lx-pulse 2.4s ease-in-out infinite;
+}
+
+.lx-statusbar__sep { color: var(--lx-color-border); }
+
+@keyframes lx-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.85); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-statusbar__dot { animation: none; }
+}

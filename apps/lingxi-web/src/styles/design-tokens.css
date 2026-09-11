@@ -1,0 +1,40 @@
+:root {
+  /* ==========================================================================
+     灵犀系统设计令牌（CSS 变量轨）—— 与 app/theme/tokens.ts 一一对应
+     设计系统：极光通感（Aurora Sense）
+     禁止在组件内写死颜色/字号/圆角魔法值（技术规约2.0 §4.2.5）
+     ========================================================================== */
+  --lx-color-primary: #0e7c86;      /* 极光青 */
+  --lx-color-info: #2e6be6;         /* 冰川蓝 */
+  --lx-color-success: #3d9a6e;      /* 苔原绿 */
+  --lx-color-warning: #f0a91a;      /* 日光黄 */
+  --lx-color-error: #e4644c;        /* 珊瑚红 */
+  --lx-color-purple: #7a5ac0;
+  --lx-color-bg: #f3f7fb;           /* 霜白 */
+  --lx-color-surface: rgba(255, 255, 255, 0.72);
+  --lx-color-border: rgba(14, 124, 134, 0.14);
+  --lx-text-primary: #122a33;
+  --lx-text-secondary: #5a6b73;
+  --lx-text-muted: #8b9aa1;
+
+  --lx-radius-sm: 8px;
+  --lx-radius: 10px;
+  --lx-radius-lg: 14px;
+  --lx-shadow-card: 0 6px 24px rgba(18, 42, 51, 0.06);
+
+  --lx-font-body: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --lx-font-display: 'Manrope', var(--lx-font-body);
+  /* 数字统一等宽，保证表格与看板对齐（tabular-nums） */
+  --lx-font-numeric: 'Manrope', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --lx-space-1: 4px;
+  --lx-space-2: 8px;
+  --lx-space-3: 12px;
+  --lx-space-4: 16px;
+  --lx-space-5: 24px;
+  --lx-space-6: 32px;
+
+  --lx-sidenav-width: 216px;
+  --lx-topbar-height: 56px;
+  --lx-statusbar-height: 28px;
+}
