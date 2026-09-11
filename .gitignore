@@ -1,0 +1,40 @@
+# ---- 密钥与本地环境（最高优先级，任何仓库不得放开）----
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+*.jks
+id_rsa*
+known_hosts
+secrets/
+
+# ---- 脚本运行痕迹 ----
+*.pid
+logs/
+.tunnel-down
+*.log
+
+# ---- 数据库备份（含真实数据）----
+backup/
+*.dump
+*.sql.gz
+
+# ---- 验收产物：qa-result.json / result.json 是评审证据，必须入库 ----
+artifacts/**/logs/
+artifacts/**/tmp/
+*.tgz
+
+# ---- IDE 与 AI Coding 本地缓存 ----
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.cursor/
+.qoder/
+.codemaker/
+

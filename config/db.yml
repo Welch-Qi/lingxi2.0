@@ -1,0 +1,65 @@
+################
+# 数据库连接配置
+#
+# 铁律（技术规约2.0 §3.1 E2/E3）：
+#   1. 应用只连本地映射端口 127.0.0.1:13306 —— 云端地址只存在于 tunnel.yml
+#   2. 禁止应用代码自建 SSH 连接；隧道由 scripts/tunnel-up.sh 负责
+#   3. 口令只来自 .env / 密钥服务，禁止入本文件、禁止入代码
+################
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://127.0.0.1:${LX_DB_TUNNEL_PORT:13306}/${LX_DB_NAME:lingxi}?ApplicationName=lingxi-server&reWriteBatchedInserts=true
+    username: ${LX_DB_USER}
+    password: ${LX_DB_PASSWORD}
+    hikari:
+      pool-name: lx-hikari
+      maximum-pool-size: ${LX_DB_POOL_MAX:20}
+      minimum-idle: ${LX_DB_POOL_MIN:4}
+      # 隧道抖动场景：短超时 + 快速失败，避免线程耗尽（§3.1 E7）
+      connection-timeout: 3000
+      validation-timeout: 2000
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      keepalive-time: 120000
+      connection-test-query: SELECT 1
+
+  flyway:
+    enabled: true
+    # 各模块迁移脚本按域分目录，合并到同一 classpath（§4.4.3）
+    locations: >-
+      classpath:db/migration/sys,
+      classpath:db/migration/dt,
+      classpath:db/migration/ag,
+      classpath:db/migration/wb,
+      classpath:db/migration/cus,
+      classpath:db/migration/prd,
+      classpath:db/migration/ord,
+      classpath:db/migration/svc,
+      classpath:db/migration/mkg,
+      classpath:db/migration/intel,
+      classpath:db/migration/ana,
+      classpath:db/migration/kc,
+      classpath:db/migration/cc
+    # 已发布脚本禁止修改（§3.3 D8），故关闭校验失败的自动修复
+    validate-on-migrate: true
+    clean-disabled: true
+    baseline-on-migrate: false
+    out-of-order: false
+    # 迁移脚本与代码同 PR 提交，评审含 DDL 影响评估（§4.4.3）
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.lingxi
+  global-config:
+    banner: false
+    db-config:
+      id-type: assign_id          # 雪花 ID（禁止数据库自增）
+      logic-delete-field: isDeleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+      update-strategy: not_null
+  configuration:
+    map-underscore-to-camel-case: true
+    # 禁止 SELECT *（§3.3 D9）：统一走显式列或自动映射
+    default-fetch-size: 100
