@@ -1,0 +1,101 @@
+# ============================================================================
+# 灵犀系统 · 仓库组根级忽略规则
+#
+# 铁律（技术规约2.0 §4.13.1）：.env 绝不入库——里面是 SSH 口令、数据库口令、
+# 模型 Key。只入库 .env.example（变量清单，无真实值）。
+# ============================================================================
+
+# ---- 密钥与本地环境（最高优先级，任何情况下不得放开）----
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+*.jks
+id_rsa*
+known_hosts
+secrets/
+
+# ---- Java / Maven ----
+target/
+*.class
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/timing.properties
+dependency-reduced-pom.xml
+jacoco.exec
+*.hprof
+
+# ---- Node / 前端 ----
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+*.tsbuildinfo
+.pnpm-store/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-error.log*
+.pnpm-lock.yaml.bak
+
+# ---- Python（数据任务进程）----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# ---- 运行时与本地状态 ----
+logs/
+*.log
+run/
+pids/
+*.pid
+.tunnel-down
+.DS_Store
+Thumbs.db
+
+# ---- IDE ----
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# ---- AI Coding 工具本地缓存（会话与索引不入库，避免噪声 diff）----
+.cursor/
+.qoder/
+.codemaker/
+*.ai-cache
+
+# ---- 构建与验收产物 ----
+# 例外：artifacts/ 下的验收结论（qa-result.json / result.json）是评审证据，必须入库
+artifacts/**/logs/
+artifacts/**/tmp/
+*.tgz
+*.zip
+!artifacts/**
+
+# ---- 数据库本地转储（迁移前备份，体积大且含真实数据）----
+backup/
+*.dump
+*.sql.gz
+
+# ============================================================================
+# 本目录是「仓库组根」（umbrella repo）：只跟踪根级约定文件与顶层布局说明。
+# 5 个子仓库各自独立版本控制，其内容**不得**被根仓库重复跟踪，
+# 否则会出现「同一文件两份历史」，评审与回滚都会失去单一真相。
+# ============================================================================
+lingxi-server/
+lingxi-web/
+lingxi-data-worker/
+lingxi-ops/
+lingxi-docs/
