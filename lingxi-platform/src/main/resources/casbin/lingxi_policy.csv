@@ -1,0 +1,43 @@
+# 初始策略（示例）。生产策略存 casbin_rule 表，由配置中心管理，带版本与操作人。
+#
+# 列含义：p, sub(角色码), obj(权限码或通配), act(动作), scope(数据范围)
+# 权限码格式 {域}:{对象}:{动作}（技术规约2.0 §4.8.2）
+
+# 平台管理员：全功能
+p, ROLE_PLATFORM_ADMIN, /*, .*, ALL
+# 租户管理员：本租户全功能（仍受租户隔离约束）
+p, ROLE_TENANT_ADMIN, /*, .*, ALL
+# 客户销售服务总监：客户与销售域
+p, ROLE_SALES_DIRECTOR, cus:*, .*, DEPT_AND_SUB
+p, ROLE_SALES_DIRECTOR, ord:*, .*, DEPT_AND_SUB
+p, ROLE_SALES_DIRECTOR, svc:*, .*, DEPT_AND_SUB
+p, ROLE_SALES_DIRECTOR, ana:metric:view, access, DEPT_AND_SUB
+# 渠道运营总监
+p, ROLE_CHANNEL_DIRECTOR, mkg:account:*, .*, DEPT
+p, ROLE_CHANNEL_DIRECTOR, mkg:content:*, .*, DEPT
+p, ROLE_CHANNEL_DIRECTOR, intel:*, .*, ALL
+# 内容创意总监
+p, ROLE_CONTENT_DIRECTOR, mkg:content:*, .*, ALL
+p, ROLE_CONTENT_DIRECTOR, kc:template:*, .*, ALL
+p, ROLE_CONTENT_DIRECTOR, kc:prompt:*, .*, ALL
+# 产品开发总监
+p, ROLE_PRODUCT_DIRECTOR, prd:*, .*, ALL
+p, ROLE_PRODUCT_DIRECTOR, intel:opportunity:*, .*, ALL
+p, ROLE_PRODUCT_DIRECTOR, svc:quality:view, access, ALL
+# CEO
+p, ROLE_CEO, ana:*, .*, ALL
+p, ROLE_CEO, wb:workbench:view, access, ALL
+p, ROLE_CEO, rw:workbench:configure, access, ALL
+# 销售专员：仅本人数据
+p, ROLE_SALES_REP, cus:lead:*, .*, SELF
+p, ROLE_SALES_REP, cus:customer:view, access, SELF
+p, ROLE_SALES_REP, cus:opportunity:*, .*, SELF
+p, ROLE_SALES_REP, ord:order:view, access, SELF
+# 智能体（独立 client + 严格 scope）：只读 + 受限写入，禁止管理员动作（§3.6 G1）
+p, SUB_AGENT_CUS, cus:lead:create, access, DEPT
+p, SUB_AGENT_CUS, dt:entity:search, access, ALL
+p, SUB_AGENT_CUS, mkg:email:draft, access, ALL
+
+# 角色继承
+g, ROLE_SALES_DIRECTOR, ROLE_SALES_REP
+g, ROLE_TENANT_ADMIN, ROLE_SALES_DIRECTOR

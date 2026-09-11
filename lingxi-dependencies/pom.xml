@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    灵犀系统 —— 统一 BOM（Bill of Materials）
+
+    定位：全系统唯一的版本定义处。依据《灵犀系统技术规约2.0》§3.2 L3：
+          「版本由 BOM 统一锁定，业务模块禁止出现版本号」。
+
+    维护规则：
+      1. 新增第三方依赖：先在本文件 dependencyManagement 中锁定版本，再在业务模块引用（不写版本）。
+      2. 升级：只升 BOM，一次 PR 完成；升级前评估兼容性与回归（§4.14.2）。
+      3. 版本基线只选已发布 >= 6 个月的稳定版，不跟随 latest / beta（§3.2 L8）。
+      4. 许可证红线：排除 SSPL / BSL / RSALv2 / Elastic License / GPL-3.0 类（§3.2 L6）。
+
+    版本基线核验日期：2026-09-11（均已核验 Maven Central 实际发布版本）
+  -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.1</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.lingxi</groupId>
+  <artifactId>lingxi-dependencies</artifactId>
+  <version>2.0.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>lingxi-dependencies</name>
+  <description>灵犀系统统一依赖版本管理（BOM）—— 唯一版本定义处</description>
+
+  <!-- ============================================================ 版本属性 -->
+  <properties>
+    <java.version>25</java.version>
+    <maven.compiler.release>25</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!-- 框架层（由 Boot / Cloud 官方 BOM 传递，此处仅登记便于审计） -->
+    <spring-boot.version>4.1.1</spring-boot.version>
+    <spring-cloud.version>2025.1.3</spring-cloud.version>
+    <spring-modulith.version>2.1.1</spring-modulith.version>
+
+    <!-- AI 层 -->
+    <spring-ai.version>2.0.1</spring-ai.version>
+    <langchain4j.version>1.20.0</langchain4j.version>
+
+    <!-- 数据访问 -->
+    <mybatis-plus.version>3.5.17</mybatis-plus.version>
+    <flyway.version>13.6.0</flyway.version>
+    <pgvector.version>0.1.6</pgvector.version>
+    <testcontainers.version>2.0.5</testcontainers.version>
+
+    <!-- 领域能力 -->
+    <jcasbin.version>1.99.0</jcasbin.version>
+    <shedlock.version>7.10.1</shedlock.version>
+    <liteflow.version>2.16.1.3</liteflow.version>
+    <spring-statemachine.version>4.0.2</spring-statemachine.version>
+
+    <!-- 接口与文档 -->
+    <springdoc.version>3.1.1</springdoc.version>
+
+    <!-- 存储 -->
+    <awssdk.version>2.54.16</awssdk.version>
+    <minio.version>9.0.3</minio.version>
+
+    <!-- 测试与架构校验 -->
+    <archunit.version>1.5.0</archunit.version>
+
+    <!-- 内部模块版本（统一随父 POM） -->
+    <lingxi.version>2.0.0-SNAPSHOT</lingxi.version>
+  </properties>
+
+  <!-- ============================================================ 依赖版本管理 -->
+  <dependencyManagement>
+    <dependencies>
+
+      <!-- ---------- 1. 官方 BOM 导入（顺序有意义：后导入者优先） ---------- -->
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.modulith</groupId>
+        <artifactId>spring-modulith-bom</artifactId>
+        <version>${spring-modulith.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.ai</groupId>
+        <artifactId>spring-ai-bom</artifactId>
+        <version>${spring-ai.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-bom</artifactId>
+        <version>${langchain4j.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>bom</artifactId>
+        <version>${awssdk.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>testcontainers-bom</artifactId>
+        <version>${testcontainers.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <!-- ---------- 2. 数据访问 ---------- -->
+      <!-- MyBatis-Plus：Boot 4 专用 starter（普通 boot3-starter 在 Boot 4 下不兼容） -->
+      <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
+        <version>${mybatis-plus.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.baomidou</groupId>
+        <artifactId>mybatis-plus-jsqlparser</artifactId>
+        <version>${mybatis-plus.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.flywaydb</groupId>
+        <artifactId>flyway-core</artifactId>
+        <version>${flyway.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.flywaydb</groupId>
+        <artifactId>flyway-database-postgresql</artifactId>
+        <version>${flyway.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.pgvector</groupId>
+        <artifactId>pgvector</artifactId>
+        <version>${pgvector.version}</version>
+      </dependency>
+
+      <!-- ---------- 3. 领域能力 ---------- -->
+      <!-- 权限决策：功能 / 行级 / 字段三层（技术规约2.0 §4.9.2） -->
+      <dependency>
+        <groupId>org.casbin</groupId>
+        <artifactId>jcasbin</artifactId>
+        <version>${jcasbin.version}</version>
+      </dependency>
+      <!-- 定时任务单实例执行（替代 XXL-Job，规避 GPL-3.0，§3.7 许可证替换清单） -->
+      <dependency>
+        <groupId>net.javacrumbs.shedlock</groupId>
+        <artifactId>shedlock-spring</artifactId>
+        <version>${shedlock.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>net.javacrumbs.shedlock</groupId>
+        <artifactId>shedlock-provider-redis-spring</artifactId>
+        <version>${shedlock.version}</version>
+      </dependency>
+      <!-- 业务规则配置化执行（替代代码内写死分配/分层/公海/OTD/SLA 规则，§3.5 F5） -->
+      <dependency>
+        <groupId>com.yomahub</groupId>
+        <artifactId>liteflow-spring-boot-starter</artifactId>
+        <version>${liteflow.version}</version>
+      </dependency>
+      <!-- 状态机：业务状态流转统一声明（§4.1.6） -->
+      <dependency>
+        <groupId>org.springframework.statemachine</groupId>
+        <artifactId>spring-statemachine-starter</artifactId>
+        <version>${spring-statemachine.version}</version>
+      </dependency>
+
+      <!-- ---------- 4. 接口与契约 ---------- -->
+      <dependency>
+        <groupId>org.springdoc</groupId>
+        <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        <version>${springdoc.version}</version>
+      </dependency>
+
+      <!-- ---------- 5. 存储 ---------- -->
+      <!-- 主路径：云对象存储（S3 兼容），文件走预签名 URL 直传（§3.4 C10） -->
+      <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>s3</artifactId>
+        <version>${awssdk.version}</version>
+      </dependency>
+      <!-- 私有化备选（AGPLv3，仅在客户要求私有化部署时启用，§3.7） -->
+      <dependency>
+        <groupId>io.minio</groupId>
+        <artifactId>minio</artifactId>
+        <version>${minio.version}</version>
+      </dependency>
+
+      <!-- ---------- 6. 测试与架构校验 ---------- -->
+      <dependency>
+        <groupId>com.tngtech.archunit</groupId>
+        <artifactId>archunit-junit5</artifactId>
+        <version>${archunit.version}</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- ---------- 7. 内部模块（业务模块引用 Starter 时不写版本） ---------- -->
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-starter-core</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-starter-security</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-starter-mybatis</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-starter-llm</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-starter-observability</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+
+      <!--
+        ---------- 8. 待接入（暂不锁定，避免引入未验证的 release train） ----------
+
+        Nacos 2.x（注册与配置，Apache-2.0，§3.3）：
+          <dependency><groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-alibaba-dependencies</artifactId>...</dependency>
+          说明：需先完成与 Spring Boot 4.1 的兼容性验证（§5.2 风险登记：Boot 4.x 生态适配）。
+                验证通过后在本节启用，业务模块方可引用。未启用前环境配置走 config/*.yml + .env。
+
+        Pact（契约测试，MIT，§4.12）：
+          说明：契约测试在 CI 阶段由流水线脚本注入，不进入业务模块依赖，避免污染运行时 classpath。
+                流水线实现见 lingxi-ops/ci/gitlab-ci.yml 的 contract-test 阶段。
+      -->
+
+    </dependencies>
+  </dependencyManagement>
+
+</project>

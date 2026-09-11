@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.lingxi</groupId>
+    <artifactId>lingxi-server</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>lingxi-starter-security</artifactId>
+  <packaging>jar</packaging>
+  <name>lingxi-starter-security</name>
+  <description>安全：Keycloak OIDC 认证过滤 · @RequirePermission 权限注解 · Casbin 三层决策 · 数据权限拦截</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>lingxi-starter-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <!-- Keycloak：OIDC / OAuth2.1，JWT RS256 校验（§4.9.1） -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+    </dependency>
+    <!-- Casbin：功能 / 行级 / 字段三层权限决策，业务模块禁自研判断（§4.9.2） -->
+    <dependency>
+      <groupId>org.casbin</groupId>
+      <artifactId>jcasbin</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-redis</artifactId>
+    </dependency>
+  </dependencies>
+
+</project>
