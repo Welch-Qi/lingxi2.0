@@ -1,0 +1,44 @@
+# ---- 密钥与本地环境（最高优先级，任何仓库不得放开）----
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+*.jks
+id_rsa*
+known_hosts
+secrets/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# ---- 运行时与本地状态 ----
+logs/
+*.log
+run/
+pids/
+*.pid
+.tunnel-down
+
+# ---- IDE 与 AI Coding 本地缓存 ----
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.cursor/
+.qoder/
+.codemaker/
+
