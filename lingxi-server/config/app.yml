@@ -1,0 +1,55 @@
+################
+# 应用配置（非敏感）
+#
+# 禁止放入：口令 / API Key / 云端 IP / 模型名（技术规约2.0 §3.5 F1）
+################
+lingxi:
+  app:
+    # 环境标识：dev / test / staging / prod
+    env: ${LX_ENV:dev}
+    # 对外访问基址（前端与回调使用）
+    base-url: ${LX_APP_BASE_URL:http://localhost:8080}
+    # 允许的跨域来源（逗号分隔）
+    cors-allowed-origins: ${LX_CORS_ORIGINS:http://localhost:5173}
+
+  security:
+    # Keycloak：Realm 天然对应租户（§4.2）
+    # issuer-uri 由环境变量注入，禁止硬编码环境地址
+    issuer-uri: ${LX_OIDC_ISSUER_URI}
+    jwk-set-uri: ${LX_OIDC_JWK_SET_URI}
+    # 客户端
+    spa-client-id: ${LX_OIDC_SPA_CLIENT_ID:lingxi-web}
+    service-client-id: ${LX_OIDC_SERVICE_CLIENT_ID:lingxi-server}
+    agent-client-id: ${LX_OIDC_AGENT_CLIENT_ID:lingxi-agent}
+    # Token 策略：Access 15 分钟 + Refresh 轮换 + 吊销黑名单（§4.9.1）
+    access-token-minutes: 15
+    refresh-token-rotation: true
+    token-blacklist-enabled: true
+    # 登录失败锁定：5 次锁 15 分钟（由 Keycloak 强约束，此处仅登记口径）
+    login-failure-threshold: 5
+    login-lock-minutes: 15
+
+  tenant:
+    # 租户上下文头（网关校验后注入；禁止业务代码从请求参数取租户，§4.3.3）
+    header-name: X-Tenant-Id
+    trace-header-name: X-Trace-Id
+    # 缺失租户上下文一律拒绝
+    reject-missing-context: true
+
+  id:
+    # 雪花 ID：workerId 来自环境（多实例部署必须唯一）
+    worker-id: ${LX_WORKER_ID:1}
+    datacenter-id: ${LX_DATACENTER_ID:1}
+
+  file:
+    # 对象存储（S3 兼容）；文件走预签名 URL 直传（§3.4 C10）
+    storage-type: ${LX_STORAGE_TYPE:s3}
+    bucket: ${LX_STORAGE_BUCKET}
+    region: ${LX_STORAGE_REGION:cn-east-1}
+    endpoint: ${LX_STORAGE_ENDPOINT}
+    presign-expire-seconds: 900
+
+  notify:
+    # 通知渠道：站内信 / 邮件 / 企微群机器人
+    channels: ${LX_NOTIFY_CHANNELS:inbox,email}
+    email-from: ${LX_NOTIFY_EMAIL_FROM}

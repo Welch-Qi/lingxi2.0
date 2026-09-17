@@ -1,0 +1,52 @@
+# ---- 密钥与本地环境（最高优先级，任何仓库不得放开）----
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+*.jks
+id_rsa*
+known_hosts
+secrets/
+
+# ---- Java / Maven ----
+target/
+*.class
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+dependency-reduced-pom.xml
+jacoco.exec
+*.hprof
+mvnw.cmd.bak
+
+# ---- 数据库本地转储（迁移前备份，含真实数据，禁止入库）----
+backup/
+*.dump
+*.sql.gz
+
+# ---- 运行时与本地状态 ----
+logs/
+*.log
+run/
+pids/
+*.pid
+.tunnel-down
+
+# ---- 验收产物：结论文件入库，日志不入库 ----
+artifacts/**/logs/
+artifacts/**/tmp/
+
+# ---- IDE 与 AI Coding 本地缓存 ----
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.cursor/
+.qoder/
+.codemaker/
+

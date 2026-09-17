@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    灵犀系统 —— 后端聚合父 POM
+
+    部署形态：模块化单体（一个 jar）+ 两个独立进程（agent-runtime / data-jobs）。
+    模块计数口径（技术规约2.0 §2.2）：
+        14 个 Maven 模块 = 11 业务模块 + lingxi-data + lingxi-platform + lingxi-dependencies(BOM)
+        lingxi-starters（5 个 Starter）为公共组件组，lingxi-agent-runtime / lingxi-data-jobs 为独立部署进程，均不计入。
+
+    环境基线：JDK 25 LTS + Spring Boot 4.1.x（3.5 已于 2026-06-30 OSS EOL，禁止使用）
+  -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.1</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.lingxi</groupId>
+  <artifactId>lingxi-server</artifactId>
+  <version>2.0.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>lingxi-server</name>
+  <description>灵犀系统后端 —— 模块化单体 + 智能体运行时 + 数据任务进程</description>
+
+  <properties>
+    <java.version>25</java.version>
+    <maven.compiler.release>25</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <!-- 覆盖率门禁（技术规约2.0 §3.8 W7）：总体 >=70%，新增代码 >=80% -->
+    <jacoco.line.coverage.min>0.70</jacoco.line.coverage.min>
+    <jacoco.line.coverage.min.new>0.80</jacoco.line.coverage.min.new>
+  </properties>
+
+  <!-- ============================================================ 模块清单 -->
+  <modules>
+    <!-- 版本定义（BOM）：必须第一个，保证后续模块可解析 -->
+    <module>lingxi-dependencies</module>
+
+    <!-- 公共 Starter 组（5 个）：core / security / mybatis / llm / observability -->
+    <module>lingxi-starters</module>
+
+    <!-- L0 平台公共服务（同时是模块化单体的启动模块） -->
+    <module>lingxi-platform</module>
+
+    <!-- L1 数据底座 -->
+    <module>lingxi-data</module>
+
+    <!-- L2 业务模块（11 个一级菜单业务域） -->
+    <module>lingxi-workbench</module>
+    <module>lingxi-customer</module>
+    <module>lingxi-product</module>
+    <module>lingxi-order</module>
+    <module>lingxi-service</module>
+    <module>lingxi-marketing</module>
+    <module>lingxi-intel</module>
+    <module>lingxi-analytics</module>
+    <module>lingxi-agent</module>
+    <module>lingxi-knowledge</module>
+    <module>lingxi-configcenter</module>
+
+    <!-- 独立部署进程（不计入单体模块口径） -->
+    <module>lingxi-agent-runtime</module>
+    <module>lingxi-data-jobs</module>
+  </modules>
+
+  <!-- ============================================================ 版本统一入口 -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-dependencies</artifactId>
+        <version>${project.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <!--
+    全模块共用依赖（仅限测试与构建期）。
+    说明：业务运行期依赖（starter-core / starter-mybatis 等）由各模块显式声明，
+         不放父 POM——否则 lingxi-starter-* 模块会自引用形成循环依赖。
+  -->
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.tngtech.archunit</groupId>
+      <artifactId>archunit-junit5</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- 集成测试用真实 PostgreSQL / Valkey（技术规约2.0 §4.12）；CI 环境可用 Testcontainers，
+         本地无容器环境时通过 -Dtest.exclude=*IT 跳过，改为连隧道端口 -->
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <!-- ============================================================ 构建与门禁 -->
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-maven-plugin</artifactId>
+          <configuration>
+            <!-- 分层打包，配合脚本化灰度发布（无容器，直启 jar） -->
+            <layers>
+              <enabled>true</enabled>
+            </layers>
+            <excludes>
+              <exclude>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+              </exclude>
+            </excludes>
+          </configuration>
+        </plugin>
+
+        <!-- 覆盖率门禁：合并前必须通过（§4.12 / §3.8 W7） -->
+        <plugin>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>prepare-agent</id>
+              <goals><goal>prepare-agent</goal></goals>
+            </execution>
+            <execution>
+              <id>report</id>
+              <phase>verify</phase>
+              <goals><goal>report</goal></goals>
+            </execution>
+            <execution>
+              <id>check-coverage</id>
+              <phase>verify</phase>
+              <goals><goal>check</goal></goals>
+              <configuration>
+                <rules>
+                  <rule>
+                    <element>BUNDLE</element>
+                    <limits>
+                      <limit>
+                        <counter>LINE</counter>
+                        <value>COVEREDRATIO</value>
+                        <minimum>${jacoco.line.coverage.min}</minimum>
+                      </limit>
+                    </limits>
+                  </rule>
+                </rules>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+
+        <!-- 静态检查：以《阿里巴巴 Java 开发手册（泰山版）》为基线（§4.1.1） -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <version>3.6.0</version>
+          <configuration>
+            <configLocation>${maven.multiModuleProjectDirectory}/config/checkstyle/lingxi-checkstyle.xml</configLocation>
+            <consoleOutput>true</consoleOutput>
+            <failOnViolation>true</failOnViolation>
+            <violationSeverity>warning</violationSeverity>
+            <includeTestSourceDirectory>false</includeTestSourceDirectory>
+          </configuration>
+        </plugin>
+
+        <!-- SAST（CI 阶段执行，本地不阻断） -->
+        <plugin>
+          <groupId>com.github.spotbugs</groupId>
+          <artifactId>spotbugs-maven-plugin</artifactId>
+          <version>4.10.4.1</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+
+    <plugins>
+      <!-- 语言级别：JDK 25（§3.2 L3） -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <release>${maven.compiler.release}</release>
+          <!-- 保留参数名，供 MyBatis / springdoc / 参数校验使用 -->
+          <parameters>true</parameters>
+          <compilerArgs>
+            <arg>-Xlint:all,-processing</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+
+      <!-- 环境校验：JDK 与 Maven 版本不符直接失败，避免"本地能跑线上不能跑" -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.6.3</version>
+        <executions>
+          <execution>
+            <id>enforce-runtime</id>
+            <goals><goal>enforce</goal></goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion>
+                  <version>[25,)</version>
+                  <message>灵犀系统基线为 JDK 25 LTS（技术规约2.0 §3.2 L3），请切换到 JDK 25。</message>
+                </requireJavaVersion>
+                <requireMavenVersion>
+                  <version>[3.9,)</version>
+                </requireMavenVersion>
+                <bannedDependencies>
+                  <message>禁止引入 Docker/K8s 与"不引入清单"组件（技术规约2.0 §3.2 L7 / §3.9）。</message>
+                  <excludes>
+                    <exclude>com.github.docker-java:*</exclude>
+                  </excludes>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

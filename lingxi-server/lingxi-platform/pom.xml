@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.lingxi</groupId>
+    <artifactId>lingxi-server</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>lingxi-platform</artifactId>
+  <packaging>jar</packaging>
+  <name>lingxi-platform</name>
+  <description>灵犀系统 L0 平台公共服务（认证 / 权限 / 租户 / 组织 / 配置 / 文件 / 通知 / 审计 / ID / 检索）—— 同时是模块化单体的启动模块</description>
+
+  <dependencies>
+    <!-- 全部公共 Starter：平台是装配中心 -->
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>lingxi-starter-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>lingxi-starter-observability</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>lingxi-starter-mybatis</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>lingxi-starter-security</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>lingxi-starter-llm</artifactId>
+    </dependency>
+
+    <!-- 缓存 / 会话 / 锁 / 限流 / 事件流（Valkey 9，BSD-3-Clause） -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-redis</artifactId>
+    </dependency>
+    <!-- ShedLock 的 Valkey 提供者：定时任务跨实例互斥 -->
+    <dependency>
+      <groupId>net.javacrumbs.shedlock</groupId>
+      <artifactId>shedlock-provider-redis-spring</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+    </dependency>
+
+    <!-- 对象存储：文件走预签名 URL 直传，业务服务不持有凭证（§4.8.1 / §3.4 C10） -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>s3</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- 启动模块：产出可执行 jar（模块化单体，一个进程） -->
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals><goal>repackage</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

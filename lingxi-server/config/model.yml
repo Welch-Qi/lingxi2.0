@@ -1,0 +1,83 @@
+################
+# 模型注册表与场景路由
+#
+# 本文件是全系统【唯一】允许出现模型名的地方（技术规约2.0 §4.13.1 / §3.6 G6）。
+# 业务代码只声明场景码（如 mkg.email.write），禁止指定具体模型名。
+#
+# 为什么这样设计：模型可随时替换与升降级，无需改业务代码、无需回归全部场景。
+################
+lingxi:
+  model:
+    gateway:
+      # 统一 OpenAI 兼容出口；地址与 Key 走环境变量（禁止入库明文，§3.5 F4）
+      base-url: ${LX_MODEL_BASE_URL}
+      api-key: ${LX_MODEL_API_KEY}
+      # 超时（§4.6.2）：流式首 token 10s；非流式 30s；重试由网关统一，业务侧不重试
+      stream-first-token-timeout-ms: 10000
+      request-timeout-ms: 30000
+      max-retries: 2
+      # 语义缓存：命中则不再调用模型
+      semantic-cache-enabled: true
+      semantic-cache-ttl-seconds: 3600
+
+    # ---------------------------------------------------------------- 模型注册表
+    registry:
+      - code: model-primary
+        display-name: 主力模型
+        provider: openai-compatible
+        model: ${LX_MODEL_PRIMARY}          # 实际模型名由环境变量注入，便于按环境切换
+        max-tokens: 8192
+        input-cost-per-1k: 0
+        output-cost-per-1k: 0
+      - code: model-secondary
+        display-name: 备用模型（降级链第二级）
+        provider: openai-compatible
+        model: ${LX_MODEL_SECONDARY}
+        max-tokens: 8192
+      - code: model-light
+        display-name: 轻量模型（分类 / 打标 / 抽取等高 QPS 低价值场景）
+        provider: openai-compatible
+        model: ${LX_MODEL_LIGHT}
+        max-tokens: 2048
+      - code: model-embedding
+        display-name: 向量模型
+        provider: openai-compatible
+        model: ${LX_MODEL_EMBEDDING}
+        dimension: 1024                     # 与 dt_knowledge_embedding.vector(1024) 对齐
+
+    # ---------------------------------------------------------------- 降级链
+    # 主模型 -> 备用模型 -> 规则兜底；降级必须记录并可观测（§4.6.2）
+    fallback:
+      enabled: true
+      chain: [model-primary, model-secondary]
+      rule-fallback-enabled: true
+
+    # ---------------------------------------------------------------- 场景路由
+    # 低价值高 QPS 场景必须路由轻量模型（§4.6.2 成本控制）
+    scenes:
+      # 营销域
+      mkg.email.write:      { primary: model-primary,   fallback: model-secondary, temperature: 0.7, max-tokens: 1200 }
+      mkg.content.draft:    { primary: model-primary,   fallback: model-secondary, temperature: 0.8, max-tokens: 2000 }
+      mkg.content.localize: { primary: model-primary,   fallback: model-secondary, temperature: 0.3 }
+      # 知识域
+      kc.script.suggest:    { primary: model-primary,   fallback: model-secondary, temperature: 0.5 }
+      kc.template.fill:     { primary: model-light,     fallback: model-primary }
+      kc.prompt.embed:      { primary: model-embedding }
+      # 客户域
+      cus.lead.score:       { primary: model-light,     fallback: model-primary, temperature: 0.1 }
+      cus.customer.enrich:  { primary: model-light,     fallback: model-primary, temperature: 0.2 }
+      cus.followup.suggest: { primary: model-primary,   fallback: model-secondary, temperature: 0.6 }
+      # 经营分析域（问答式取数只出参数，不出 SQL，§3.6 G9）
+      ana.qa.intent:        { primary: model-light,     fallback: model-primary, temperature: 0 }
+      ana.qa.answer:        { primary: model-primary,   fallback: model-secondary, temperature: 0.2 }
+      # 售后域（多语言客服）
+      svc.reply.draft:      { primary: model-primary,   fallback: model-secondary, temperature: 0.4 }
+      svc.ticket.classify:  { primary: model-light,     fallback: model-primary, temperature: 0 }
+      # 数据底座
+      dt.entity.normalize:  { primary: model-light,     fallback: model-primary, temperature: 0 }
+
+    # ---------------------------------------------------------------- 租户级预算
+    quota:
+      default-monthly-tokens: ${LX_MODEL_MONTHLY_TOKEN_QUOTA:2000000}
+      per-task-max-tokens: 100000
+      over-budget-action: ROUTE_LIGHT_MODEL      # 超预算路由轻量模型（不直接失败）
