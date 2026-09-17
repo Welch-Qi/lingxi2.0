@@ -1,0 +1,158 @@
+################################################################################
+# 灵犀系统 CI 流水线（GitLab CE + Runner）
+#
+# 依据《灵犀系统技术规约2.0》§4.12 强制要求：
+#   顺序固定为 编译 -> ArchUnit 依赖检查 -> 单测 -> 契约测试 -> 覆盖率门禁
+#               -> 隔离套件 -> 静态扫描 -> 依赖与密钥扫描；任一环节失败阻断合并
+################################################################################
+stages:
+  - build
+  - arch-check
+  - test
+  - coverage
+  - isolation
+  - security
+  - package
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  MAVEN_CLI_OPTS: "-B -q --no-transfer-progress"
+  PNPM_STORE_DIR: "$CI_PROJECT_DIR/.pnpm-store"
+
+default:
+  interruptible: true
+
+# ---------------------------------------------------------------- 1. 编译
+build:backend:
+  stage: build
+  image: eclipse-temurin:25-jdk
+  script:
+    - cd lingxi-server
+    - mvn $MAVEN_CLI_OPTS -DskipTests clean package
+  artifacts:
+    paths:
+      - lingxi-server/**/target/*.jar
+    expire_in: 1 day
+  cache:
+    key: maven-$CI_COMMIT_REF_SLUG
+    paths: [.m2/repository]
+
+build:frontend:
+  stage: build
+  image: node:22
+  script:
+    - cd lingxi-web
+    - corepack enable && pnpm install --frozen-lockfile
+    - pnpm -s run typecheck
+    - pnpm -s run build
+  artifacts:
+    paths: [lingxi-web/apps/lingxi-web/dist]
+    expire_in: 1 day
+
+# ---------------------------------------------------------------- 2. 架构边界（强制）
+arch-check:
+  stage: arch-check
+  image: eclipse-temurin:25-jdk
+  needs: [build:backend]
+  script:
+    - cd lingxi-server
+    - mvn $MAVEN_CLI_OPTS -pl lingxi-platform test -Dtest=ArchitectureRuleTest
+  allow_failure: false
+  # 规则：domain 不依赖框架 / api 不依赖实现 / infra 不依赖 app / Starter 不反向依赖业务
+
+# ---------------------------------------------------------------- 3. 单测
+test:backend:
+  stage: test
+  image: eclipse-temurin:25-jdk
+  needs: [build:backend]
+  script:
+    - cd lingxi-server
+    - mvn $MAVEN_CLI_OPTS test
+  artifacts:
+    when: always
+    reports:
+      junit: lingxi-server/**/target/surefire-reports/TEST-*.xml
+
+test:frontend:
+  stage: test
+  image: node:22
+  script:
+    - cd lingxi-web
+    - corepack enable && pnpm install --frozen-lockfile
+    - pnpm -s run test:unit -- --run
+
+# 契约测试（Pact）：双向校验，契约变更即失败（§4.12）
+test:contract:
+  stage: test
+  image: eclipse-temurin:25-jdk
+  needs: [build:backend]
+  script:
+    - cd lingxi-server
+    - mvn $MAVEN_CLI_OPTS -pl lingxi-platform -am verify -Pcontract-test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# ---------------------------------------------------------------- 4. 覆盖率门禁
+coverage:
+  stage: coverage
+  image: eclipse-temurin:25-jdk
+  needs: [test:backend]
+  script:
+    - cd lingxi-server
+    - mvn $MAVEN_CLI_OPTS verify -Djacoco.skip=false
+    - echo "覆盖率门禁：总体 >=70%，新增代码 >=80%（§3.8 W7）"
+  coverage: '/Total.*?([0-9]{1,3})%/'
+
+# ---------------------------------------------------------------- 5. 租户隔离套件（强制）
+isolation:
+  stage: isolation
+  image: eclipse-temurin:25-jdk
+  needs: [build:backend]
+  script:
+    - apt-get update -qq && apt-get install -y -qq postgresql-client
+    - bash lingxi-ops/scripts/check-env.sh || true
+    - bash lingxi-ops/scripts/verify-tenant-isolation.sh "$LX_TEST_TOKEN_A" "$LX_TEST_TOKEN_B"
+  variables:
+    LX_API_BASE: "http://lingxi-test:8080"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  allow_failure: false
+  # 6 项：数据层越权 / 列表层归属 / 检索层 / 智能体层 / 导出对账 / RLS 直连
+
+# ---------------------------------------------------------------- 6. 安全门禁
+security:sast:
+  stage: security
+  image: returntocorp/semgrep
+  script:
+    - semgrep --error --config=p/owasp-top-ten --config=p/java lingxi-server
+
+security:dependency:
+  stage: security
+  image: aquasec/trivy
+  script:
+    - trivy fs --severity HIGH,CRITICAL --exit-code 1 lingxi-server lingxi-web
+
+security:secrets:
+  stage: security
+  image: zricethezav/gitleaks
+  script:
+    - gitleaks detect --no-banner --redact -s .
+
+security:hardcode:
+  stage: security
+  image: eclipse-temurin:25-jdk
+  script:
+    - bash lingxi-ops/scripts/qa-gate.sh
+
+# ---------------------------------------------------------------- 7. 制品
+package:
+  stage: package
+  image: eclipse-temurin:25-jdk
+  needs: [coverage, isolation, security:sast]
+  script:
+    - cd lingxi-server && mvn $MAVEN_CLI_OPTS -DskipTests package
+    - mkdir -p dist && cp lingxi-platform/target/*.jar dist/
+  artifacts:
+    paths: [ dist/ ]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
