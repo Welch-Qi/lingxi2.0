@@ -1,22 +1,31 @@
 import type { ModuleConfig } from '@/app/router/types';
 
 /**
- * 路由分区「商品中心」清单（技术规约2.0 §4.2.2 强制）。
+ * 商品中心分区清单（一级菜单「商品中心」）。
  *
- * <p>为什么必须登记：新增模块 = 新增路由分区 + 注册 manifest + 登记权限资源，
- * 禁止私挂路由与菜单；菜单与权限码由配置中心下发，前端按权限码过滤渲染。
+ * 功能编号对应《功能清单V2.0》三、商品中心（OP-PRD-）。
  *
- * <p>功能编号：OP-PRD-
+ * 为什么"数据完整度"是要害指标：商品主数据被内容创意、社媒运营、订单建单三处消费，
+ * 字段缺失不是本模块的问题，会直接放大成内容质量与交付准确性问题，
+ * 因此完整度必须显性度量并可一键交给智能体补全（HS 编码 / 属性 / 多语种素材）。
  */
 const config: ModuleConfig = {
   key: 'product',
   basePath: '/product',
   titleKey: 'prd.menu.product',
+  subtitleKey: 'prd.subtitle',
   bizCodes: 'OP-PRD-',
   permPrefix: 'prd',
   enabled: true,
+  icon: 'product',
+  layout: () => import('./layout'),
   routes: [
-    // { path: '/product', element: () => import('./index'), permCode: 'prd:*:view' },
+    {
+      path: '/product',
+      element: () => import('./index'),
+      permCode: 'prd:product:view',
+      titleKey: 'prd.menu.home',
+    },
   ],
 };
 

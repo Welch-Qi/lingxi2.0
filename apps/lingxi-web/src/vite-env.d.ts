@@ -18,6 +18,11 @@ interface ImportMetaEnv {
   readonly VITE_OIDC_CLIENT_ID?: string;
   /** 环境标识，用于底部状态栏与排障（dev / test / prod） */
   readonly VITE_APP_ENV?: string;
+  /**
+   * 静态骨架预览开关（仅 dev 生效）：'true' 时跳过 OIDC 走占位会话，
+   * 便于后端与 Keycloak 就绪前浏览已完成页面。生产构建恒为关闭。
+   */
+  readonly VITE_LX_STATIC_PREVIEW?: string;
 }
 
 interface ImportMeta {

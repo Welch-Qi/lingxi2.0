@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
 import { configureHttp, get } from '@lingxi/request';
 import { PermissionContext } from '@lingxi/ui';
+import { PREVIEW_PERMISSIONS, PREVIEW_TENANT, PREVIEW_USER, isStaticPreview } from '@/app/providers/previewSession';
 
 /**
  * 认证与租户上下文（技术规约2.0 §4.8.1 / §4.9.1）。
@@ -74,6 +75,10 @@ function createUserManager(): UserManager {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const managerRef = useRef<UserManager | null>(null);
+  // 访问令牌缓存：请求拦截器是同步 API（§4.3.3），而 oidc-client-ts 的 getUser()
+  // 返回 Promise，故在认证态这里统一缓存令牌，供请求层同步读取。
+  // 令牌只存在于内存（不落 localStorage），刷新页面即失效，由静默续期重建。
+  const tokenRef = useRef<string | null>(null);
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<AuthUser | null>(null);
   const [tenant, setTenant] = useState<AuthTenant | null>(null);
@@ -85,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const manager = managerRef.current;
 
   const clearSession = useCallback(() => {
+    tokenRef.current = null;
     setUser(null);
     setTenant(null);
     setPermissions([]);
@@ -121,11 +127,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // 请求层注入：token 与租户上下文由认证态统一提供，业务代码不得自行读取
   useEffect(() => {
     configureHttp({
-      getAccessToken: () => manager.getUser()?.access_token ?? null,
+      getAccessToken: () => tokenRef.current,
       getTenantId: () => tenant?.id ?? null,
       onUnauthenticated: clearSession,
     });
-  }, [manager, tenant, clearSession]);
+  }, [tenant, clearSession]);
 
   // 启动流程：处理 OIDC 回调 → 拉取会话；无 token 则判定匿名
   useEffect(() => {
@@ -133,6 +139,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function bootstrap() {
       try {
+        // 静态骨架预览：后端与 Keycloak 就绪前放开闸门，仅供本地自检页面（DEV 专有，见 previewSession.ts）
+        if (isStaticPreview()) {
+          setUser(PREVIEW_USER);
+          setTenant(PREVIEW_TENANT);
+          setPermissions(PREVIEW_PERMISSIONS);
+          setStatus('authenticated');
+          return;
+        }
         if (window.location.search.includes('code=') && window.location.search.includes('state=')) {
           // 回调地址即 /login，交换 token 后清掉地址栏参数（防 code 泄漏进历史记录）
           await manager.signinRedirectCallback();
@@ -146,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           clearSession();
           return;
         }
+        tokenRef.current = current.access_token;
         await loadSession();
       } catch {
         // 会话获取失败一律视为未登录；错误详情由错误边界与 traceId 承载
@@ -157,10 +172,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     void bootstrap();
 
-    const onUserLoaded = () => {
+    const onUserLoaded = (loaded: User) => {
+      tokenRef.current = loaded.access_token;
       void loadSession().catch(() => clearSession());
     };
-    const onUserUnloaded = () => clearSession();
+    const onUserUnloaded = () => {
+      tokenRef.current = null;
+      clearSession();
+    };
     manager.events.addUserLoaded(onUserLoaded);
     manager.events.addUserUnloaded(onUserUnloaded);
     manager.events.addAccessTokenExpired(onUserUnloaded);
@@ -188,7 +207,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) {
-    throw new Error('useAuth 必须在 <AuthProvider> 内使用');
+    // 面向开发者的不变式报错，不是用户可见文案：用英文，避免污染语言包（附录D 规则10）
+    throw new Error('useAuth must be used inside <AuthProvider>');
   }
   return ctx;
 }

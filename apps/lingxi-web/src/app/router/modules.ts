@@ -32,3 +32,40 @@ export const moduleConfigs: readonly ModuleConfig[] = [
   knowledge,
   config,
 ];
+
+/**
+ * 菜单分组（产品规划说明书2.0 §5.1：菜单分组为「业务」「分析」「平台」三组）。
+ *
+ * 分组只描述"导航怎么摆"，分区清单仍是 moduleConfigs 单一来源；
+ * 因此此处只登记分组与包含的分区键，不重复定义分区属性。
+ */
+export interface MenuGroup {
+  key: 'biz' | 'ana' | 'plt';
+  titleKey: string;
+  modules: readonly ModuleConfig[];
+}
+
+const GROUP_DEFS = [
+  {
+    key: 'biz',
+    titleKey: 'nav.group.biz',
+    keys: ['workbench', 'customer', 'product', 'order', 'service', 'marketing'],
+  },
+  { key: 'ana', titleKey: 'nav.group.ana', keys: ['intel', 'analytics'] },
+  { key: 'plt', titleKey: 'nav.group.plt', keys: ['agent', 'knowledge', 'config'] },
+] as const;
+
+const byKey = new Map(moduleConfigs.map((m) => [m.key, m]));
+
+export const menuGroups: readonly MenuGroup[] = GROUP_DEFS.map((def) => ({
+  key: def.key,
+  titleKey: def.titleKey,
+  modules: def.keys
+    .map((key) => byKey.get(key))
+    .filter((m): m is ModuleConfig => m !== undefined),
+}));
+
+/** 按当前路径匹配所属分区（用于侧边栏选中态与顶栏标题）。 */
+export function findModuleByPath(pathname: string): ModuleConfig | undefined {
+  return moduleConfigs.find((m) => pathname === m.basePath || pathname.startsWith(`${m.basePath}/`));
+}

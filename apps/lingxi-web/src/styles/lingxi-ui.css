@@ -1,0 +1,1255 @@
+/* ==========================================================================
+   lingxi-ui 业务组件样式（Aurora Sense）
+   基准：《灵犀系统前端改造指引-AuroraSense1.0》第 4 章
+   组件实现位于 packages/lingxi-ui，样式统一在此登记，避免样式与实现两处漂移
+   ========================================================================== */
+
+/* 卡片类组件可能被渲染为 button（可点击态），需抹平浏览器默认按钮样式 */
+.lx-kpi,
+.lx-insight,
+.lx-quick,
+.lx-agent {
+  width: 100%;
+  font-family: inherit;
+  text-align: left;
+}
+
+/* --------------------------------------------------------------------------
+   栅格（响应式：≤1100px 降档，≤768px 单列）
+   -------------------------------------------------------------------------- */
+.lx-grid {
+  display: grid;
+  gap: var(--lx-space-4);
+}
+
+.lx-grid--kpi {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.lx-grid--kpi-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.lx-grid--agent {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.lx-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .lx-grid--kpi {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .lx-grid--kpi-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lx-grid--agent {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lx-grid--3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .lx-grid--kpi,
+  .lx-grid--kpi-4,
+  .lx-grid--agent {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* --------------------------------------------------------------------------
+   LxKpi 指标卡（4.3）
+   -------------------------------------------------------------------------- */
+.lx-kpi {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.lx-kpi__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--lx-color-muted);
+}
+
+.lx-kpi__tick {
+  width: 3px;
+  height: 11px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  background: var(--lx-color-primary);
+}
+
+.lx-kpi__tick--primary {
+  background: var(--lx-color-primary);
+}
+
+.lx-kpi__tick--secondary {
+  background: var(--lx-color-secondary);
+}
+
+.lx-kpi__tick--accent {
+  background: var(--lx-color-accent);
+}
+
+.lx-kpi__tick--success {
+  background: var(--lx-color-success);
+}
+
+.lx-kpi__tick--violet {
+  background: var(--lx-color-violet);
+}
+
+.lx-kpi__value {
+  margin-top: 6px;
+  font-family: var(--lx-font-display);
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--lx-color-ink);
+}
+
+.lx-kpi__value--sm {
+  font-size: 22px;
+}
+
+.lx-kpi__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-2);
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-kpi__sub {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lx-kpi__spark {
+  display: block;
+  width: 100%;
+  height: 18px;
+  margin-top: var(--lx-space-2);
+}
+
+/* 涨跌胶囊：绿涨 / 红跌 / 灰平（中国市场惯例） */
+.lx-trend {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-family: var(--lx-font-display);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.lx-trend--up {
+  background: var(--lx-color-success-soft);
+  color: var(--lx-color-success);
+}
+
+.lx-trend--dn {
+  background: var(--lx-color-danger-soft);
+  color: var(--lx-color-danger);
+}
+
+.lx-trend--fl {
+  background: var(--lx-color-frost);
+  color: var(--lx-color-slate);
+}
+
+/* --------------------------------------------------------------------------
+   LxAgentCard 智能体卡片（4.4）
+   -------------------------------------------------------------------------- */
+.lx-agent {
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-frost);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lx-agent:hover {
+  transform: translateY(-2px);
+  border-color: var(--lx-color-primary-line);
+  box-shadow: var(--lx-shadow-pop);
+}
+
+/* busy 态：主色描边 + 浅青渐变底（正在执行任务） */
+.lx-agent.is-busy {
+  border-color: var(--lx-color-primary-line);
+  background: linear-gradient(0deg, var(--lx-color-primary-soft), var(--lx-color-frost));
+}
+
+.lx-agent__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lx-agent__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  box-shadow: var(--lx-shadow-agent);
+  color: #fff;
+  font-size: 16px;
+}
+
+/* 有形象图时用圆形头像（沿用高保真原型的视觉意图），描边随 busy 态变主色 */
+.lx-agent__avatar {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: var(--lx-shadow-agent);
+  outline: 2px solid var(--lx-color-card-solid);
+}
+
+.lx-agent__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.lx-agent.is-busy .lx-agent__avatar {
+  outline-color: var(--lx-color-primary-line);
+}
+
+/* 智能体色系固定为 青/蓝/紫/黄/绿 五维，不新增任意色相（禁忌 8） */
+.lx-agent__icon--sage {
+  background: linear-gradient(135deg, #0e7c86, #2e6be6);
+}
+
+.lx-agent__icon--atlas {
+  background: linear-gradient(135deg, #2e6be6, #7a5ac0);
+}
+
+.lx-agent__icon--muse {
+  background: linear-gradient(135deg, #f0a91a, #e4644c);
+}
+
+.lx-agent__icon--echo {
+  background: linear-gradient(135deg, #3d9a6e, #0e7c86);
+}
+
+.lx-agent__ident {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lx-agent__name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-agent__role {
+  font-size: 10.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-agent__grade {
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-family: var(--lx-font-display);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.lx-agent__grade--gold {
+  background: var(--lx-color-accent-soft);
+  color: var(--lx-color-amber-ink);
+}
+
+.lx-agent__grade--silver {
+  border: 1px solid var(--lx-color-border);
+  background: var(--lx-color-frost);
+  color: var(--lx-color-muted);
+}
+
+.lx-agent__grade--bronze {
+  background: var(--lx-color-bronze-bg);
+  color: var(--lx-color-bronze-ink);
+}
+
+.lx-agent__task {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--lx-color-slate);
+}
+
+.lx-agent__progress {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-2);
+  margin-top: 10px;
+}
+
+.lx-agent__bar {
+  flex: 1;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--lx-color-border);
+}
+
+.lx-agent__bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--lx-color-primary), var(--lx-color-secondary));
+}
+
+.lx-agent__bar--good > i {
+  background: linear-gradient(90deg, var(--lx-color-success), var(--lx-color-primary));
+}
+
+.lx-agent__bar--warn > i {
+  background: linear-gradient(90deg, var(--lx-color-accent), var(--lx-color-danger));
+}
+
+.lx-agent__pct {
+  font-family: var(--lx-font-display);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--lx-color-slate);
+}
+
+.lx-agent__stats {
+  display: flex;
+  gap: var(--lx-space-4);
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--lx-color-border);
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-agent__stats b {
+  font-family: var(--lx-font-display);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--lx-color-ink);
+}
+
+/* 智能体协作网络的流动连接线（仅在 ≥4 列时显示） */
+.lx-agent-net {
+  position: relative;
+}
+
+.lx-agent-net::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 6%;
+  right: 6%;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--lx-color-primary-line),
+    var(--lx-color-secondary),
+    var(--lx-color-success)
+  );
+  opacity: 0.5;
+  z-index: 0;
+}
+
+.lx-agent-net > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 1100px) {
+  .lx-agent-net::before {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   LxInsightCard 决策卡 / 今日要点（4.5）
+   -------------------------------------------------------------------------- */
+.lx-insight {
+  display: flex;
+  flex-direction: column;
+  padding: var(--lx-space-4);
+  border-left: 3px solid var(--lx-color-accent);
+  cursor: pointer;
+}
+
+.lx-insight--accent {
+  border-left-color: var(--lx-color-accent);
+}
+
+.lx-insight--success {
+  border-left-color: var(--lx-color-success);
+}
+
+.lx-insight--primary {
+  border-left-color: var(--lx-color-primary);
+}
+
+.lx-insight__type {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--lx-color-muted);
+}
+
+.lx-insight__text {
+  margin-top: 6px;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--lx-color-ink);
+}
+
+.lx-insight__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-2);
+  margin-top: 10px;
+}
+
+.lx-insight__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  color: #fff;
+  font-size: 11px;
+}
+
+.lx-insight__source {
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+/* 来源头像色与所属智能体一致 */
+.lx-insight__avatar--sage {
+  background: linear-gradient(135deg, #0e7c86, #2e6be6);
+}
+
+.lx-insight__avatar--atlas {
+  background: linear-gradient(135deg, #2e6be6, #7a5ac0);
+}
+
+.lx-insight__avatar--muse {
+  background: linear-gradient(135deg, #f0a91a, #e4644c);
+}
+
+.lx-insight__avatar--echo {
+  background: linear-gradient(135deg, #3d9a6e, #0e7c86);
+}
+
+/* --------------------------------------------------------------------------
+   LxBanner 问候 / 提示条（4.11）
+   -------------------------------------------------------------------------- */
+.lx-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: var(--lx-space-4) 20px;
+  border: 1px solid var(--lx-color-primary-line);
+  border-radius: var(--lx-radius-lg);
+  background: linear-gradient(
+    120deg,
+    var(--lx-color-primary-soft),
+    var(--lx-color-secondary-soft) 60%,
+    var(--lx-color-accent-soft)
+  );
+}
+
+.lx-banner__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: var(--lx-radius-md);
+  background: linear-gradient(135deg, #0e7c86, #2e6be6);
+  box-shadow: var(--lx-shadow-primary);
+  color: #fff;
+  font-size: 18px;
+}
+
+.lx-banner__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lx-banner__title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-banner__desc {
+  font-size: 12.5px;
+  color: var(--lx-color-slate);
+}
+
+.lx-banner__more {
+  margin-left: auto;
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--lx-color-primary);
+}
+
+.lx-banner__more:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   LxStepper 步骤条（4.9）
+   -------------------------------------------------------------------------- */
+.lx-stepper {
+  display: flex;
+  padding: var(--lx-space-2);
+}
+
+.lx-stepper__item {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: var(--lx-radius);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--lx-color-muted);
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.lx-stepper__item:hover {
+  background: var(--lx-color-frost);
+  color: var(--lx-color-slate);
+}
+
+.lx-stepper__item.is-active {
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+  font-weight: 500;
+}
+
+.lx-stepper__num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-frost);
+  font-family: var(--lx-font-display);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.lx-stepper__item.is-active .lx-stepper__num {
+  background: var(--lx-color-primary);
+  color: #fff;
+}
+
+.lx-stepper__arrow {
+  position: absolute;
+  right: -2px;
+  font-size: 12px;
+  color: var(--lx-color-faint);
+}
+
+@media (max-width: 768px) {
+  .lx-stepper {
+    flex-direction: column;
+  }
+
+  .lx-stepper__arrow {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   LxTable 容器与工具条（4.6）
+   -------------------------------------------------------------------------- */
+.lx-tablecard {
+  overflow: hidden;
+  border-radius: var(--lx-radius-lg);
+}
+
+.lx-tablecard__tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--lx-color-border);
+}
+
+.lx-tablecard__search {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--lx-space-2);
+  max-width: 280px;
+  padding: 0 14px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--lx-color-frost);
+}
+
+.lx-tablecard__search:focus-within {
+  border-color: var(--lx-color-primary-line);
+  background: #fff;
+}
+
+.lx-tablecard__search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--lx-color-ink);
+}
+
+.lx-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--lx-color-slate);
+  transition: all 0.15s ease;
+}
+
+.lx-filter:hover {
+  border-color: var(--lx-color-primary-line);
+  color: var(--lx-color-primary);
+}
+
+/* 表格单元格内的标题 + 编码双行 */
+.lx-cell-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-cell-code {
+  font-family: var(--lx-font-display);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--lx-color-muted);
+}
+
+.lx-cell-link {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--lx-color-primary);
+}
+
+.lx-cell-link:hover {
+  text-decoration: underline;
+}
+
+/* 单元格内的"缩略图 + 标题/编码"横排 */
+.lx-cell-media {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-3);
+}
+
+/* 工具条右侧同步提示 */
+.lx-tools-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--lx-color-success);
+}
+
+/* 内容缩略图（44×32 圆角 8px 渐变 + 白色图标） */
+.lx-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 32px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: var(--lx-radius-sm);
+  color: #fff;
+  font-size: 14px;
+}
+
+.lx-thumb--card {
+  width: 100%;
+  height: 132px;
+}
+
+.lx-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.lx-thumb--video {
+  background: linear-gradient(135deg, #2e6be6, #7a5ac0);
+}
+
+.lx-thumb--graphic {
+  background: linear-gradient(135deg, #0e7c86, #2e6be6);
+}
+
+.lx-thumb--stored {
+  background: linear-gradient(135deg, #94a3b8, #cbd5e1);
+}
+
+/* --------------------------------------------------------------------------
+   LxTag 标签色板（4.6）
+   -------------------------------------------------------------------------- */
+.lx-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.lx-tag--video {
+  background: var(--lx-color-secondary-soft);
+  color: var(--lx-color-secondary);
+}
+
+.lx-tag--graphic {
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+}
+
+.lx-tag--lang {
+  border: 1px solid var(--lx-color-border);
+  background: var(--lx-color-frost);
+  color: var(--lx-color-slate);
+}
+
+.lx-tag--done {
+  background: var(--lx-color-success-soft);
+  color: var(--lx-color-success);
+}
+
+.lx-tag--review {
+  background: var(--lx-color-accent-soft);
+  color: var(--lx-color-amber-ink);
+}
+
+.lx-tag--producing {
+  background: var(--lx-color-frost);
+  color: var(--lx-color-muted);
+}
+
+/* --------------------------------------------------------------------------
+   LxEmpty 空态（禁忌 9：数据为空必须有空态，风格与玻璃卡一致）
+   -------------------------------------------------------------------------- */
+.lx-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--lx-space-2);
+  padding: 48px var(--lx-space-5);
+  text-align: center;
+}
+
+.lx-empty__icon {
+  font-size: 28px;
+  color: var(--lx-color-faint);
+}
+
+.lx-empty__text {
+  font-size: 13px;
+  color: var(--lx-color-primary);
+}
+
+.lx-empty__hint {
+  font-size: 12px;
+  color: var(--lx-color-muted);
+}
+
+/* --------------------------------------------------------------------------
+   快捷操作入口（5.2 第 5 项）
+   -------------------------------------------------------------------------- */
+.lx-quick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.lx-quick__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  font-size: 16px;
+}
+
+.lx-quick__icon--primary {
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+}
+
+.lx-quick__icon--accent {
+  background: var(--lx-color-accent-soft);
+  color: var(--lx-color-amber-ink);
+}
+
+.lx-quick__icon--secondary {
+  background: var(--lx-color-secondary-soft);
+  color: var(--lx-color-secondary);
+}
+
+.lx-quick__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-quick__desc {
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+/* --------------------------------------------------------------------------
+   协调条（5.3 第 1 项：Muse 协调条）
+   -------------------------------------------------------------------------- */
+.lx-coordbar {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-3);
+  padding: 14px 18px;
+  border: 1px solid rgba(240, 169, 26, 0.25);
+  border-radius: var(--lx-radius-lg);
+  background: linear-gradient(120deg, var(--lx-color-accent-soft), var(--lx-color-secondary-soft) 70%);
+}
+
+.lx-coordbar__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--lx-radius);
+  background: linear-gradient(135deg, #f0a91a, #e4644c);
+  color: #fff;
+  font-size: 15px;
+}
+
+.lx-coordbar__text {
+  font-size: 13px;
+  color: var(--lx-color-slate);
+}
+
+.lx-coordbar__text b {
+  color: var(--lx-color-amber-ink);
+  font-weight: 500;
+}
+
+.lx-coordbar__more {
+  margin-left: auto;
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--lx-color-primary);
+}
+
+/* --------------------------------------------------------------------------
+   AntD 覆写：让内置组件与极光通感一致
+   -------------------------------------------------------------------------- */
+.lx-tablecard .ant-table {
+  background: transparent;
+}
+
+.lx-tablecard .ant-table-thead > tr > th {
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--lx-color-border);
+  background: rgba(243, 247, 251, 0.6);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--lx-color-muted);
+}
+
+.lx-tablecard .ant-table-tbody > tr > td {
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--lx-color-border);
+  font-size: 13px;
+}
+
+.lx-tablecard .ant-table-tbody > tr:last-child > td {
+  border-bottom: 0;
+}
+
+.lx-tablecard .ant-table-tbody > tr:hover > td {
+  background: var(--lx-color-frost);
+}
+
+.lx-tablecard .ant-table-placeholder:hover > td {
+  background: transparent;
+}
+
+/* 无权限时不渲染（LxPermission），无需禁用态样式 */
+.lx-tablecard .ant-pagination {
+  padding: 0 18px 14px;
+}
+
+
+/* --------------------------------------------------------------------------
+   LxChart 图表容器（技术规约2.0 §4.6）
+   -------------------------------------------------------------------------- */
+.lx-chart {
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   面板（带表头的玻璃卡）：看板上的图表卡 / 列表卡共用
+   -------------------------------------------------------------------------- */
+.lx-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.lx-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lx-space-3);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--lx-color-border);
+}
+
+.lx-panel__title {
+  font-family: var(--lx-font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--lx-color-ink);
+}
+
+.lx-panel__sub {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-panel__badge {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-family: var(--lx-font-display);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.lx-panel__badge--success {
+  background: var(--lx-color-success-soft);
+  color: var(--lx-color-success);
+}
+
+.lx-panel__badge--danger {
+  background: var(--lx-color-danger);
+  color: #fff;
+}
+
+.lx-panel__body {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 18px;
+}
+
+/* 看板双栏：主图占宽，侧栏列表占窄 */
+.lx-grid--split {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+}
+
+@media (max-width: 1100px) {
+  .lx-grid--split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   待人工决策清单
+   -------------------------------------------------------------------------- */
+.lx-decision {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-2);
+}
+
+.lx-decision__item {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-3);
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius);
+  background: transparent;
+  text-align: left;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.lx-decision__item:hover {
+  border-color: var(--lx-color-border-strong);
+  background: var(--lx-color-frost);
+}
+
+.lx-decision__icon {
+  display: flex;
+  flex-shrink: 0;
+  font-size: 18px;
+}
+
+.lx-decision__icon--danger {
+  color: var(--lx-color-danger);
+}
+
+.lx-decision__icon--accent {
+  color: var(--lx-color-accent);
+}
+
+.lx-decision__icon--primary {
+  color: var(--lx-color-primary);
+}
+
+.lx-decision__icon--muted {
+  color: var(--lx-color-muted);
+}
+
+.lx-decision__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.lx-decision__title {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-decision__meta {
+  display: block;
+  margin-top: 1px;
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-decision__arrow {
+  flex-shrink: 0;
+  color: var(--lx-color-muted);
+}
+
+/* --------------------------------------------------------------------------
+   业务实时流（智能体之间的任务交接）
+   -------------------------------------------------------------------------- */
+.lx-flow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .lx-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .lx-flow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.lx-flow__cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-3);
+  padding: 16px 18px;
+  border-top: 1px solid var(--lx-color-border);
+}
+
+.lx-flow__cell:first-child {
+  border-top: 0;
+}
+
+@media (min-width: 1101px) {
+  .lx-flow__cell {
+    border-top: 0;
+    border-left: 1px solid var(--lx-color-border);
+  }
+
+  .lx-flow__cell:first-child {
+    border-left: 0;
+  }
+}
+
+.lx-flow__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lx-flow__time {
+  padding: 1px 8px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: 999px;
+  font-family: var(--lx-font-display);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--lx-color-slate);
+}
+
+.lx-flow__icon {
+  color: var(--lx-color-muted);
+  font-size: 15px;
+}
+
+.lx-flow__icon--done {
+  color: var(--lx-color-primary);
+}
+
+.lx-flow__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-flow__desc {
+  margin-top: 4px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--lx-color-muted);
+}
+
+.lx-flow__result {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--lx-color-primary);
+}
+
+/* --------------------------------------------------------------------------
+   素材卡片（内容营销预览墙）
+   -------------------------------------------------------------------------- */
+.lx-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--lx-space-4);
+}
+
+@media (max-width: 1100px) {
+  .lx-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .lx-gallery {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.lx-gallery__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-2);
+  overflow: hidden;
+  padding: 0;
+  text-align: left;
+}
+
+.lx-gallery__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lx-space-2);
+  padding: 0 14px 14px;
+}
+
+.lx-gallery__title {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-gallery__sub {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}

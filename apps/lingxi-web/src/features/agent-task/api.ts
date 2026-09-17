@@ -1,4 +1,6 @@
 import { get, getPage, post, type PageQuery, type PageResult } from '@lingxi/request';
+import { isStaticPreview } from '@/app/providers/previewSession';
+import { PREVIEW_PENDING_TASKS } from '@/app/providers/previewFixtures';
 
 /**
  * 智能体任务接口（技术规约2.0 §4.6）。
@@ -64,6 +66,16 @@ function toParams(query: AgentTaskQuery): Record<string, unknown> {
 
 /** 我的待处理任务：NEEDS_HUMAN（需人工接手）+ NEEDS_APPROVAL（待审批） */
 export function fetchMyPendingTasks(query: AgentTaskQuery = {}): Promise<PageResult<AgentTask>> {
+  // 静态骨架阶段（DEV）：用占位任务撑起任务中心三态，接入后端后此分支不可达
+  if (isStaticPreview()) {
+    const pageSize = query.pageSize ?? 20;
+    return Promise.resolve({
+      list: PREVIEW_PENDING_TASKS,
+      total: PREVIEW_PENDING_TASKS.length,
+      pageNo: query.pageNo ?? 1,
+      pageSize,
+    });
+  }
   return getPage<AgentTask>('/api/v1/agent/tasks/my-pending', toParams(query));
 }
 
@@ -78,6 +90,34 @@ export function fetchAgentTask(taskId: string): Promise<AgentTask> {
 }
 
 /**
+ * 静态骨架阶段（DEV）的本地回显：让「接管 / 通过 / 驳回」在无后端时可点通，
+ * 便于验证抽屉交互与状态文案。后端就绪后此函数不再被调用。
+ */
+function previewTaskResult(taskId: string, status: AgentTaskStatus): Promise<AgentTask> {
+  const now = new Date().toISOString();
+  const found = PREVIEW_PENDING_TASKS.find((task) => task.taskId === taskId);
+  const empty: AgentTask = {
+    taskId,
+    agentCode: 'preview',
+    agentName: 'Preview',
+    sceneCode: 'PREVIEW',
+    sceneName: 'Preview',
+    status,
+    autonomyLevel: 'A0',
+    outbound: false,
+    bizType: null,
+    bizId: null,
+    bizTitle: null,
+    progress: null,
+    summary: null,
+    failReason: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  return Promise.resolve({ ...empty, ...(found ?? {}), status });
+}
+
+/**
  * 人工接管（产品「接管铁律」/ §4.6.6）。
  *
  * 后端语义：撤销该任务后续排队动作 + 释放并发锁 + 记录接管人与原因；
@@ -85,15 +125,24 @@ export function fetchAgentTask(taskId: string): Promise<AgentTask> {
  * 传 reason 是强制的——接管必须留痕，否则无法复盘智能体为何跑偏。
  */
 export function takeoverTask(taskId: string, reason: string): Promise<AgentTask> {
+  if (isStaticPreview()) {
+    return previewTaskResult(taskId, 'TAKEN_OVER');
+  }
   return post<AgentTask>(`/api/v1/agent/tasks/${taskId}/takeover`, { reason });
 }
 
 /** 审批通过（仅 NEEDS_APPROVAL 状态可调用；通过后按原自主度继续执行） */
 export function approveTask(taskId: string, comment?: string): Promise<AgentTask> {
+  if (isStaticPreview()) {
+    return previewTaskResult(taskId, 'RUNNING');
+  }
   return post<AgentTask>(`/api/v1/agent/tasks/${taskId}/approve`, { comment });
 }
 
 /** 审批驳回：任务终止，不自动重试（重试须重新发起，避免反复消耗额度） */
 export function rejectTask(taskId: string, reason: string): Promise<AgentTask> {
+  if (isStaticPreview()) {
+    return previewTaskResult(taskId, 'CANCELLED');
+  }
   return post<AgentTask>(`/api/v1/agent/tasks/${taskId}/reject`, { reason });
 }

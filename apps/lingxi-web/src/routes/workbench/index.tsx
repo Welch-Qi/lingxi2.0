@@ -1,13 +1,9 @@
-import { PageContainer } from '@/components/PageContainer';
-
 /**
- * 工作台 路由分区入口（/workbench）。
- * 页面骨架由根 layout + 分区 layout 提供，此处只组装业务内容。
+ * 工作台分区入口（/workbench）。
+ *
+ * 为什么只做一层再导出：分区入口的职责是"固定 URL ↔ 页面组件"的映射，
+ * 而不是承载业务内容。这样 /workbench 这个地址始终稳定，
+ * 后续若要给不同角色换默认页（产品规划说明书 §5.3 角色首页），
+ * 只改这一行即可，不必动菜单与权限。
  */
-export default function WorkbenchPage() {
-  return (
-    <PageContainer titleKey="wb.menu.workbench">
-      {/* TODO: 按功能清单 UW- / RW- 实现页面 */}
-    </PageContainer>
-  );
-}
+export { default } from './dashboard';

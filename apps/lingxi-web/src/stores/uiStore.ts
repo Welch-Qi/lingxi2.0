@@ -17,7 +17,9 @@ interface UiState {
 
 export const useUiStore = create<UiState>((set) => ({
   taskDrawerOpen: false,
-  pendingTaskCount: 0,
+  // 静态骨架占位值：接入任务中心后由 /api/v1/ag/tasks 汇总下发（NEEDS_HUMAN + 待审批），
+  // 此处先给非零值，否则侧边栏角标与顶栏红点这两个签名细节在自检时永远看不到。
+  pendingTaskCount: 3,
   toggleTaskDrawer: () => set((s) => ({ taskDrawerOpen: !s.taskDrawerOpen })),
   setPendingTaskCount: (count) => set({ pendingTaskCount: count }),
 }));

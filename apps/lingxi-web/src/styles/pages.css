@@ -1,0 +1,388 @@
+/* ==========================================================================
+   页面级样式：P1 工作区选择（深色品牌区 + 浅色登录区）
+   基准：《灵犀系统前端改造指引-AuroraSense1.0》4.12 / 5.1
+   ========================================================================== */
+
+.lx-select {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  min-height: 100vh;
+  padding-top: var(--lx-aurora-height);
+}
+
+/* --------------------------------------------------------------------------
+   左侧品牌区（深色 + 两处径向光斑）
+   -------------------------------------------------------------------------- */
+.lx-select__brand {
+  position: relative;
+  padding: 56px 52px;
+  overflow: hidden;
+  background:
+    radial-gradient(1200px 500px at 80% -10%, rgba(46, 107, 230, 0.35), transparent 60%),
+    radial-gradient(900px 400px at 10% 110%, rgba(14, 124, 134, 0.45), transparent 55%),
+    linear-gradient(150deg, #0b1b2b 0%, #0e3a4d 55%, #0e7c86 130%);
+}
+
+.lx-select__brand-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 520px;
+}
+
+.lx-select__logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lx-select__logo-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--lx-radius);
+  background: var(--lx-grad-brand);
+  color: #fff;
+  font-size: 16px;
+}
+
+.lx-select__logo-text {
+  font-family: var(--lx-font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+
+.lx-select__eyebrow {
+  margin-top: 56px;
+  font-family: var(--lx-font-display);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.lx-select__h1 {
+  margin: 14px 0 0;
+  font-family: var(--lx-font-display);
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.lx-select__h1 em {
+  font-style: normal;
+  color: var(--lx-color-aurora);
+}
+
+.lx-select__lead {
+  margin: 18px 0 0;
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.lx-select__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--lx-space-3);
+  margin-top: auto;
+  padding-top: 48px;
+}
+
+.lx-select__stat {
+  padding: var(--lx-space-4);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--lx-radius-md);
+  background: rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.lx-select__stat-value {
+  font-family: var(--lx-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.lx-select__stat-label {
+  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* --------------------------------------------------------------------------
+   右侧登录区
+   -------------------------------------------------------------------------- */
+.lx-select__panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 40px;
+  background: var(--lx-color-frost);
+}
+
+.lx-select__card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  max-width: 480px;
+  padding: 40px 40px 32px;
+  border-radius: var(--lx-radius-xl);
+  background: var(--lx-color-card-solid);
+  box-shadow: var(--lx-shadow-pop);
+}
+
+.lx-select__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 4px 12px;
+  border: 1px solid var(--lx-color-primary-line);
+  border-radius: 999px;
+  background: var(--lx-color-primary-soft);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--lx-color-primary);
+}
+
+.lx-select__heading {
+  font-family: var(--lx-font-display);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--lx-color-ink);
+}
+
+.lx-select__sub {
+  font-size: 12.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-select__fieldlabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--lx-color-slate);
+}
+
+.lx-select__tenant {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-card);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lx-select__tenant:hover,
+.lx-select__tenant.is-selected {
+  border-color: var(--lx-color-primary-line);
+  box-shadow: 0 2px 8px rgba(14, 124, 134, 0.08);
+}
+
+.lx-select__tenant-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+  font-size: 15px;
+}
+
+.lx-select__tenant-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-select__tenant-meta {
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-select__roles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lx-select__role {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1.5px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.lx-select__role--wide {
+  grid-column: span 2;
+}
+
+.lx-select__role:hover {
+  transform: translateY(-2px);
+  border-color: var(--lx-color-primary-line);
+  box-shadow: 0 2px 8px rgba(14, 124, 134, 0.08);
+}
+
+.lx-select__role.is-selected {
+  border-color: var(--lx-color-primary);
+  background: linear-gradient(0deg, var(--lx-color-primary-soft), rgba(255, 255, 255, 0.9));
+}
+
+.lx-select__role-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--lx-radius-sm);
+  font-size: 14px;
+}
+
+.lx-select__role-icon--primary {
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+}
+
+.lx-select__role-icon--secondary {
+  background: var(--lx-color-secondary-soft);
+  color: var(--lx-color-secondary);
+}
+
+.lx-select__role-icon--accent {
+  background: var(--lx-color-accent-soft);
+  color: var(--lx-color-amber-ink);
+}
+
+.lx-select__role-icon--success {
+  background: var(--lx-color-success-soft);
+  color: var(--lx-color-success);
+}
+
+.lx-select__role-icon--violet {
+  background: var(--lx-color-violet-soft);
+  color: var(--lx-color-violet);
+}
+
+.lx-select__role-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-select__role-desc {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--lx-color-muted);
+}
+
+.lx-select__check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--lx-color-primary);
+  color: #fff;
+  font-size: 9px;
+}
+
+.lx-select__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-2);
+  margin-top: var(--lx-space-1);
+}
+
+.lx-select__btn {
+  height: 42px;
+  border: 0;
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-primary);
+  cursor: pointer;
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.lx-select__btn:hover:not(:disabled) {
+  background: var(--lx-color-primary-deep);
+  box-shadow: var(--lx-shadow-primary);
+}
+
+.lx-select__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.lx-select__btn--ghost {
+  border: 1px solid var(--lx-color-border-strong);
+  background: transparent;
+  color: var(--lx-color-slate);
+}
+
+.lx-select__btn--ghost:hover {
+  border-color: var(--lx-color-primary-line);
+  background: transparent;
+  box-shadow: none;
+  color: var(--lx-color-primary);
+}
+
+@media (max-width: 768px) {
+  .lx-select {
+    grid-template-columns: 1fr;
+  }
+
+  .lx-select__brand {
+    padding: 40px 24px;
+  }
+
+  .lx-select__h1 {
+    font-size: 30px;
+  }
+
+  .lx-select__stats {
+    padding-top: 32px;
+  }
+
+  .lx-select__panel {
+    padding: 32px 16px;
+  }
+
+  .lx-select__card {
+    padding: 28px 20px 24px;
+  }
+}

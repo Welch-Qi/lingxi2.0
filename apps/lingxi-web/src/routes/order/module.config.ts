@@ -1,22 +1,31 @@
 import type { ModuleConfig } from '@/app/router/types';
 
 /**
- * 路由分区「订单交付」清单（技术规约2.0 §4.2.2 强制）。
+ * 订单交付分区清单（一级菜单「订单交付」）。
  *
- * <p>为什么必须登记：新增模块 = 新增路由分区 + 注册 manifest + 登记权限资源，
- * 禁止私挂路由与菜单；菜单与权限码由配置中心下发，前端按权限码过滤渲染。
+ * 功能编号对应《功能清单V2.0》四、订单交付（OP-ORD-）。
  *
- * <p>功能编号：OP-ORD-
+ * 与客户中心的边界：客户中心管"要卖什么"，订单交付管"货到没到"。
+ * OTD 节点模板（订单确认 / 排产 / 生产完工 / 出运 / 报关 / 到港 / 签收）
+ * 由系统提供默认值、企业可增删改，以同时适配贸易型与生产型企业。
  */
 const config: ModuleConfig = {
   key: 'order',
   basePath: '/order',
   titleKey: 'ord.menu.order',
+  subtitleKey: 'ord.subtitle',
   bizCodes: 'OP-ORD-',
   permPrefix: 'ord',
   enabled: true,
+  icon: 'order',
+  layout: () => import('./layout'),
   routes: [
-    // { path: '/order', element: () => import('./index'), permCode: 'ord:*:view' },
+    {
+      path: '/order',
+      element: () => import('./index'),
+      permCode: 'ord:order:view',
+      titleKey: 'ord.menu.home',
+    },
   ],
 };
 

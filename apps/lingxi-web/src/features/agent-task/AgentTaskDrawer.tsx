@@ -12,7 +12,6 @@ import {
   rejectTask,
   takeoverTask,
   type AgentTask,
-  type AutonomyLevel,
 } from '@/features/agent-task/api';
 
 /**
@@ -56,8 +55,14 @@ export function AgentTaskDrawer() {
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
 
+  // 条件展开而非显式传 undefined：exactOptionalPropertyTypes 下
+  // 「属性存在但值为 undefined」是类型错误，也避免把 undefined 序列化进查询串
   const query = useMemo(
-    () => ({ pageNo: 1, pageSize: 50, status: filter === 'ALL' ? undefined : [filter] }),
+    () => ({
+      pageNo: 1,
+      pageSize: 50,
+      ...(filter === 'ALL' ? {} : { status: [filter] }),
+    }),
     [filter],
   );
 

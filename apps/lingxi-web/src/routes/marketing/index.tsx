@@ -1,13 +1,8 @@
-import { PageContainer } from '@/components/PageContainer';
-
 /**
- * 营销中心 路由分区入口（/marketing）。
- * 页面骨架由根 layout + 分区 layout 提供，此处只组装业务内容。
+ * 营销中心分区入口（/marketing）。
+ *
+ * 一级菜单「营销中心」只设一个内容页：内容生产、分发、投放是串行工作流，
+ * 拆成多个一级入口会让人在菜单间来回找上下文（改造指引 5.3 的三段合并思路）。
+ * 因此入口直接指向内容营销页，而不是再套一层营销概览。
  */
-export default function MarketingPage() {
-  return (
-    <PageContainer titleKey="mkg.menu.marketing">
-      {/* TODO: 按功能清单 OP-MKT- / BO-MKG- 实现页面 */}
-    </PageContainer>
-  );
-}
+export { default } from './content';
