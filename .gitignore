@@ -74,6 +74,9 @@ Thumbs.db
 .cursor/
 .qoder/
 .codemaker/
+# WorkBuddy 的协作记忆（每日工作日志）：属会话级记录、每轮都会变动，
+# 与 .cursor/.qoder 同类，不入库；需要长期留存的结论请沉淀到 lingxi-docs。
+.workbuddy/
 *.ai-cache
 
 # ---- 构建与验收产物 ----
