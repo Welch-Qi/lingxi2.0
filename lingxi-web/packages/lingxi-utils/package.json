@@ -1,0 +1,21 @@
+{
+  "name": "@lingxi/utils",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "工具库（金额 / 时间 / 币种 / 校验等纯函数）",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./config": "./src/config.ts"
+  },
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "dependencies": {
+    "dayjs": "^1.11.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "5.9.3"
+  }
+}

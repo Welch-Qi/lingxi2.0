@@ -1,0 +1,59 @@
+# ---- 密钥与本地环境（最高优先级，任何仓库不得放开）----
+.env
+.env.local
+.env.*.local
+# 按环境命名的 .env.* 同样不入库：里面是本机开关（如 VITE_LX_STATIC_PREVIEW 会跳过
+# 认证闸门、改用占位会话），入库等于把"默认关掉认证"变成全组默认值。
+# 变量清单一律以 .env.example 为准，开发者各自复制成 .env.development。
+.env.development
+.env.test
+.env.production
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+id_rsa*
+known_hosts
+secrets/
+
+# ---- Node / 前端 ----
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+*.tsbuildinfo
+.pnpm-store/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-error.log*
+
+# ---- 由 OpenAPI 生成的类型：入库（保证构建可复现），但不允许手工改 ----
+# packages/lingxi-types/src/api.gen.ts  ← 有意不忽略
+
+# ---- 运行时与本地状态 ----
+logs/
+*.log
+run/
+pids/
+*.pid
+.tunnel-down
+
+artifacts/**/logs/
+artifacts/**/tmp/
+# 截图工具的浏览器 profile（体积大且是本地状态，不入库）
+artifacts/**/.chrome-profile/
+
+# ---- IDE 与 AI Coding 本地缓存 ----
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.cursor/
+.qoder/
+.codemaker/
+

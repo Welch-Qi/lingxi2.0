@@ -1,0 +1,19 @@
+# 灵犀系统前端工作区（技术规约2.0 §2.3）
+# 内部包引用一律使用 workspace:*，禁止从 npm 混合拉取内部包
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# 允许执行构建脚本的依赖白名单（pnpm 11 的供应链策略）：
+# esbuild 的 postinstall 负责落地本机二进制，Vite 依赖它，必须放行；
+# 其余依赖一律不放行，减少供应链攻击面。
+allowBuilds:
+  esbuild: true
+
+minimumReleaseAgeExclude:
+  - zod@4.6.2
+
+# 依赖提升策略：Ant Design 与 React 必须单实例，避免多版本共存导致样式与 context 失效
+publicHoistPattern:
+  - '*eslint*'
+  - '*prettier*'

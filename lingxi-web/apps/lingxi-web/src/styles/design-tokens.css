@@ -1,0 +1,116 @@
+:root {
+  /* ==========================================================================
+     灵犀系统设计令牌（CSS 变量轨）—— 与 app/theme/tokens.ts 一一对应
+     设计系统：极光通感（Aurora Sense）
+     视觉基准：《灵犀系统前端改造指引-AuroraSense1.0》第 2 章
+     禁止在组件内写死颜色/字号/圆角魔法值（技术规约2.0 §4.2.5）
+     ========================================================================== */
+
+  /* ===== 品牌色 ===== */
+  --lx-color-primary: #0e7c86;                      /* 极光青：主操作/激活/链接/渐变端点 */
+  --lx-color-primary-deep: #0a6870;                 /* 主色 hover 深一档 */
+  --lx-color-primary-soft: rgba(14, 124, 134, 0.08); /* 主色浅底（选中态/胶囊底） */
+  --lx-color-primary-line: rgba(14, 124, 134, 0.22); /* 主色描边 / focus 环 */
+
+  --lx-color-secondary: #2e6be6;                    /* 冰川蓝：次强调/信息图标 */
+  --lx-color-secondary-soft: rgba(46, 107, 230, 0.08);
+
+  --lx-color-accent: #f0a91a;                       /* 日光黄：预警/待办/关注 */
+  --lx-color-accent-soft: rgba(240, 169, 26, 0.14);
+
+  --lx-color-success: #3d9a6e;                      /* 苔原绿：成功/正向/在线 */
+  --lx-color-success-soft: rgba(61, 154, 110, 0.12);
+
+  --lx-color-danger: #e4644c;                       /* 珊瑚红：危险/告警/跌幅 */
+  --lx-color-danger-soft: rgba(228, 100, 76, 0.12);
+
+  --lx-color-aurora: #7fd6dd;                       /* 极光浅青：深色品牌页强调字 */
+  --lx-color-violet: #7a5ac0;                       /* 智能体紫：第 5 维度 */
+  --lx-color-violet-soft: #f0eafa;
+
+  --lx-color-amber-ink: #a8780b;                    /* 黄底深字（待审核/金牌徽章） */
+  --lx-color-bronze-bg: #f6efe7;                    /* 铜牌徽章底 */
+  --lx-color-bronze-ink: #a9713b;                   /* 铜牌徽章字 */
+
+  /* ===== 中性色 ===== */
+  --lx-color-ink: #1e293b;                          /* 主文本 */
+  --lx-color-slate: #475569;                        /* 次级文本 */
+  --lx-color-muted: #94a3b8;                        /* 弱化文本/辅助说明 */
+  --lx-color-faint: #cbd5e1;                        /* 占位/最弱 */
+  --lx-color-frost: #f3f7fb;                        /* 页面底色（霜白） */
+  --lx-color-card: rgba(255, 255, 255, 0.72);       /* 玻璃卡底（半透明） */
+  --lx-color-card-solid: #ffffff;                   /* 实心卡底 */
+  --lx-color-border: rgba(30, 41, 59, 0.08);        /* 常规描边 */
+  --lx-color-border-strong: rgba(30, 41, 59, 0.14); /* 强化描边（可交互元件） */
+
+  /* ===== 语义别名（沿用既有变量名，避免破坏既有组件） ===== */
+  --lx-color-bg: var(--lx-color-frost);
+  --lx-color-surface: var(--lx-color-card);
+  --lx-color-info: var(--lx-color-secondary);
+  --lx-color-warning: var(--lx-color-accent);
+  --lx-color-error: var(--lx-color-danger);
+  --lx-color-purple: var(--lx-color-violet);
+  --lx-text-primary: var(--lx-color-ink);
+  --lx-text-secondary: var(--lx-color-slate);
+  --lx-text-muted: var(--lx-color-muted);
+
+  /* ===== 字体 ===== */
+  --lx-font-display: 'Manrope', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --lx-font-body: 'Noto Sans SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* 数字统一等宽，保证表格与看板对齐（tabular-nums） */
+  --lx-font-numeric: 'Manrope', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ===== 圆角 ===== */
+  --lx-radius-sm: 8px;
+  --lx-radius: 10px;
+  --lx-radius-md: 12px;
+  --lx-radius-lg: 16px;
+  --lx-radius-xl: 20px;
+
+  /* ===== 阴影（两层：常态 / 浮起） ===== */
+  --lx-shadow-card: 0 1px 2px rgba(15, 40, 60, 0.04), 0 8px 24px rgba(15, 40, 60, 0.05);
+  --lx-shadow-pop: 0 4px 12px rgba(15, 40, 60, 0.08), 0 16px 40px rgba(15, 40, 60, 0.1);
+  --lx-shadow-primary: 0 4px 14px rgba(14, 124, 134, 0.28); /* 主按钮 hover */
+  --lx-shadow-agent: 0 3px 8px rgba(15, 40, 60, 0.15);      /* 智能体图标 */
+
+  /* ===== 渐变（智能体色系限定在 青/蓝/紫/黄/绿 五维内） ===== */
+  --lx-grad-brand: linear-gradient(135deg, #2e6be6, #0e7c86);
+  --lx-grad-aurora: linear-gradient(90deg, #0e7c86 0%, #2e6be6 45%, #3d9a6e 80%, #f0a91a 100%);
+
+  /* ===== 间距 ===== */
+  --lx-space-1: 4px;
+  --lx-space-2: 8px;
+  --lx-space-3: 12px;
+  --lx-space-4: 16px;
+  --lx-space-5: 24px;
+  --lx-space-6: 32px;
+
+  /* ===== 布局尺寸 ===== */
+  --lx-aurora-height: 3px;      /* 极光色带高度，sticky 元素偏移量同此值 */
+  --lx-sidenav-width: 224px;
+  --lx-topbar-height: 62px;
+  --lx-statusbar-height: 40px;
+  --lx-content-max-width: 1280px;
+  --lx-content-padding-x: 28px;
+  --lx-content-gap: 22px;
+}
+
+/* ===== 深色主题（可选扩展）：仅覆盖令牌，组件代码无需改动 ===== */
+:root[data-lx-theme='dark'] {
+  --lx-color-ink: #e6edf5;
+  --lx-color-slate: #b6c2d4;
+  --lx-color-muted: #7a8ba3;
+  --lx-color-faint: #56677f;
+  --lx-color-frost: #0b1220;
+  --lx-color-card: rgba(15, 26, 44, 0.72);
+  --lx-color-card-solid: #101b2e;
+  --lx-color-border: rgba(148, 163, 184, 0.12);
+  --lx-color-border-strong: rgba(148, 163, 184, 0.22);
+}
+
+@media (max-width: 768px) {
+  :root {
+    --lx-content-padding-x: 16px;
+    --lx-sidenav-width: 0px;
+  }
+}

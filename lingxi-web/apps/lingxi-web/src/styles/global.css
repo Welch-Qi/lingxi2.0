@@ -1,0 +1,262 @@
+/* ==========================================================================
+   全局基础样式 + 全局签名元素（Aurora Sense 极光通感）
+   布局一律走 class，禁止在组件内写内联 style 做布局（技术规约2.0 §4.2.5）
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--lx-font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--lx-text-primary);
+  background: var(--lx-color-frost);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--lx-color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   签名字段 1：数字优先 —— 所有数值/百分比/编码/日期必须加 .lx-num
+   为什么强制：不统一则表格与看板数字宽度抖动，无法纵向对齐
+   -------------------------------------------------------------------------- */
+.lx-num {
+  font-family: var(--lx-font-numeric);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* --------------------------------------------------------------------------
+   签名字段 2：顶部极光色带（全站固定 3px，14s 缓慢漂移）
+   放在根 layout 第一个子元素；所有 sticky 元素 top 偏移必须为 3px
+   -------------------------------------------------------------------------- */
+.lx-aurora {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--lx-aurora-height);
+  z-index: 100;
+  pointer-events: none;
+  background: var(--lx-grad-aurora);
+  background-size: 200% 100%;
+  animation: lx-aurora-drift 14s ease-in-out infinite;
+}
+
+@keyframes lx-aurora-drift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   签名字段 3：玻璃拟态
+   禁止改成实心纯白/纯深色，否则失去通透感（改造指引第 8 章禁忌 2）
+   -------------------------------------------------------------------------- */
+.lx-glass {
+  background: var(--lx-color-card);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-lg);
+  box-shadow: var(--lx-shadow-card);
+}
+
+/* 在线脉冲点（状态栏 / 租户胶囊） */
+.lx-pulse-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--lx-color-success);
+  animation: lx-pulse-ring 2s infinite;
+}
+
+@keyframes lx-pulse-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(61, 154, 110, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(61, 154, 110, 0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   统一交互反馈（改造指引 3.3）
+   -------------------------------------------------------------------------- */
+.lx-hoverable {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.lx-hoverable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--lx-shadow-pop);
+  border-color: var(--lx-color-border-strong);
+}
+
+.lx-focusable:focus-visible {
+  outline: 3px solid var(--lx-color-primary-line);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   页面容器
+   -------------------------------------------------------------------------- */
+.lx-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-content-gap);
+}
+
+.lx-page__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--lx-space-4);
+}
+
+.lx-page__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lx-page__title {
+  margin: 0;
+  font-family: var(--lx-font-display);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--lx-color-ink);
+}
+
+.lx-page__subtitle {
+  font-size: 12.5px;
+  color: var(--lx-color-muted);
+}
+
+/* 标题右侧的操作区（导出、时间范围切换等） */
+.lx-page__extra {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-2);
+  flex: none;
+}
+
+.lx-page__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-content-gap);
+}
+
+/* 次要说明文字（表格内二级信息、状态栏旁注） */
+.lx-muted {
+  color: var(--lx-text-muted);
+  font-size: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   章节头（章节标题 + 副标题 + 右侧操作）
+   -------------------------------------------------------------------------- */
+.lx-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-3);
+}
+
+.lx-section__head {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-3);
+}
+
+.lx-section__title {
+  margin: 0;
+  font-family: var(--lx-font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--lx-color-ink);
+}
+
+.lx-section__sub {
+  font-size: 12px;
+  color: var(--lx-color-muted);
+}
+
+.lx-section__more {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--lx-color-primary);
+}
+
+.lx-section__more:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   加载态
+   -------------------------------------------------------------------------- */
+.lx-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-2);
+  align-items: center;
+  padding: var(--lx-space-6);
+}
+
+.lx-loading__text {
+  color: var(--lx-text-muted);
+  font-size: 13px;
+}
+
+/* --------------------------------------------------------------------------
+   响应式降级（改造指引 7.5）
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .lx-page__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-aurora,
+  .lx-pulse-dot {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
+}
