@@ -1,13 +1,15 @@
 # 灵犀系统（Synapse X）· 代码仓
 
 > 面向中小制造企业出海经营的 AI-Native 数智化平台。
-> 本目录为**仓库组根**，下辖 4 个代码仓库 + 1 个文档库，全部纳入同一 GitLab 组 `lingxi/`。
+> 本仓库为**单仓库（monorepo）**，托管于 GitHub [`Welch-Qi/lingxi2.0`](https://github.com/Welch-Qi/lingxi2.0)。
+> 2026-09-17 由「仓库组根 + 5 个独立子仓库」合并而来，各子系统提交历史完整保留；
+> 原子仓库的 `.git` 已归档至 `D:/work/_lingxi-subrepo-backup-20260917/`（可回滚）。
 
 ---
 
-## 一、仓库导航
+## 一、目录导航
 
-| 仓库 | 内容 | 技术栈 | 状态 |
+| 目录 | 内容 | 技术栈 | 状态 |
 |---|---|---|---|
 | [`lingxi-server/`](lingxi-server/) | 后端 Monorepo（14 个 Maven 模块） | JDK 25 LTS · Spring Boot 4.1.1 · MyBatis-Plus · PostgreSQL 17 | 骨架就绪 |
 | [`lingxi-web/`](lingxi-web/) | 前端 Monorepo（pnpm workspace） | React 19 · Vite 7 · TypeScript 5.9 · Ant Design 5 | 骨架就绪 |
@@ -105,7 +107,7 @@ bash lingxi-ops/scripts/verify-skeleton.sh
 
 | 项 | 状态 |
 |---|---|
-| Git 仓库（5 个，main 分支，各含首次提交） | ✅ 已初始化（`lingxi-dev / dev@lingxi.local`，**需替换为真实身份**） |
+| Git 仓库（单仓 monorepo，main 分支，21 个提交） | ✅ 已合并（5 个子仓库历史并入，提交身份 `Welch-Qi`） |
 | 后端模块目录（20 个：13 单体 + 5 Starter + 2 独立进程） | ✅ 已建，含 `package-info.java` 声明分层职责 |
 | BOM 版本锁定（`lingxi-dependencies`） | ✅ 已锁，全部版本经 Maven Central 核验 |
 | 五层分层骨架与 ArchUnit 规则 | ✅ `ArchUnit` 4 条规则进 CI |
@@ -115,7 +117,7 @@ bash lingxi-ops/scripts/verify-skeleton.sh
 | 骨架自检 | ✅ `bash lingxi-ops/scripts/verify-skeleton.sh` → 通过 77 / 失败 0（另有 4 项文档缺口提醒） |
 | 业务功能实现 | ⬜ 待按 `TASKS.md` 分批派发 |
 
-> **换行符策略**：全部文本文件强制 LF（`.gitattributes` + 各仓 `.gitignore`）。
+> **换行符策略**：全部文本文件强制 LF（根级 `.gitattributes` 覆盖全仓，各子目录另有同名文件按路径前缀生效）。
 > 原因：Shell 脚本被转成 CRLF 后，在 Linux 云主机上会以 `bad interpreter: /bin/bash^M` 直接失败，
 > 而本地一切正常——这类「环境相关故障」排查成本极高，故在仓级别锁死。
 
