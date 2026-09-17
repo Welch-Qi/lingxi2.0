@@ -25,12 +25,14 @@ export function formatInTimezone(
   return dayjs.utc(isoUtc).tz(tz).format(pattern);
 }
 
-/** 客户相关时间轴：必须带时区标注，避免跨时区误判跟进时效。 */
-export function formatForCustomer(
-  isoUtc: string | null | undefined,
-  customerTimezone: string,
-  locale = 'zh-CN',
-): string {
+/**
+ * 客户相关时间轴：必须带时区标注，避免跨时区误判跟进时效。
+ *
+ * 说明：输出固定用 ISO 风格（`YYYY-MM-DD HH:mm`）+ 时区偏移，不随 UI 语言变化——
+ * 客户沟通记录属凭证类信息，数字序日期在 zh-CN / en-US 下都必须无歧义，
+ * 故此处不接受 locale 参数（文案本地化由调用方的 i18n 承担）。
+ */
+export function formatForCustomer(isoUtc: string | null | undefined, customerTimezone: string): string {
   if (!isoUtc) {
     return '-';
   }

@@ -25,7 +25,7 @@ export function LxTable<T extends object>({
   pageNo = 1,
   pageSize = 20,
   onPageChange,
-  loading,
+  loading = false,
   ...rest
 }: LxTableProps<T>) {
   const { t } = useTranslation();

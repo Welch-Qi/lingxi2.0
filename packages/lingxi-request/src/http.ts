@@ -77,9 +77,11 @@ http.interceptors.response.use(
     // 业务失败：抛带 messageKey 的错误，由调用方或全局处理决定提示方式
     throw new ApiError(payload.code, payload.messageKey, payload.message, payload.traceId);
   },
-  (error) => {
-    const status = error?.response?.status as number | undefined;
-    const body = error?.response?.data as ApiEnvelope<unknown> | undefined;
+  (error: unknown) => {
+    // axios 的 error 回调参数是 any，这里显式收窄，避免 any 扩散到错误处理逻辑
+    const axiosError = axios.isAxiosError(error) ? error : undefined;
+    const status = axiosError?.response?.status;
+    const body = axiosError?.response?.data as ApiEnvelope<unknown> | undefined;
     if (status === 401) {
       // 登录态失效：统一跳登录，禁止各页面自行处理
       contextProvider.onUnauthenticated();
@@ -88,19 +90,19 @@ http.interceptors.response.use(
     if (body && typeof body.code === 'number') {
       throw new ApiError(body.code, body.messageKey, body.message, body.traceId);
     }
-    throw new ApiError(status ?? -1, 'common.error.system', error?.message ?? 'network error');
+    throw new ApiError(status ?? -1, 'common.error.system', axiosError?.message ?? 'network error');
   },
 );
 
 // ---- 语义化方法封装 ----
 export async function get<T>(url: string, params?: Record<string, unknown>): Promise<T> {
   const res = await http.get<ApiEnvelope<T>>(url, { params });
-  return (res.data as ApiEnvelope<T>).data;
+  return res.data.data;
 }
 
 export async function getPage<T>(url: string, params?: Record<string, unknown>): Promise<PageResult<T>> {
   const res = await http.get<ApiEnvelope<PageResult<T>>>(url, { params });
-  return (res.data as ApiEnvelope<PageResult<T>>).data;
+  return res.data.data;
 }
 
 /** 读操作接口，仅用于文档化：参数必须含 id（便于审计）；禁止在前端拼接业务规则参数 */
@@ -129,19 +131,19 @@ function withIdempotency(options?: IdempotentRequestOptions): AxiosRequestConfig
  */
 export async function post<T>(url: string, body?: unknown, options?: IdempotentRequestOptions): Promise<T> {
   const res = await http.post<ApiEnvelope<T>>(url, body, withIdempotency(options));
-  return (res.data as ApiEnvelope<T>).data;
+  return res.data.data;
 }
 
 /** 写操作统一入口（PUT，全量更新）。语义：幂等，重复提交结果一致。 */
 export async function put<T>(url: string, body?: unknown, options?: IdempotentRequestOptions): Promise<T> {
   const res = await http.put<ApiEnvelope<T>>(url, body, withIdempotency(options));
-  return (res.data as ApiEnvelope<T>).data;
+  return res.data.data;
 }
 
 /** 写操作统一入口（PATCH，局部更新）。用于状态流转与字段级修改。 */
 export async function patch<T>(url: string, body?: unknown, options?: IdempotentRequestOptions): Promise<T> {
   const res = await http.patch<ApiEnvelope<T>>(url, body, withIdempotency(options));
-  return (res.data as ApiEnvelope<T>).data;
+  return res.data.data;
 }
 
 /**
@@ -152,5 +154,5 @@ export async function patch<T>(url: string, body?: unknown, options?: Idempotent
  */
 export async function del<T>(url: string, params?: Record<string, unknown>, options?: IdempotentRequestOptions): Promise<T> {
   const res = await http.delete<ApiEnvelope<T>>(url, { params, ...withIdempotency(options) });
-  return (res.data as ApiEnvelope<T>).data;
+  return res.data.data;
 }

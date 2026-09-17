@@ -9,11 +9,11 @@ import { useTranslation } from 'react-i18next';
  */
 export function LxTakeoverButton({
   taskId,
-  disabled,
+  disabled = false,
   onTakeover,
 }: {
   taskId: string;
-  disabled?: boolean;
+  disabled?: boolean | undefined;
   onTakeover: (taskId: string) => void | Promise<void>;
 }) {
   const { t } = useTranslation();
