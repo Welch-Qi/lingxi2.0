@@ -1,46 +1,51 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
 import {
-  AlertOutlined,
   ExportOutlined,
   FileAddOutlined,
   MoneyCollectOutlined,
   RocketOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
+import {
+  LxActionBar,
+  LxFilterButton,
+  LxSearchInput,
+  LxSectionHeader,
+  LxStageBoard,
+  LxTable,
+  LxTableCard,
+  LxTag,
+  LxWorkList,
+} from '@lingxi/ui';
+import type { LxStage, LxWorkItem } from '@lingxi/ui';
 import { formatMoney } from '@lingxi/utils';
-import type { ModuleHomeRow } from '@/components/ModuleHome';
-import { ModuleHome } from '@/components/ModuleHome';
-import { LxTag } from '@lingxi/ui';
+import { PageContainer } from '@/components/PageContainer';
+import { ORDER_ROWS, OTD_STAGES } from './data';
 
 /**
- * 订单交付首页（/order）—— 从签约到签收（产品规划说明书 §2.4）。
+ * 订单交付首页（/order）—— 从签约到签收（产品规划说明书 V2.1 §2.6）。
+ *
+ * 典型使用者：渠道运营总监。§1.5 描述他关心"渠道结构健康不健康、履约顺不顺、
+ * 准时不准时"，§5.3 给出的默认首屏是「订单量结构 + OTD 准时率与异常单 + 渠道产出排行」。
+ *
+ * 差异化的关键在 OTD 节点看板：其他模块看"有多少"，本模块看"卡在哪一段"。
+ * 七个节点（订单确认→排产→生产完工→出运→报关→到港→签收）横排后，
+ * 节点间数量骤减的位置就是瓶颈，这是订单模块独有的判断方式。
+ *
+ * 两个队列按"要不要立刻动手"分层：
+ *   ① 交付风险单（danger）—— 已偏移标准工期，必须今天催办
+ *   ② 待回款（accent）—— 有账期约束，本周内处理即可
  *
  * 金额处理：一律走 formatMoney（最小单位整数 + 币种），
  * 禁止在组件里做浮点运算或手工拼币种符号（技术规约2.0 §3.3 D5 / §4.10）。
  *
- * OTD 节点：系统提供默认节点模板（订单确认 / 排产 / 生产完工 / 出运 / 报关 / 到港 / 签收），
- * 企业可增删改并设标准工期与预警提前量，以适配贸易型与生产型企业的差异。
+ * 文案一律走 i18n key（附录D 规则10），故演示数据定义在 ./data。
  *
- * 静态骨架：占位演示数据，接入后走 /api/v1/ord/orders。
+ * 2026-09-29 扩展：OTD 看板左侧加「全部订单」卡，所有卡可点筛选下方列表；
+ * 风险 / 待回款区「查看全部」同样筛选下方列表；四个动作按钮与行内动作拉起二级页。
  */
-
-interface OrderRow extends ModuleHomeRow {
-  id: string;
-  orderNo: string;
-  customer: string;
-  amountMinor: number;
-  currency: string;
-  nodeKey: string;
-  eta: string;
-  status: 'ontrack' | 'risk' | 'delayed';
-}
-
-const ROWS: readonly OrderRow[] = [
-  { id: '1', orderNo: 'SO-2026-0418', customer: 'Nordwind Energie GmbH', amountMinor: 15_600_000, currency: 'EUR', nodeKey: 'demo.otd.production', eta: '2026-10-08', status: 'ontrack' },
-  { id: '2', orderNo: 'SO-2026-0417', customer: 'Saigon Solar Co., Ltd', amountMinor: 4_280_000, currency: 'USD', nodeKey: 'demo.otd.shipping', eta: '2026-09-24', status: 'risk' },
-  { id: '3', orderNo: 'SO-2026-0415', customer: 'BluePeak Storage LLC', amountMinor: 9_950_000, currency: 'USD', nodeKey: 'demo.otd.customs', eta: '2026-09-30', status: 'delayed' },
-  { id: '4', orderNo: 'SO-2026-0412', customer: 'Anatolia Power A.S.', amountMinor: 7_120_000, currency: 'EUR', nodeKey: 'demo.otd.arrival', eta: '2026-09-20', status: 'ontrack' },
-  { id: '5', orderNo: 'SO-2026-0409', customer: 'Atacama Mining SpA', amountMinor: 3_640_000, currency: 'USD', nodeKey: 'demo.otd.received', eta: '2026-09-12', status: 'ontrack' },
-];
 
 const STATUS_TAG = {
   ontrack: 'done',
@@ -48,15 +53,105 @@ const STATUS_TAG = {
   delayed: 'video',
 } as const;
 
+/** 列表筛选：'all' = 全部；OTD 阶段键 = 按节点；'risk'/'pay' = 按队列。 */
+type ListFilter = string;
+
 export default function OrderHomePage() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const [keyword, setKeyword] = useState('');
+  const [listFilter, setListFilter] = useState<ListFilter>('all');
+
+  /** OTD 节点名走 i18n（`ord.stage.*.label`）；最左侧合成「全部订单」卡。 */
+  const otdStages: readonly LxStage[] = [
+    { key: 'all', label: t('ord.stage.all'), count: 96, value: '¥12.8M' },
+    ...OTD_STAGES.map((stage) => ({ ...stage, label: t(`ord.stage.${stage.key}.label`) })),
+  ];
+
+  const activeKey = listFilter === 'all' ? 'all' : OTD_STAGES.some((s) => s.key === listFilter) ? listFilter : undefined;
+
+  /** 交付风险单：ETA 与卡点节点是催办的依据；AI 提前预警在标记里体现。 */
+  const riskItems: readonly LxWorkItem[] = [
+    {
+      key: 'r1',
+      title: 'BluePeak Storage LLC',
+      sub: t('ord.item.r1.sub'),
+      tags: [{ label: t('ord.item.r1.tag1'), variant: 'review' }],
+      agentLabel: t('ord.item.r1.agent'),
+      value: '$99,500',
+      valueTone: 'danger',
+      actionLabel: t('ord.action.urge'),
+      actionPrimary: true,
+      onAction: () => void navigate('/order/3/urge'),
+    },
+    {
+      key: 'r2',
+      title: 'Saigon Solar Co., Ltd',
+      sub: t('ord.item.r2.sub'),
+      tags: [{ label: t('ord.item.r2.tag1'), variant: 'review' }],
+      agentLabel: t('ord.item.r2.agent'),
+      value: '$42,800',
+      valueTone: 'danger',
+      actionLabel: t('ord.action.urge'),
+      actionPrimary: true,
+      onAction: () => void navigate('/order/2/urge'),
+    },
+    {
+      key: 'r3',
+      title: 'Anatolia Power A.S.',
+      sub: t('ord.item.r3.sub'),
+      tags: [{ label: t('ord.item.r3.tag1'), variant: 'producing' }],
+      value: '€71,200',
+      valueTone: 'accent',
+      actionLabel: t('ord.item.r3.action'),
+      onAction: () => void navigate('/order/4/nodes'),
+    },
+  ];
+
+  /** 待回款：账期临近的应收账款，处理动作是"登记回款"而不是"催客户"。 */
+  const receivableItems: readonly LxWorkItem[] = [
+    {
+      key: 'm1',
+      title: 'Nordwind Energie GmbH',
+      sub: t('ord.item.m1.sub'),
+      tags: [{ label: t('ord.item.m1.tag1'), variant: 'producing' }],
+      value: '€156,000',
+      actionLabel: t('ord.action.logPayment'),
+      actionPrimary: true,
+      onAction: () => void navigate('/order/payment'),
+    },
+    {
+      key: 'm2',
+      title: 'Atacama Mining SpA',
+      sub: t('ord.item.m2.sub'),
+      tags: [{ label: t('ord.item.m2.tag1'), variant: 'review' }],
+      value: '$36,400',
+      valueTone: 'danger',
+      actionLabel: t('ord.action.logPayment'),
+      actionPrimary: true,
+      onAction: () => void navigate('/order/payment'),
+    },
+  ];
+
+  const baseRows =
+    listFilter === 'all'
+      ? ORDER_ROWS
+      : listFilter === 'risk'
+        ? ORDER_ROWS.filter((row) => row.status === 'risk' || row.status === 'delayed')
+        : listFilter === 'pay'
+          ? ORDER_ROWS.filter((row) => row.pendingPayment)
+          : ORDER_ROWS.filter((row) => row.stageKey === listFilter);
+
+  const visibleRows = keyword
+    ? baseRows.filter((row) => row.customer.includes(keyword) || row.orderNo.includes(keyword))
+    : baseRows;
 
   const columns = [
     {
       title: t('ord.col.order'),
       dataIndex: 'orderNo',
       key: 'order',
-      render: (_value: string, row: OrderRow) => (
+      render: (_value: string, row: (typeof ORDER_ROWS)[number]) => (
         <span>
           <div className="lx-cell-title">{row.customer}</div>
           <div className="lx-cell-code">{row.orderNo}</div>
@@ -67,7 +162,7 @@ export default function OrderHomePage() {
       title: t('ord.col.amount'),
       dataIndex: 'amountMinor',
       key: 'amount',
-      render: (_value: number, row: OrderRow) => (
+      render: (_value: number, row: (typeof ORDER_ROWS)[number]) => (
         <span className="lx-num">{formatMoney(row.amountMinor, row.currency, i18n.language)}</span>
       ),
     },
@@ -87,13 +182,19 @@ export default function OrderHomePage() {
       title: t('common.status'),
       dataIndex: 'status',
       key: 'status',
-      render: (value: OrderRow['status']) => <LxTag variant={STATUS_TAG[value]}>{t(`ord.status.${value}`)}</LxTag>,
+      render: (value: (typeof ORDER_ROWS)[number]['status']) => (
+        <LxTag variant={STATUS_TAG[value]}>{t(`ord.status.${value}`)}</LxTag>
+      ),
     },
     {
       title: t('common.action'),
       key: 'action',
-      render: () => (
-        <button type="button" className="lx-cell-link lx-focusable">
+      render: (_value: string, row: (typeof ORDER_ROWS)[number]) => (
+        <button
+          type="button"
+          className="lx-cell-link lx-focusable"
+          onClick={() => void navigate(`/order/${row.id}/track`)}
+        >
           {t('ord.action.track')}
         </button>
       ),
@@ -101,38 +202,90 @@ export default function OrderHomePage() {
   ];
 
   return (
-    <ModuleHome<OrderRow>
-      titleKey="ord.page.home"
-      subtitleKey="ord.page.homeSub"
-      kpis={[
-        { labelKey: 'ord.kpi.monthOrders', value: '96', sub: t('ord.kpi.sub.month'), trend: 'up', delta: '9.1%', color: 'primary', spark: [6, 8, 9, 11, 10, 13, 14, 16] },
-        { labelKey: 'ord.kpi.gmv', value: formatMoney(1_284_000_000, 'CNY', i18n.language), sub: t('ord.kpi.sub.gmv'), trend: 'up', delta: '12.6%', color: 'secondary', spark: [20, 24, 26, 32, 30, 38, 42, 48] },
-        { labelKey: 'ord.kpi.otd', value: '94.2%', sub: t('ord.kpi.sub.otd'), trend: 'up', delta: '1.8pt', color: 'accent', spark: [7, 8, 8, 9, 9, 9, 10, 10] },
-        { labelKey: 'ord.kpi.risk', value: '3', sub: t('ord.kpi.sub.risk'), trend: 'dn', delta: '2', color: 'success', spark: [5, 4, 5, 4, 3, 4, 3, 3] },
-      ]}
-      insightsTitleKey="ord.insight.title"
-      insightsSubKey="ord.insight.sub"
-      insightsMoreKey="ord.insight.more"
-      insights={[
-        { typeKey: 'ord.insight.otd.type', textKey: 'ord.insight.otd.text', sourceKey: 'ord.insight.otd.source', accent: 'accent', tone: 'sage', icon: <AlertOutlined /> },
-        { typeKey: 'ord.insight.payment.type', textKey: 'ord.insight.payment.text', sourceKey: 'ord.insight.payment.source', accent: 'primary', tone: 'sage', icon: <MoneyCollectOutlined /> },
-        { typeKey: 'ord.insight.parse.type', textKey: 'ord.insight.parse.text', sourceKey: 'ord.insight.parse.source', accent: 'success', tone: 'sage', icon: <FileAddOutlined /> },
-      ]}
-      quicks={[
-        { titleKey: 'ord.quick.create', descKey: 'ord.quick.createDesc', icon: <RocketOutlined />, tone: 'primary' },
-        { titleKey: 'ord.quick.payment', descKey: 'ord.quick.paymentDesc', icon: <MoneyCollectOutlined />, tone: 'accent' },
-        { titleKey: 'ord.quick.statement', descKey: 'ord.quick.statementDesc', icon: <ExportOutlined />, tone: 'secondary' },
-      ]}
-      listTitleKey="ord.list.title"
-      listSubKey="ord.list.sub"
-      listMoreKey="ord.list.more"
-      searchPlaceholderKey="ord.list.search"
-      filterLabelKey="ord.list.filter"
-      columns={columns}
-      rows={ROWS}
-      emptyTextKey="ord.list.empty"
-      emptyHintKey="ord.list.emptyHint"
-      total={96}
-    />
+    <PageContainer titleKey="ord.page.home" hideTitle>
+      <LxActionBar
+        primary={{
+          key: 'create',
+          label: t('ord.bar.create'),
+          icon: <RocketOutlined />,
+          onClick: () => void navigate('/order/create'),
+        }}
+        items={[
+          { key: 'parse', label: t('ord.bar.parse'), icon: <FileAddOutlined />, onClick: () => void navigate('/order/parse') },
+          { key: 'payment', label: t('ord.bar.payment'), icon: <MoneyCollectOutlined />, onClick: () => void navigate('/order/payment') },
+          { key: 'statement', label: t('ord.bar.statement'), icon: <ExportOutlined />, onClick: () => void navigate('/order/statement') },
+        ]}
+        note={
+          <>
+            {t('ord.note.prefix')}
+            <b>96</b>
+            {t('ord.note.suffix')}
+          </>
+        }
+      />
+
+      <LxStageBoard
+        stages={otdStages}
+        onSelect={(key) => setListFilter(key)}
+        activeKey={activeKey}
+      />
+
+      {listFilter === 'all' && (
+        <div className="lx-workgrid">
+          <div className="lx-workgrid__col">
+            <LxWorkList
+              title={t('ord.queue.risk.title')}
+              sub={t('ord.queue.risk.sub')}
+              count={3}
+              tone="danger"
+              moreLabel={t('ord.queue.risk.more')}
+              onMore={() => setListFilter('risk')}
+              items={riskItems}
+              emptyText={t('ord.queue.risk.empty')}
+            />
+          </div>
+
+          <div className="lx-workgrid__col">
+            <LxWorkList
+              title={t('ord.queue.pay.title')}
+              sub={t('ord.queue.pay.sub')}
+              count={5}
+              tone="accent"
+              moreLabel={t('ord.queue.pay.more')}
+              onMore={() => setListFilter('pay')}
+              items={receivableItems}
+              emptyText={t('ord.queue.pay.empty')}
+            />
+          </div>
+        </div>
+      )}
+
+      <section className="lx-section">
+        <LxSectionHeader
+          title={t('ord.list.title')}
+          sub={t('ord.list.sub')}
+        />
+        <LxTableCard
+          tools={
+            <>
+              <LxSearchInput value={keyword} placeholder={t('ord.list.search')} onChange={setKeyword} />
+              <LxFilterButton label={t('ord.list.filter')} />
+              <span className="lx-tools-note">
+                <ThunderboltOutlined />
+                {t('ord.list.syncHint')}
+              </span>
+            </>
+          }
+        >
+          <LxTable<(typeof ORDER_ROWS)[number]>
+            columns={columns}
+            dataSource={[...visibleRows]}
+            total={listFilter === 'all' && !keyword ? 96 : visibleRows.length}
+            pageNo={1}
+            pageSize={20}
+          />
+        </LxTableCard>
+      </section>
+    </PageContainer>
   );
 }

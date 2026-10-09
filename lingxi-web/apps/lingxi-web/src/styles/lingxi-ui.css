@@ -83,6 +83,29 @@
   color: var(--lx-color-muted);
 }
 
+/* 指标名不折行。折行会把同一行的卡片撑成不同高度，整排栅格就散了。
+   真装不下时退化为省略号而不是溢出去压到隔壁卡上（7 列窄卡下宁可截断也不破版）。 */
+.lx-kpi__name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 时点标签（如「今日」）：挂在数值行右端，与左边的大字拉开距离。
+   底色走 frost 令牌：亮色下比白卡略深、暗色下比卡底略深，两态都可见且不引入新色相。 */
+.lx-kpi__badge {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--lx-color-frost);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--lx-color-slate);
+}
+
 .lx-kpi__tick {
   width: 3px;
   height: 11px;
@@ -111,8 +134,16 @@
   background: var(--lx-color-violet);
 }
 
-.lx-kpi__value {
+/* 数值行：大字 + 时点标签。
+   用 baseline 对齐让胶囊贴着数字的基线，而不是与 24px 的字框垂直居中。 */
+.lx-kpi__valuerow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   margin-top: 6px;
+}
+
+.lx-kpi__value {
   font-family: var(--lx-font-display);
   font-size: 24px;
   font-weight: 700;
@@ -120,6 +151,11 @@
   letter-spacing: -0.02em;
   line-height: 1.1;
   color: var(--lx-color-ink);
+}
+
+/* 行间距由 .lx-kpi__valuerow 统一给，值自身不再重复撑开 */
+.lx-kpi__valuerow .lx-kpi__value {
+  margin-top: 0;
 }
 
 .lx-kpi__value--sm {
@@ -146,6 +182,14 @@
   width: 100%;
   height: 18px;
   margin-top: var(--lx-space-2);
+}
+
+/* 指标卡选中态：作为"筛选 / 切换列表"入口时高亮当前生效的卡片。
+   用主色描边 + 极淡主色底，不引入新色相，与五维色域一致。 */
+.lx-kpi--active {
+  border-color: var(--lx-color-primary);
+  box-shadow: 0 0 0 1px var(--lx-color-primary) inset;
+  background-image: linear-gradient(180deg, var(--lx-color-primary-soft), transparent 70%);
 }
 
 /* 涨跌胶囊：绿涨 / 红跌 / 灰平（中国市场惯例） */
@@ -364,37 +408,48 @@
   color: var(--lx-color-ink);
 }
 
-/* 智能体协作网络的流动连接线（仅在 ≥4 列时显示） */
-.lx-agent-net {
-  position: relative;
+/* 智能体协作网络。
+   不画贯穿全行的横线——横线从卡片背后穿过，卡片多时像被划了一道，
+   而「谁和谁在协作」这个信息横线本身也表达不了。改为相邻两张卡之间嵌一个链接图标，
+   连接关系变成一个个具体的相邻关系。 */
+.lx-agentnet {
+  display: flex;
+  align-items: stretch;
 }
 
-.lx-agent-net::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 6%;
-  right: 6%;
-  height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(
-    90deg,
-    var(--lx-color-primary-line),
-    var(--lx-color-secondary),
-    var(--lx-color-success)
-  );
-  opacity: 0.5;
-  z-index: 0;
+.lx-agentnet > .lx-agent {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
-.lx-agent-net > * {
-  position: relative;
-  z-index: 1;
+.lx-agentnet__link {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  font-size: 14px;
+  /* 用 slate 而非 muted：muted（#94a3b8）在浅底上几乎看不见，
+     图标存在但读不出来就等于没加。slate 在亮/暗两态都清晰，又不至于抢过卡片本身。 */
+  color: var(--lx-color-slate);
 }
 
 @media (max-width: 1100px) {
-  .lx-agent-net::before {
+  /* 降到两列后卡与卡不再左右相邻，链接图标失去指向对象：隐藏并退回等距栅格 */
+  .lx-agentnet {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--lx-space-4);
+  }
+
+  .lx-agentnet__link {
     display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .lx-agentnet {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -702,6 +757,8 @@
   font-family: inherit;
   font-size: 12.5px;
   font-weight: 500;
+  /* 行内动作链接不允许折行：中文没有词间空格，宽度差几像素就会断成「客户3 / 60」 */
+  white-space: nowrap;
   color: var(--lx-color-primary);
 }
 
@@ -871,13 +928,23 @@
   color: var(--lx-color-secondary);
 }
 
+.lx-quick__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* 允许文本列在窄卡片里折行，而不是把图标挤出容器 */
+  min-width: 0;
+}
+
 .lx-quick__title {
+  display: block;
   font-size: 13px;
   font-weight: 500;
   color: var(--lx-color-ink);
 }
 
 .lx-quick__desc {
+  display: block;
   font-size: 11.5px;
   color: var(--lx-color-muted);
 }
@@ -967,6 +1034,85 @@
 /* 无权限时不渲染（LxPermission），无需禁用态样式 */
 .lx-tablecard .ant-pagination {
   padding: 0 18px 14px;
+}
+
+/* --------------------------------------------------------------------------
+   LxTable · fit 模式 —— 固定列宽 / 永不横滚 / 截断 + 悬停看全
+   （组件侧开关见 packages/lingxi-ui/src/LxTable.tsx 的 `fit`）
+
+   为什么要有这一套：默认的 `scroll={{ x: 'max-content' }}` 让表格宽 =
+   max(容器, **内容自然宽**)，于是只要内容比声明列宽长，整表就顶出容器、出现横向滚动条。
+   实测（zh-CN，2026-09-24）：商机中心十列自然宽 1123px、线索中心九列 1092px、
+   客户 360 商机九列 1118px —— 而内容区在 1280 视口只有 998px、1366 视口 1084px，
+   三张表**在 ≤1366 必滚**；1440 视口容器 1158px 不过是"恰好跨过临界点"，
+   所以此前只跑 1440/1682 的探针全部报 0，而用户天天看见滚动条。
+
+   开了 fit 之后列宽的权威只有一处：**列定义里的 `width`（百分比，合计 100%）**。
+   内容反过来不能再撑宽列，超出的部分按"截断 + `title` 悬停看全"处理 ——
+   即用户要的"每列固定宽度，文字显示不全采用截断，鼠标放置后显示全"。
+
+   三条规则各自不可省：
+   ① 表格 width:100% + table-layout:fixed —— 结构上排除横向溢出（这是"不横滚"的根因修复，
+      不是拿 overflow:hidden 把滚动条盖住）；
+   ② 单元格 nowrap + 省略号 —— 允许折行的话列宽就又不是"固定"的了；
+   ③ 走 render 的列必须给**叶子元素**单独上省略号：`td` 上的 text-overflow 只管
+      **行内内容**，对块/弹性子元素（`.lx-oppprod`、`.lx-cell-title` 等）无效，
+      不补这一条它们会被 td 的 overflow:hidden **硬裁**——硬裁不给任何提示，
+      正是探针里 CLIP 那一类硬缺陷。
+   -------------------------------------------------------------------------- */
+.lx-tablecard .lx-table--fit .ant-table-content > table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* 注意：**这里故意不写 `padding`**。实测 antd `size="middle"` 的
+   `.ant-table.ant-table-middle .ant-table-tbody > tr > td { padding: 12px 8px }`
+   与 `.lx-tablecard .ant-table-tbody > tr > td` 特异性相同（0,3,2），而 antd 的样式后注入
+   → 单元格左右内边距**实际是 8px（合计 16px）**，不是 12px。
+   列宽的预算必须按"列宽 − 16px"算（各路由 columns 里的注释用的就是这个数）；
+   若在此处强行写 12px 并提权，只会白丢每列 8px 的内容空间、把截断推得更早。 */
+.lx-tablecard .lx-table--fit .ant-table-thead > tr > th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 正文字号 13px → 12px（用户要求"字体调小一点"）。 */
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 叶子级省略号：`display: block` 不是装饰 —— 对 inline 的 span，overflow 与
+   text-overflow 一律无效，必须先把它们变成块级（或弹性项）才截得断。
+   为什么把"单元格的直接子元素"逐个列出来、而不写 `td > *`：列里既有胶囊
+   （`.lx-tag` 依赖 inline-flex）也有弹性动作组（`.lx-oppops` 依赖 flex-wrap），
+   一条通配规则会把它们一起改成 `display: block`，把布局改坏。
+   `.lx-cell-text` = 纯文本单元格（线索来源 / 国家地区这类"值就是一段文案"的列）。 */
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-cell-title,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-cell-code,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-cell-text,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-cell-link,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-num,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-oppprod,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-oppowner,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-p360__prod,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-p360__owner,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-p360__bant,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-p360__summary {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 操作列的动作**不许在动作内部断行**（"Follow up" 断成两行比换行更难看）。
+   整块仍允许 flex-wrap —— 真放不下时两个动作换行，也不去顶宽列。 */
+.lx-tablecard .lx-table--fit .lx-oppops .lx-cell-link {
+  white-space: nowrap;
 }
 
 
@@ -1120,9 +1266,12 @@
 /* --------------------------------------------------------------------------
    业务实时流（智能体之间的任务交接）
    -------------------------------------------------------------------------- */
+/* 事件卡网格：一次摆 3 张，左右各留一个切换按钮的位置（`.lx-dyn`）。 */
 .lx-flow {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 @media (max-width: 1100px) {
@@ -1134,6 +1283,89 @@
 @media (max-width: 768px) {
   .lx-flow {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* 轮播视窗：左按钮 ｜ 事件卡 ｜ 右按钮。
+   切换用手动「载入前序 / 后序」，到边界即置灰，不做无限循环——
+   「实时动态」的语义里，最早一条之前确实没有内容可看。 */
+.lx-dyn {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 0 14px;
+}
+
+.lx-dyn__stage {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.lx-dyn__nav {
+  align-self: center;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: 50%;
+  background: var(--lx-color-card-solid);
+  font-size: 13px;
+  color: var(--lx-color-slate);
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+}
+
+.lx-dyn__nav:hover:not(:disabled) {
+  border-color: var(--lx-color-primary);
+  color: var(--lx-color-primary);
+}
+
+.lx-dyn__nav:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.lx-dyn__nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* 换页方向决定滑入侧，让人看出这批事件是从哪边来的 */
+@keyframes lx-dyn-in-next {
+  from {
+    opacity: 0;
+    transform: translateX(26px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes lx-dyn-in-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-26px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lx-dyn__stage[data-dir='next'] {
+  animation: lx-dyn-in-next 320ms ease;
+}
+
+.lx-dyn__stage[data-dir='prev'] {
+  animation: lx-dyn-in-prev 320ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-dyn__stage[data-dir] {
+    animation: none;
   }
 }
 

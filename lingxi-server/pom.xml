@@ -52,7 +52,7 @@
     <!-- L1 数据底座 -->
     <module>lingxi-data</module>
 
-    <!-- L2 业务模块（11 个一级菜单业务域） -->
+    <!-- L2 业务模块（11 个业务域，承载 13 个一级菜单；线索中心 / 商机中心与客户中心同域复用） -->
     <module>lingxi-workbench</module>
     <module>lingxi-customer</module>
     <module>lingxi-product</module>

@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
 import {
+  AimOutlined,
   AppstoreOutlined,
   BarChartOutlined,
   BookOutlined,
   CustomerServiceOutlined,
   DashboardOutlined,
+  FunnelPlotOutlined,
   GlobalOutlined,
   NotificationOutlined,
   RobotOutlined,
@@ -23,6 +25,8 @@ import {
 export const MENU_ICONS: Record<string, ReactNode> = {
   workbench: <DashboardOutlined />,
   customer: <TeamOutlined />,
+  lead: <AimOutlined />,
+  opportunity: <FunnelPlotOutlined />,
   product: <AppstoreOutlined />,
   order: <ShoppingOutlined />,
   service: <CustomerServiceOutlined />,

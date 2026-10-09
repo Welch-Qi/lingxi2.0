@@ -1,146 +1,289 @@
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import {
   AppstoreAddOutlined,
   CloudUploadOutlined,
-  ExperimentOutlined,
-  FileTextOutlined,
-  FileImageOutlined,
-  TagsOutlined,
-  TranslationOutlined,
+  ThunderboltFilled,
 } from '@ant-design/icons';
-import type { ModuleHomeRow } from '@/components/ModuleHome';
-import { ModuleHome } from '@/components/ModuleHome';
-import { LxTag, LxThumb } from '@lingxi/ui';
+import {
+  LxActionBar,
+  LxKpi,
+  LxSectionHeader,
+  LxSearchInput,
+  LxTable,
+  LxTableCard,
+  LxTag,
+  LxThumb,
+  type LxTagVariant,
+} from '@lingxi/ui';
+import { PageContainer } from '@/components/PageContainer';
+import { AIContentStudio } from '@/components/AIContentStudio';
+import {
+  COMPLETENESS_TARGET,
+  PRODUCT_MASTER,
+  PRODUCT_MATERIALS,
+  type ProductRecord,
+  type ProductStatus,
+} from './data';
 
 /**
- * 商品中心首页（/product）—— 商品与素材的单一事实源（产品规划说明书 §2.3）。
+ * 商品中心首页（/product）—— 商品与素材的单一事实源（产品规划说明书 V2.1 §2.5）。
  *
- * 为什么"数据完整度"是一等指标：内容创意、社媒运营、订单建单都消费商品主数据，
- * 商品字段缺失不是商品模块自己的问题，会直接放大成内容质量与交付准确性问题；
- * 因此完整度必须被显性度量并给出补全入口（AI 自动补全 HS 编码与属性缺失项）。
+ * 页面职责（2026-09-26 重构；2026-09-27 再收敛）：
+ *  - 顶部操作条：新建商品等直达入口（入口铁律，主操作永远在左上角第一个）。
+ *  - 四个可点击指标卡：总商品数 / 待补全商品数 / 在售商品数 / 商品素材数。
+ *    点击卡即切换下方列表——前三者过滤商品列表，最后一个**跳到产品素材库**
+ *    （二级页 /product/assets）。
+ *  - 默认展示全部商品列表；点击「待补全 / 在售」按状态过滤。
  *
- * 缩略图：沿用高保真原型的素材列视觉（有图用图、无图降级为图标色块），
- * 图片资产随原型一并移植到 public/images，图片本身不入 i18n。
+ * 2026-09-27：**素材不再是本页页内的第二种视图**。原先点「商品素材数」会在页内切到素材表格，
+ * 与本页新建的「产品素材库」二级页功能重叠 —— 同一个能力两个落点，用户不知道该去哪。
+ * 收敛后本页只管商品主数据，素材（上传 / 分类 / 打标 / 多语言版本 / 与 SKU 关联）
+ * 一律落在素材库页，首页上的素材入口只做跳转。
  *
- * 静态骨架：占位演示数据（品名为真实语种专有名词，不翻译），接入后走 /api/v1/prd/products。
+ * 待补全口径：资料完整度 < COMPLETENESS_TARGET（85%），与总览完整度目标的分档一致。
+ * 商品状态（E47）映射 LxTag 固定变体：在售→done、待上架→review、下架→producing，
+ * 不引入新色相（禁忌 8）。
+ *
+ * 文案一律走 i18n key；商品主数据与素材在 ./data.ts（商机中心按外键引用，须可独立 import）。
+ * 静态骨架：占位演示数据，接入后走 /api/v1/prd/products 与 /api/v1/prd/materials。
  */
 
-interface ProductRow extends ModuleHomeRow {
-  id: string;
-  name: string;
-  sku: string;
-  categoryKey: string;
-  hsCode: string;
-  assets: number;
-  completeness: number;
-  /** 主图；缺省时列表降级为图标占位（不应出现空白列） */
-  image?: string | undefined;
-}
+const STATUS_KEY: Record<ProductStatus, string> = {
+  pending: 'prd.status.pending',
+  onSale: 'prd.status.onSale',
+  offShelf: 'prd.status.offShelf',
+};
 
-const ROWS: readonly ProductRow[] = [
-  { id: '1', name: 'Portable Power Station 1000W', sku: 'PS-1000-EU', categoryKey: 'demo.category.energy', hsCode: '8507600090', assets: 42, completeness: 96, image: '/images/product-power.png' },
-  { id: '2', name: 'LiFePO4 Battery Module 5kWh', sku: 'BM-5K-48V', categoryKey: 'demo.category.battery', hsCode: '8507600090', assets: 28, completeness: 88 },
-  { id: '3', name: 'Foldable Solar Panel 200W', sku: 'SP-200-FD', categoryKey: 'demo.category.solar', hsCode: '8541430000', assets: 35, completeness: 82, image: '/images/product-solar.png' },
-  { id: '4', name: 'Hybrid Inverter 8kW', sku: 'IV-8K-HY', categoryKey: 'demo.category.inverter', hsCode: '-', assets: 12, completeness: 64 },
-  { id: '5', name: 'EV Charger Wallbox 11kW', sku: 'EV-11K-WB', categoryKey: 'demo.category.charging', hsCode: '8504403090', assets: 19, completeness: 71 },
-];
+const STATUS_VARIANT: Record<ProductStatus, LxTagVariant> = {
+  pending: 'review',
+  onSale: 'done',
+  offShelf: 'producing',
+};
 
 export default function ProductHomePage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  /* 只有一种视图：素材已收敛到二级页（见文件头 2026-09-27 说明）。 */
+  const [filter, setFilter] = useState<'all' | 'incomplete' | 'onSale'>('all');
+  const [keyword, setKeyword] = useState('');
+  const [studioOpen, setStudioOpen] = useState(false);
 
-  const columns = [
+  const totalCount = PRODUCT_MASTER.length;
+  const incompleteCount = PRODUCT_MASTER.filter((p) => p.completeness < COMPLETENESS_TARGET).length;
+  const onSaleCount = PRODUCT_MASTER.filter((p) => p.status === 'onSale').length;
+  const materialCount = PRODUCT_MATERIALS.length;
+
+  const filteredProducts = useMemo(() => {
+    let rows = PRODUCT_MASTER;
+    if (filter === 'incomplete') rows = rows.filter((p) => p.completeness < COMPLETENESS_TARGET);
+    else if (filter === 'onSale') rows = rows.filter((p) => p.status === 'onSale');
+    if (keyword) {
+      const kw = keyword.trim().toLowerCase();
+      rows = rows.filter(
+        (p) => p.name.toLowerCase().includes(kw) || p.sku.toLowerCase().includes(kw),
+      );
+    }
+    return rows;
+  }, [filter, keyword]);
+
+  const selectAll = () => setFilter('all');
+  const selectIncomplete = () => setFilter('incomplete');
+  const selectOnSale = () => setFilter('onSale');
+  /** 素材统一在二级页：首页面上的这个入口只负责把人送到那儿。 */
+  const openAssets = () => {
+    void navigate('/product/assets');
+  };
+  const openCreate = () => {
+    void navigate('/product/new');
+  };
+  const openUpload = () => {
+    void navigate('/product/upload');
+  };
+
+  const listTitleKey =
+    filter === 'incomplete' ? 'prd.list.incomplete' : filter === 'onSale' ? 'prd.list.onSale' : 'prd.list.all';
+
+  const productColumns = [
     {
       title: t('prd.col.thumb'),
       dataIndex: 'image',
       key: 'thumb',
-      width: 64,
-      render: (_value: string | undefined, row: ProductRow) => (
-        <LxThumb src={row.image} alt={row.name} kind="graphic" icon={<FileImageOutlined />} />
+      width: '8%',
+      render: (_value: string | undefined, row: ProductRecord) => (
+        <LxThumb src={row.image} alt={row.name} kind="graphic" />
       ),
+    },
+    {
+      title: t('prd.col.category'),
+      dataIndex: 'categoryKey',
+      key: 'category',
+      width: '12%',
+      render: (value: string) => (
+        <span className="lx-cell-text" title={t(value)}>
+          {t(value)}
+        </span>
+      ),
+    },
+    {
+      title: t('prd.col.sku'),
+      dataIndex: 'sku',
+      key: 'sku',
+      width: '14%',
+      render: (value: string) => <span className="lx-num">{value}</span>,
     },
     {
       title: t('prd.col.product'),
       dataIndex: 'name',
       key: 'name',
-      render: (_value: string, row: ProductRow) => (
-        <span>
-          <div className="lx-cell-title">{row.name}</div>
-          <div className="lx-cell-code">{row.sku}</div>
-        </span>
-      ),
+      width: '18%',
+      render: (value: string) => <span className="lx-cell-title">{value}</span>,
     },
-    { title: t('prd.col.category'), dataIndex: 'categoryKey', key: 'category', render: (value: string) => t(value) },
     {
-      title: t('prd.col.hsCode'),
-      dataIndex: 'hsCode',
-      key: 'hsCode',
-      render: (value: string) =>
-        value === '-' ? (
-          <LxTag variant="review">{t('prd.hs.missing')}</LxTag>
-        ) : (
-          <span className="lx-num">{value}</span>
-        ),
+      title: t('prd.col.status'),
+      dataIndex: 'status',
+      key: 'status',
+      width: '10%',
+      render: (value: ProductStatus) => (
+        <LxTag variant={STATUS_VARIANT[value]}>{t(STATUS_KEY[value])}</LxTag>
+      ),
     },
     {
       title: t('prd.col.assets'),
       dataIndex: 'assets',
       key: 'assets',
+      width: '9%',
       render: (value: number) => <span className="lx-num">{value}</span>,
     },
     {
-      title: t('prd.col.completeness'),
-      dataIndex: 'completeness',
-      key: 'completeness',
-      render: (value: number) => (
-        <LxTag variant={value >= 85 ? 'done' : value >= 70 ? 'graphic' : 'review'}>
-          <span className="lx-num">{value}%</span>
-        </LxTag>
+      title: t('prd.col.skuCount'),
+      dataIndex: 'skuCount',
+      key: 'skuCount',
+      width: '9%',
+      render: (value: number) => <span className="lx-num">{value}</span>,
+    },
+    {
+      title: t('prd.col.maintenance'),
+      dataIndex: 'maintenanceTime',
+      key: 'maintenance',
+      width: '12%',
+      render: (value: string) => (
+        <span className="lx-num" title={value}>
+          {value}
+        </span>
       ),
     },
     {
       title: t('common.action'),
       key: 'action',
-      render: () => (
-        <button type="button" className="lx-cell-link lx-focusable">
-          {t('prd.action.complete')}
-        </button>
+      width: '12%',
+      render: (_value: unknown, row: ProductRecord) => (
+        <span className="lx-oppops">
+          <button
+            type="button"
+            className="lx-cell-link lx-focusable"
+            onClick={() => void navigate(`/product/new?id=${row.id}`)}
+          >
+            {t('prd.action.edit')}
+          </button>
+          <button
+            type="button"
+            className="lx-cell-link lx-focusable"
+            onClick={() => void navigate(`/product/${row.id}/sku`)}
+          >
+            {t('prd.sku.manage')}
+          </button>
+          <button type="button" className="lx-cell-link lx-focusable" onClick={openAssets}>
+            {t('prd.action.material')}
+          </button>
+        </span>
       ),
     },
   ];
 
   return (
-    <ModuleHome<ProductRow>
-      titleKey="prd.page.home"
-      subtitleKey="prd.page.homeSub"
-      kpis={[
-        { labelKey: 'prd.kpi.sku', value: '486', sub: t('prd.kpi.sub.active'), trend: 'up', delta: '12', color: 'primary', spark: [2, 3, 4, 4, 5, 6, 6, 8] },
-        { labelKey: 'prd.kpi.assets', value: '2,340', sub: t('prd.kpi.sub.multilang'), trend: 'up', delta: '8.6%', color: 'secondary', spark: [12, 15, 18, 22, 26, 30, 36, 42] },
-        { labelKey: 'prd.kpi.completeness', value: '88%', sub: t('prd.kpi.sub.target'), trend: 'up', delta: '3.1pt', color: 'accent', spark: [6, 7, 7, 8, 8, 9, 9, 10] },
-        { labelKey: 'prd.kpi.localeCoverage', value: '76%', sub: t('prd.kpi.sub.locale'), trend: 'fl', delta: '0pt', color: 'success', spark: [5, 5, 6, 6, 6, 7, 7, 7] },
-      ]}
-      insightsTitleKey="prd.insight.title"
-      insightsSubKey="prd.insight.sub"
-      insightsMoreKey="prd.insight.more"
-      insights={[
-        { typeKey: 'prd.insight.hs.type', textKey: 'prd.insight.hs.text', sourceKey: 'prd.insight.hs.source', accent: 'accent', tone: 'muse', icon: <TagsOutlined /> },
-        { typeKey: 'prd.insight.asset.type', textKey: 'prd.insight.asset.text', sourceKey: 'prd.insight.asset.source', accent: 'primary', tone: 'muse', icon: <FileTextOutlined /> },
-        { typeKey: 'prd.insight.locale.type', textKey: 'prd.insight.locale.text', sourceKey: 'prd.insight.locale.source', accent: 'success', tone: 'muse', icon: <TranslationOutlined /> },
-      ]}
-      quicks={[
-        { titleKey: 'prd.quick.create', descKey: 'prd.quick.createDesc', icon: <AppstoreAddOutlined />, tone: 'primary' },
-        { titleKey: 'prd.quick.upload', descKey: 'prd.quick.uploadDesc', icon: <CloudUploadOutlined />, tone: 'accent' },
-        { titleKey: 'prd.quick.fill', descKey: 'prd.quick.fillDesc', icon: <ExperimentOutlined />, tone: 'secondary' },
-      ]}
-      listTitleKey="prd.list.title"
-      listSubKey="prd.list.sub"
-      listMoreKey="prd.list.more"
-      searchPlaceholderKey="prd.list.search"
-      filterLabelKey="prd.list.filter"
-      columns={columns}
-      rows={ROWS}
-      emptyTextKey="prd.list.empty"
-      emptyHintKey="prd.list.emptyHint"
-      total={486}
-    />
+    <PageContainer titleKey="prd.page.home" hideTitle>
+      <LxActionBar
+        primary={{
+          key: 'create',
+          label: t('prd.bar.create'),
+          icon: <AppstoreAddOutlined />,
+          onClick: openCreate,
+        }}
+        items={[
+          { key: 'upload', label: t('prd.bar.upload'), icon: <CloudUploadOutlined />, onClick: openUpload },
+          {
+            key: 'aiMaterial',
+            label: t('prd.bar.aiMaterial'),
+            icon: <ThunderboltFilled />,
+            onClick: () => setStudioOpen(true),
+          },
+        ]}
+        note={
+          <>
+            {t('prd.note.prefix')}
+            <b>96</b>
+            {t('prd.note.suffix')}
+          </>
+        }
+      />
+
+      <div className="lx-grid lx-grid--kpi-4">
+        <LxKpi
+          label={t('prd.metric.total')}
+          value={String(totalCount)}
+          color="primary"
+          onClick={selectAll}
+          active={filter === 'all'}
+        />
+        <LxKpi
+          label={t('prd.metric.incomplete')}
+          value={String(incompleteCount)}
+          color="accent"
+          onClick={selectIncomplete}
+          active={filter === 'incomplete'}
+        />
+        <LxKpi
+          label={t('prd.metric.onSale')}
+          value={String(onSaleCount)}
+          color="success"
+          onClick={selectOnSale}
+          active={filter === 'onSale'}
+        />
+        <LxKpi
+          label={t('prd.metric.materials')}
+          value={String(materialCount)}
+          color="secondary"
+          onClick={openAssets}
+        />
+      </div>
+
+      <section className="lx-section">
+        <LxSectionHeader title={t(listTitleKey)} />
+        <LxTableCard
+          tools={<LxSearchInput value={keyword} placeholder={t('prd.list.search')} onChange={setKeyword} />}
+        >
+          <LxTable<ProductRecord>
+            fit
+            columns={productColumns}
+            dataSource={[...filteredProducts]}
+            total={filteredProducts.length}
+            pageNo={1}
+            pageSize={20}
+          />
+        </LxTableCard>
+      </section>
+
+      {/* 「AI生成素材」与营销中心共用同一个工作台：商品侧关心的是"这份素材能不能用"，
+          营销侧关心的是"这篇内容发出去效果如何"，但生成过程完全一样。 */}
+      <AIContentStudio
+        open={studioOpen}
+        onClose={() => setStudioOpen(false)}
+        titleKey="prd.studio.title"
+        submitLabelKey="prd.studio.submit"
+        submittedKey="prd.studio.submitted"
+      />
+    </PageContainer>
   );
 }

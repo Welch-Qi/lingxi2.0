@@ -2,7 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { UserManager, WebStorageStateStore, type User } from 'oidc-client-ts';
 import { configureHttp, get } from '@lingxi/request';
 import { PermissionContext } from '@lingxi/ui';
-import { PREVIEW_PERMISSIONS, PREVIEW_TENANT, PREVIEW_USER, isStaticPreview } from '@/app/providers/previewSession';
+import { PREVIEW_TENANT, isStaticPreview } from '@/app/providers/previewSession';
+import { useActingIdentity } from '@/app/providers/useActingIdentity';
 
 /**
  * 认证与租户上下文（技术规约2.0 §4.8.1 / §4.9.1）。
@@ -19,12 +20,31 @@ import { PREVIEW_PERMISSIONS, PREVIEW_TENANT, PREVIEW_USER, isStaticPreview } fr
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
 
+/**
+ * 数据权限范围（技术规约2.0 §4.8.2）。
+ *
+ * 五档由平台统一定义，**各模块不得自定义** —— 口径一旦分叉，
+ * 「这个角色能看到哪些行」就没法跨模块比较，审计也失去统一口径。
+ *
+ * 为什么范围是「用户级」而不是「角色级」：
+ * 同部门的两个人看得到的东西通常不同（主管看全组、专员只看自己跟进的），
+ * 把范围写死在角色上，就只能按角色切人，组织一动就得重配角色。
+ * 角色侧保留一个**默认值**（新建用户时的缺省范围），最终值以用户上的为准。
+ */
+export type DataScope = 'SELF' | 'DEPT' | 'DEPT_AND_SUB' | 'CUSTOM' | 'ALL';
+
 export interface AuthUser {
   id: string;
   username: string;
   displayName: string;
   email?: string;
   roles: readonly string[];
+  /** 所属部门 key（SELF / DEPT / DEPT_AND_SUB 三档的判据） */
+  deptKey?: string;
+  /** 数据权限范围；缺省视为 ALL（登录即可看全部，与后端未下发范围时的历史行为一致） */
+  dataScope?: DataScope;
+  /** CUSTOM 档下被授权的部门 key 集合；其余档为空数组 */
+  scopeDeptKeys?: readonly string[];
 }
 
 export interface AuthTenant {
@@ -84,6 +104,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [tenant, setTenant] = useState<AuthTenant | null>(null);
   const [permissions, setPermissions] = useState<readonly string[]>([]);
 
+  /* ------------------------------------------------------------------
+   * 静态预览态：身份与权限改为**从配置中心派生**（2026-10-06）。
+   *
+   * 此前这里是一组写死的 PREVIEW_* 常量，与配置中心毫无关系 —— 于是
+   * 「权限管理」页勾掉任何一条权限，侧边栏与路由守卫都不会有反应。
+   * 现在预览身份取自 useActingIdentity（cc-store 派生），
+   * 于是「在用户列表切视角身份」时权限与数据范围会实时跟着变。
+   *
+   * 为什么放在渲染期派生而不是 effect 里 setState：
+   * effect 改会话 state 会多一帧延迟，且 StrictMode 下会触发两次 setState；
+   * 而这里只是"用哪一份"的判据，直接在渲染期选即可，无副作用。
+   *
+   * ⚠️ 仅在 isStaticPreview()（DEV + 显式开关）下生效；真实会话一律走后端下发。
+   * 接入后端后本段整段删除（连同 useActingIdentity 对 cc-store 的依赖一起）。
+   * ------------------------------------------------------------------ */
+  const acting = useActingIdentity();
+  const previewIdentity = isStaticPreview() ? acting : null;
+
   if (managerRef.current === null) {
     managerRef.current = createUserManager();
   }
@@ -140,10 +178,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function bootstrap() {
       try {
         // 静态骨架预览：后端与 Keycloak 就绪前放开闸门，仅供本地自检页面（DEV 专有，见 previewSession.ts）
+        // 身份与权限不在这里写死 —— 走 previewIdentity（由配置中心派生，见上方注释），
+        // 这样在用户列表切「视角身份」时无需重挂会话就能看到权限实时变化。
         if (isStaticPreview()) {
-          setUser(PREVIEW_USER);
+          setUser(previewIdentity?.user ?? null);
           setTenant(PREVIEW_TENANT);
-          setPermissions(PREVIEW_PERMISSIONS);
+          setPermissions(previewIdentity?.perms ?? []);
           setStatus('authenticated');
           return;
         }
@@ -190,16 +230,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       manager.events.removeUserUnloaded(onUserUnloaded);
       manager.events.removeAccessTokenExpired(onUserUnloaded);
     };
-  }, [manager, loadSession, clearSession]);
+    /* previewIdentity 在依赖里：切「视角身份」时 bootstrap 不重跑（它只在挂载时跑一次），
+       但下面的 activePermissions / activeUser 会立刻跟着变，效果与重跑等价。 */
+  }, [manager, loadSession, clearSession, previewIdentity]);
+
+  /* 生效身份与权限：预览态取配置中心派生值，真实会话取后端下发值。 */
+  const activeUser = previewIdentity?.user ?? user;
+  const activePermissions = previewIdentity?.perms ?? permissions;
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, tenant, permissions, login, logout }),
-    [status, user, tenant, permissions, login, logout],
+    () => ({ status, user: activeUser, tenant, permissions: activePermissions, login, logout }),
+    [status, activeUser, tenant, activePermissions, login, logout],
   );
 
   return (
     <AuthContext.Provider value={value}>
-      <PermissionContext.Provider value={permissions}>{children}</PermissionContext.Provider>
+      <PermissionContext.Provider value={activePermissions}>{children}</PermissionContext.Provider>
     </AuthContext.Provider>
   );
 }

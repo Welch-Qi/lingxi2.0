@@ -209,13 +209,17 @@
   font-size: 15px;
 }
 
+/* 同 role-name/desc：inline span 不成块会与名称同行粘连 */
 .lx-select__tenant-name {
+  display: block;
+  margin-bottom: 2px;
   font-size: 13px;
   font-weight: 500;
   color: var(--lx-color-ink);
 }
 
 .lx-select__tenant-meta {
+  display: block;
   font-size: 11.5px;
   color: var(--lx-color-muted);
 }
@@ -291,13 +295,18 @@
   color: var(--lx-color-violet);
 }
 
+/* name 与 desc 是 flex 容器里的两个 inline span：不显式成块就会同行粘连
+   （"总经理看全局经营与风险"），1.0 原版两者各占一行。 */
 .lx-select__role-name {
+  display: block;
+  margin-bottom: 2px;
   font-size: 13px;
   font-weight: 500;
   color: var(--lx-color-ink);
 }
 
 .lx-select__role-desc {
+  display: block;
   font-size: 11px;
   line-height: 1.4;
   color: var(--lx-color-muted);
@@ -386,3 +395,2349 @@
     padding: 28px 20px 24px;
   }
 }
+
+/* --------------------------------------------------------------------------
+   高度自适应：保证「一页全部显示、不出现滚动条」（2026-10-07 第十九轮）
+
+   用户反馈「登录模块存在上菜滑动条，要求一页全部显示不要滚动」。实测：
+     1440×1000 → 溢出 0px（刚好）
+     1366×768  → 溢出 98px
+     1280×720  → 溢出 146px
+   即**绝大多数笔记本**都会滚，而上面那个 `@media (max-width:768px)` 按**宽度**断点，
+   1366 宽根本不触发，所以此前一直没人发现。
+
+   为什么按宽度断点解不了这一类问题：本页的溢出量主要由**视口高度**决定，
+   而「一页显示」是登录页的硬需求（登录表单被截掉一半 = 没法用）。
+   所以这里必须**按高度**断，且不能用 `min-height: 100vh` + `overflow:hidden`
+   那套"藏起来"的写法 —— 那只是把溢出藏进滚动容器，用户依然看不到按钮，
+   而"进入工作台"恰好就在被藏的那段里。
+
+   压缩顺序（从最不影响阅读的地方开始）：
+     1. 品牌区上下留白 56→32px、眉标上边距 56→24px、统计区上留白 48→28px
+     2. H1 字号 40→30px（标题行数不变，靠 line-height 收）
+     3. 卡片 padding 40→28px、gap 18→12px
+     4. 角色卡 padding 12→9px、图标 30→26px —— 角色区占 321px，是最大的单块
+   每一步都只动留白与字号，不删任何内容项。
+   -------------------------------------------------------------------------- */
+@media (max-height: 860px) {
+  .lx-select__brand {
+    padding: 32px 52px;
+  }
+
+  .lx-select__eyebrow {
+    margin-top: 24px;
+  }
+
+  .lx-select__h1 {
+    margin-top: 10px;
+    font-size: 30px;
+    line-height: 1.16;
+  }
+
+  .lx-select__lead {
+    margin-top: 12px;
+    line-height: 1.65;
+  }
+
+  .lx-select__stats {
+    padding-top: 28px;
+  }
+
+  .lx-select__stat {
+    padding: 10px 12px;
+  }
+
+  .lx-select__stat-value {
+    font-size: 19px;
+  }
+
+  .lx-select__panel {
+    padding: 24px 40px;
+  }
+
+  .lx-select__card {
+    gap: 12px;
+    padding: 28px 32px 22px;
+  }
+
+  .lx-select__roles {
+    gap: 8px;
+  }
+
+  .lx-select__role {
+    gap: 6px;
+    padding: 9px 10px;
+  }
+
+  .lx-select__role-icon {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+  }
+
+  .lx-select__role-desc {
+    font-size: 10.5px;
+    line-height: 1.35;
+  }
+
+  .lx-select__tenant {
+    padding: 10px 12px;
+  }
+
+  .lx-select__btn {
+    height: 38px;
+  }
+}
+
+/* 更矮的屏（720 及以下）：角色描述已无信息增量——它只是重复岗位名 ——
+   这一档直接去掉 desc 行，五张卡从 321px 收到 ~200px。
+   **不删角色名与图标**，那是选择岗位时真正要读的东西。 */
+@media (max-height: 740px) {
+  .lx-select__brand {
+    padding: 24px 44px;
+  }
+
+  .lx-select__h1 {
+    font-size: 26px;
+  }
+
+  .lx-select__stats {
+    display: none;
+  }
+
+  .lx-select__panel {
+    padding: 16px 32px;
+  }
+
+  .lx-select__card {
+    gap: 10px;
+    padding: 22px 28px 18px;
+  }
+
+  .lx-select__role-desc {
+    display: none;
+  }
+
+  .lx-select__role {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .lx-select__role-name {
+    margin-bottom: 0;
+  }
+}
+
+/* 超矮屏（≤620，常见于分屏/远程桌面小窗）：只保功能可達，
+   品牌区让位给登录卡——登录卡不可见 = 无法登录，优先级高于品牌展示。 */
+@media (max-height: 620px) {
+  .lx-select__brand {
+    display: none;
+  }
+
+  .lx-select {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   营销中心 · 内容分发 / 投放管理（2026-09-27 新增三段中的后两段）
+   只放这两个页面独有的形状；通用卡片、表格、KPI 走 lingxi-ui.css 与 workspace.css。
+   -------------------------------------------------------------------------- */
+
+/* 分发：左图右进度 */
+.lx-mktdist__chart {
+  grid-column: span 2;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-lg);
+  background: var(--lx-color-card-solid);
+}
+
+.lx-mktdist__channels {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-lg);
+  background: var(--lx-color-card-solid);
+}
+
+.lx-mktdist__channels ul {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lx-mktdist__channels li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 10px;
+}
+
+.lx-mktdist__chname {
+  font-size: 12.5px;
+  color: var(--lx-color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-mktdist__chnum {
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+  white-space: nowrap;
+}
+
+.lx-mktdist__chtrack {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--lx-color-frost);
+  overflow: hidden;
+}
+
+.lx-mktdist__chtrack i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--lx-color-primary);
+}
+
+.lx-mktdist__chhint {
+  margin: 0;
+  font-size: 11px;
+}
+
+/* 矩阵单元格：勾/叉必须同时有颜色与形状差异，不能只靠颜色 */
+.lx-mktdist__cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.lx-mktdist__cell--on {
+  color: var(--lx-color-success);
+}
+
+.lx-mktdist__cell--off {
+  color: var(--lx-color-faint);
+}
+
+.lx-mktdist__clicks {
+  color: var(--lx-color-primary);
+}
+
+/* 投放：活动卡 */
+.lx-mktplace__card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-lg);
+  background: var(--lx-color-card-solid);
+}
+
+.lx-mktplace__card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lx-mktplace__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+  font-size: 14px;
+}
+
+.lx-mktplace__name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-mktplace__chans {
+  margin: -6px 0 0;
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-mktplace__bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+/* 顶部「创建投放计划」CTA（2026-10-06）。
+   这一栏是 `minmax(0,1fr) auto` 的两列栅格（右侧给统计文字留位），
+   CTA 作为栅格子项默认 `justify-self: stretch`，会被 1fr 列拉成**满宽按钮** ——
+   一个 6 字的主按钮横跨整页，视觉上比页面标题还重，抢走了"投放明细"的注意力。
+   改为按内容收缩（`justify-self: start` + `width: fit-content`），
+   按钮回到"一个动作"的正常体量；栅格本身不动，下方统计文字的位置不受影响。 */
+.lx-mktplace__cta {
+  justify-self: start;
+  width: fit-content;
+}
+
+.lx-mktplace__bar b {
+  color: var(--lx-color-ink);
+}
+
+.lx-mktplace__track {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--lx-color-frost);
+  overflow: hidden;
+}
+
+.lx-mktplace__track i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--lx-color-accent);
+}
+
+.lx-mktplace__track i.is-warn {
+  background: var(--lx-color-danger);
+}
+
+.lx-mktplace__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.lx-mktplace__facts > div {
+  padding: 7px 9px;
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-frost);
+}
+
+.lx-mktplace__facts span {
+  display: block;
+  font-size: 10.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-mktplace__facts b {
+  font-size: 13px;
+  color: var(--lx-color-ink);
+}
+
+.lx-mktplace__detail {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 0;
+  border: 1px solid var(--lx-color-primary-line);
+  border-radius: var(--lx-radius-md);
+  background: transparent;
+  font-size: 12.5px;
+  color: var(--lx-color-primary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lx-mktplace__detail:hover {
+  background: var(--lx-color-primary-soft);
+}
+
+/* ===== 内容排期日历（/marketing/calendar，2026-09-27）=====
+ * 泳道网格靠 `display: contents` 拼：外层是 8 列网格（渠道列 + 7 天），
+ * 每条泳道用一个 `display: contents` 的容器把"渠道名 + 7 个格子"摊进同一张网格，
+ * 这样列对齐由网格保证、行结构由 DOM 保证，不必手写每一行 8 个 grid-column。
+ */
+.lx-mkgcal__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--lx-gap-md, 16px);
+  align-items: start;
+}
+
+.lx-mkgcal__week {
+  display: grid;
+  grid-template-columns: 104px repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+  overflow: hidden;
+}
+
+.lx-mkgcal__lane {
+  display: contents;
+}
+
+.lx-mkgcal__lanehead,
+.lx-mkgcal__day,
+.lx-mkgcal__lanelabel,
+.lx-mkgcal__cell {
+  padding: 8px 8px;
+  border-bottom: 1px solid var(--lx-color-border);
+  min-width: 0;
+}
+
+.lx-mkgcal__lanehead,
+.lx-mkgcal__day {
+  background: var(--lx-color-card);
+  font-size: 12.5px;
+}
+
+.lx-mkgcal__day {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 1px solid var(--lx-color-border);
+}
+
+.lx-mkgcal__day.is-today {
+  background: var(--lx-color-primary-soft);
+}
+
+.lx-mkgcal__dow {
+  color: var(--lx-color-muted);
+}
+
+.lx-mkgcal__dom {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-mkgcal__lanelabel {
+  color: var(--lx-color-primary);
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lx-mkgcal__cell {
+  border-left: 1px solid var(--lx-color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 76px;
+  background: var(--lx-color-card-solid);
+}
+
+.lx-mkgcal__cellempty {
+  color: var(--lx-color-faint);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.lx-mkgcal__slot {
+  display: block;
+  min-width: 0;
+}
+
+.lx-mkgcal__card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--lx-color-primary-line);
+  border-left: 3px solid var(--lx-color-primary);
+  border-radius: 6px;
+  padding: 4px 6px;
+  margin-bottom: 4px;
+  background: var(--lx-color-card-solid);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.lx-mkgcal__cardtime {
+  display: block;
+  font-size: 11px;
+  color: var(--lx-color-primary);
+}
+
+.lx-mkgcal__cardtitle {
+  display: block;
+  font-size: 12px;
+  color: var(--lx-color-ink);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 状态色只加左侧色条与底色，不动文字色 —— 文字对比度由卡片自身保证。 */
+.lx-mkgcal__card--review { border-left-color: var(--lx-color-warning); }
+.lx-mkgcal__card--scheduled { border-left-color: var(--lx-color-primary); }
+.lx-mkgcal__card--publishing { border-left-color: var(--lx-color-violet); }
+.lx-mkgcal__card--published { border-left-color: var(--lx-color-success); }
+.lx-mkgcal__card--postponed { border-left-color: var(--lx-color-faint); }
+
+.lx-mkgcal__seg {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.lx-mkgcal__segbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: 999px;
+  padding: 4px 12px;
+  background: transparent;
+  color: var(--lx-color-muted);
+  font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lx-mkgcal__segbtn.is-active {
+  border-color: var(--lx-color-primary);
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+}
+
+.lx-mkgcal__hint {
+  color: var(--lx-color-muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+  margin: 4px 0 0;
+}
+
+/* ── 待审核队列（右栏）── */
+.lx-mkgcal__reviewlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lx-mkgcal__reviewitem {
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+  padding: 8px;
+  background: var(--lx-color-card-solid);
+}
+
+.lx-mkgcal__reviewbtn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  min-width: 0;
+}
+
+.lx-mkgcal__rvtitle {
+  display: block;
+  font-size: 13px;
+  color: var(--lx-color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-mkgcal__rvmeta {
+  display: block;
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+  margin-top: 2px;
+}
+
+.lx-mkgcal__rvops {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.lx-mkgcal__rvop {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  background: var(--lx-color-card-solid);
+  color: var(--lx-color-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lx-mkgcal__rvop--ok.is-active,
+.lx-mkgcal__rvop--ok:hover {
+  border-color: var(--lx-color-success);
+  color: var(--lx-color-success);
+}
+
+.lx-mkgcal__rvop--no:hover {
+  border-color: var(--lx-color-danger);
+  color: var(--lx-color-danger);
+}
+
+/* ── 抽屉 ── */
+.lx-mkgcal__dlist {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 8px 12px;
+  margin: 0 0 16px;
+}
+
+.lx-mkgcal__dlist dt {
+  color: var(--lx-color-muted);
+  font-size: 12.5px;
+}
+
+.lx-mkgcal__dlist dd {
+  margin: 0;
+  font-size: 13px;
+  color: var(--lx-color-ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lx-mkgcal__zone {
+  color: var(--lx-color-muted);
+  font-size: 11.5px;
+}
+
+.lx-mkgcal__detailops {
+  display: flex;
+  gap: 8px;
+}
+
+/* 窄屏：日历网格横向滚动，而不是把 7 天压成看不清的细条。 */
+@media (max-width: 1280px) {
+  .lx-mkgcal__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lx-mkgcal__week {
+    grid-template-columns: 88px repeat(7, 132px);
+    overflow-x: auto;
+  }
+}
+
+/* ===== 社媒账号（/marketing/channel，2026-09-27）=====
+ * 健康度的色条与"还有几天"的红色是这一页仅有的两个视觉变量：
+ * 其余字段一律保持中性，避免整页花掉之后真正要预警的两处反而看不见。
+ */
+.lx-mkgchn__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--lx-gap-md, 16px);
+  align-items: start;
+}
+
+.lx-mkgchn__health {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lx-mkgchn__track {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 40px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--lx-color-primary-soft);
+  overflow: hidden;
+}
+
+.lx-mkgchn__track > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--lx-color-primary);
+}
+
+.lx-mkgchn__track > i.is-good {
+  background: var(--lx-color-success);
+}
+
+.lx-mkgchn__track > i.is-bad {
+  background: var(--lx-color-danger);
+}
+
+.lx-mkgchn__expire {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.lx-mkgchn__days {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--lx-color-muted);
+}
+
+.lx-mkgchn__expire.is-warn,
+.lx-mkgchn__days.is-warn {
+  color: var(--lx-color-danger);
+}
+
+.lx-mkgchn__warnlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lx-mkgchn__warnitem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  border: 1px solid var(--lx-color-border);
+  border-left: 3px solid var(--lx-color-warning);
+  border-radius: var(--lx-radius-md);
+  padding: 8px;
+  background: var(--lx-color-card-solid);
+}
+
+.lx-mkgchn__warnhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.lx-mkgchn__warnhandle {
+  font-size: 12.5px;
+  color: var(--lx-color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-mkgchn__warndays {
+  font-size: 12px;
+  color: var(--lx-color-danger);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.lx-mkgchn__warntag {
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-mkgchn__warnbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--lx-color-primary-line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--lx-color-primary);
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lx-mkgchn__warnbtn:hover {
+  background: var(--lx-color-primary-soft);
+}
+
+.lx-mkgchn__hint {
+  color: var(--lx-color-muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+  margin: 10px 0 0;
+}
+
+.lx-mkgchn__stamp {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  color: var(--lx-color-faint);
+}
+
+@media (max-width: 1280px) {
+  .lx-mkgchn__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ===== 访客识别（/marketing/visitor，2026-09-27）=====
+ * 右栏是"要动手的"、左表是"要复核的"，所以右栏的每件都自带一个动作按钮：
+ * 一个只能看的队列，读者会在第二屏就放弃它。
+ */
+.lx-mkgvis__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: var(--lx-gap-md, 16px);
+  align-items: start;
+}
+
+.lx-mkgvis__queuelist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lx-mkgvis__queueitem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  border: 1px solid var(--lx-color-border);
+  border-left: 3px solid var(--lx-color-primary);
+  border-radius: var(--lx-radius-md);
+  padding: 8px;
+  background: var(--lx-color-card-solid);
+}
+
+.lx-mkgvis__queuehead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.lx-mkgvis__queuename {
+  font-size: 12.5px;
+  color: var(--lx-color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-mkgvis__queuedepth {
+  font-size: 12px;
+  color: var(--lx-color-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.lx-mkgvis__queuepages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.lx-mkgvis__queuepage {
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+  border: 1px solid var(--lx-color-border);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.lx-mkgvis__queuebtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--lx-color-primary-line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--lx-color-primary);
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lx-mkgvis__queuebtn:hover {
+  background: var(--lx-color-primary-soft);
+}
+
+.lx-mkgvis__hint {
+  color: var(--lx-color-muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+  margin: 10px 0 0;
+}
+
+/* ===== 邮件营销（/marketing/email，2026-09-27）=====
+ * 右栏两块（主题 A/B、退信预警）都是"要动手的"：一块让人选下一封的标题，
+ * 一块让人去清列表。色只出现在退信上 —— 退信是这一页唯一的纯负面指标。
+ */
+.lx-mkgmail__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: var(--lx-gap-md, 16px);
+  align-items: start;
+}
+
+.lx-mkgmail__side {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.lx-mkgmail__ablist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lx-mkgmail__abitm {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+  padding: 8px;
+  background: var(--lx-color-card-solid);
+}
+
+.lx-mkgmail__abhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 2px;
+}
+
+.lx-mkgmail__abname {
+  font-size: 12.5px;
+  color: var(--lx-color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-mkgmail__abdelta {
+  font-size: 12px;
+  color: var(--lx-color-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.lx-mkgmail__abdelta.is-up {
+  color: var(--lx-color-primary);
+}
+
+.lx-mkgmail__abrow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-mkgmail__abrow > i {
+  margin-left: auto;
+  font-style: normal;
+  color: var(--lx-color-ink);
+  white-space: nowrap;
+}
+
+.lx-mkgmail__bouncelist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lx-mkgmail__bounceitem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  border: 1px solid var(--lx-color-border);
+  border-left: 3px solid var(--lx-color-danger);
+  border-radius: var(--lx-radius-md);
+  padding: 8px;
+  background: var(--lx-color-card-solid);
+}
+
+.lx-mkgmail__bouncehead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.lx-mkgmail__bouncename {
+  font-size: 12.5px;
+  color: var(--lx-color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-mkgmail__bouncerate {
+  font-size: 12px;
+  color: var(--lx-color-danger);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.lx-mkgmail__bouncetrack {
+  display: block;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--lx-color-primary-soft);
+  overflow: hidden;
+}
+
+.lx-mkgmail__bouncetrack > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--lx-color-danger);
+}
+
+.lx-mkgmail__bouncebtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--lx-color-ink);
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lx-mkgmail__bouncebtn:hover {
+  border-color: var(--lx-color-danger);
+  color: var(--lx-color-danger);
+}
+
+.lx-mkgmail__hint {
+  color: var(--lx-color-muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.lx-mkgmail__draft {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lx-mkgmail__draftlabel {
+  font-size: 13px;
+  color: var(--lx-color-muted);
+}
+
+.lx-mkgmail__drafthint {
+  font-size: 12.5px;
+  color: var(--lx-color-muted);
+  line-height: 1.6;
+}
+
+.lx-mkgmail__drafttext {
+  resize: vertical;
+}
+
+.lx-mkgmail__draftbtn {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--lx-color-primary-line);
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 13px;
+  color: var(--lx-color-primary);
+  background: var(--lx-color-primary-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+@media (max-width: 1280px) {
+  .lx-mkgvis__body,
+  .lx-mkgmail__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ===== 营销中心分区出口带（layout，2026-09-27）=====
+ * 流水线三段走步骤条，其余二级页走这条 chip 带。
+ * 它横跨所有二级页，所以只放"当前页之外的入口"—— 点自己等于没反应，
+ * 一个不动的按钮比没有按钮更糟。
+ */
+.lx-marketing__exits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ===== 内容详情 / 审核（/marketing/content/:code，2026-09-28）=====
+ * 一页两栏：左边"这条内容长什么样"，右边"发还是不发"。
+ * 审核是决策动作，决策依据（渠道 / 语种 / 负责人 / 发布时间）必须与预览同屏 ——
+ * 分两屏就得先记一遍再点通过，记错渠道就是发错市场。
+ *
+ * 两栏在 ≤1280 塌缩成单列：右栏最窄处约 320px，英文「Interaction rate」
+ * 这类标签在 320px 里已经要换行，再窄就没有可读性了。
+ */
+.lx-mkgct {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-4);
+}
+
+/* `.lx-page__body` 是 flex 列，裸 inline-flex 的按钮会被拉成整行宽 */
+.lx-mkgct__back {
+  display: flex;
+}
+
+.lx-mkgct__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--lx-space-4);
+  padding: 16px;
+}
+
+.lx-mkgct__headmain {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.lx-mkgct__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+  overflow-wrap: break-word;
+}
+
+.lx-mkgct__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.lx-mkgct__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--lx-space-4);
+  align-items: start;
+}
+
+.lx-mkgct__main,
+.lx-mkgct__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-4);
+  min-width: 0;
+}
+
+.lx-mkgct__stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  padding: 12px;
+  background: var(--lx-color-frost);
+  border-radius: var(--lx-radius-md);
+  overflow: hidden;
+}
+
+.lx-mkgct__stage img {
+  display: block;
+  max-width: 100%;
+  max-height: 340px;
+  border-radius: var(--lx-radius-sm);
+}
+
+/* 视频预览（2026-10-06）：与图片同框同高（`max-height:340px`），
+   否则播放控件一出现就把下面的正文挤下去、整页版式跳动。
+   `width:100% + max-height` + `object-fit:contain` 的组合保证竖版短视频
+   也不会被裁掉画面（审核人要看到完整画面，不是看到裁剪后的一角）。 */
+.lx-mkgct__video {
+  display: block;
+  width: 100%;
+  max-height: 340px;
+  object-fit: contain;
+  background: var(--lx-color-slate);
+  border-radius: var(--lx-radius-sm);
+}
+
+/* 视频下的操作提示：原生 `<video controls>` 的控件是浏览器绘制的，
+   主题色管不到，所以用一行文字把"可播放/可拖进度"说清楚。 */
+.lx-mkgct__videohint {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-mkgct__stageicon {
+  font-size: 40px;
+  color: var(--lx-color-primary);
+}
+
+.lx-mkgct__copy {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--lx-color-slate);
+  overflow-wrap: break-word;
+}
+
+/* 明细表：标签列按内容宽度（`nowrap`），数值列吃掉剩余宽度并允许折行 —— */
+/* 反过来会让「计划发布时间」这类长标签把日期挤成两行。 */
+.lx-mkgct__kvs {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 14px;
+  margin: 0;
+  font-size: 12.5px;
+}
+
+.lx-mkgct__kvs dt {
+  color: var(--lx-color-muted);
+  white-space: nowrap;
+}
+
+.lx-mkgct__kvs dd {
+  margin: 0;
+  color: var(--lx-color-ink);
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.lx-mkgct__review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-3);
+}
+
+.lx-mkgct__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lx-space-2);
+}
+
+.lx-mkgct__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lx-space-2);
+}
+
+.lx-mkgct__stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--lx-color-slate);
+  background: var(--lx-color-card-solid);
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-sm);
+  white-space: nowrap;
+}
+
+.lx-mkgct__stat b {
+  font-family: var(--lx-font-numeric);
+  font-size: 15px;
+  color: var(--lx-color-ink);
+}
+
+.lx-mkgct__trace {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lx-mkgct__traceitem {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--lx-color-slate);
+  min-width: 0;
+}
+
+/* 时间戳是原子单位，不参与压缩 */
+.lx-mkgct__tracetime {
+  font-family: var(--lx-font-numeric);
+  color: var(--lx-color-muted);
+  flex-shrink: 0;
+}
+
+@media (max-width: 1280px) {
+  .lx-mkgct__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ===== 营销中心 · 四模块切换器（SCRM 重构） ===== */
+.lx-mkgnav {
+  display: flex;
+  gap: var(--lx-space-2);
+  padding: var(--lx-space-2) var(--lx-space-3);
+  background: var(--lx-color-card-solid);
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius);
+  box-shadow: var(--lx-shadow-card);
+  margin-bottom: var(--lx-content-gap);
+  overflow-x: auto;
+}
+.lx-mkgnav__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--lx-space-2);
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--lx-radius-sm);
+  background: transparent;
+  color: var(--lx-color-slate);
+  font: 600 14px/1.2 var(--lx-font-body);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.lx-mkgnav__item:hover {
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+}
+.lx-mkgnav__item.is-active {
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+  border-color: var(--lx-color-primary-line);
+}
+.lx-mkgnav__icon {
+  display: inline-flex;
+  font-size: 16px;
+}
+.lx-mkgnav__subs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lx-space-2);
+  margin-bottom: var(--lx-content-gap);
+}
+
+/* ===== 营销中心 · 总览枢纽 ===== */
+.lx-mkgov__kpis {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--lx-space-3);
+  margin-bottom: var(--lx-content-gap);
+}
+.lx-mkgov__cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--lx-content-gap);
+  margin-bottom: var(--lx-content-gap);
+}
+.lx-mkgov__todo { margin-bottom: 0; }
+.lx-mkgov__tabs { display: inline-flex; gap: var(--lx-space-1); }
+.lx-mkgov__tab {
+  position: relative;
+  padding: 6px 12px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: 999px;
+  background: var(--lx-color-card-solid);
+  color: var(--lx-color-slate);
+  font: 600 13px/1 var(--lx-font-body);
+  cursor: pointer;
+}
+.lx-mkgov__tab.is-active {
+  color: var(--lx-color-primary);
+  border-color: var(--lx-color-primary-line);
+  background: var(--lx-color-primary-soft);
+}
+.lx-mkgov__tabdot {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lx-color-danger);
+}
+.lx-mkgov__funnel { margin-bottom: 0; }
+.lx-mkgov__quick {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--lx-space-3);
+}
+
+/* ===== 活动管理 ===== */
+/*
+ * 活动管理的四张指标卡：**必须一行**（2026-10-07 第二十轮）。
+ *
+ * 页面用的是全局类 `lx-grid--kpi-4`，而它在 lingxi-ui.css 的 `≤1100px`
+ * 断点降为 2 列 —— 于是 1280/1366 这两个最常见的视口下四张卡排成两行，
+ * 把下面的生命周期看板顶到第二屏。
+ *
+ * 这里**不改全局断点**而在本页覆盖：`lx-grid--kpi-4` 有 12 个页面在用
+ * （工作台、商品中心、营销其余各页），那些页的卡片带涨跌胶囊与两行副文案，
+ * 窄屏下真会挤成两行文字 —— 为了本页把全站降档点抬上去是拿别人的版式
+ * 换本页的版式。本页的卡只有「标签 + 数字 + 一行副文案」，窄一档仍装得下。
+ *
+ * 选择器需与 lingxi-ui.css 的 @media 同权重：`.lx-grid--kpi-4` 在
+ * media 查询里是 0,1,0，这里用 `.lx-grid.lx-mkgkpi` 提权到 0,2,0。
+ */
+.lx-grid.lx-mkgkpi {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.lx-mkgcamp__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lx-space-4);
+  padding: var(--lx-space-4);
+  margin-bottom: var(--lx-content-gap);
+}
+.lx-mkgcamp__headmain {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-3);
+  flex-wrap: wrap;
+}
+.lx-mkgcamp__name { margin: 0; font: 700 20px/1.2 var(--lx-font-display); color: var(--lx-color-ink); }
+.lx-mkgcamp__id { color: var(--lx-color-muted); font-size: 13px; }
+.lx-mkgcamp__headmeta { display: flex; align-items: center; gap: var(--lx-space-5); flex-wrap: wrap; }
+.lx-mkgcamp__headmeta > span { display: inline-flex; flex-direction: column; gap: 2px; }
+.lx-mkgcamp__headmeta b { font: 700 16px/1 var(--lx-font-numeric); color: var(--lx-color-ink); }
+.lx-mkgcamp__headmeta i { font-style: normal; font-size: 12px; color: var(--lx-color-muted); }
+.lx-mkgcamp__advance {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border: none;
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-grad-brand);
+  color: #fff;
+  font: 600 14px/1 var(--lx-font-body);
+  cursor: pointer;
+  box-shadow: var(--lx-shadow-primary);
+}
+.lx-mkgcamp__advance:disabled { background: var(--lx-color-faint); box-shadow: none; cursor: not-allowed; }
+.lx-mkgcamp__timeline { display: flex; align-items: flex-start; padding: var(--lx-space-2) var(--lx-space-3) var(--lx-space-4); }
+.lx-mkgcamp__step {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--lx-space-2);
+}
+.lx-mkgcamp__dot {
+  position: relative;
+  z-index: 1;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 14px/1 var(--lx-font-numeric);
+  background: var(--lx-color-frost);
+  border: 2px solid var(--lx-color-border);
+  color: var(--lx-color-muted);
+}
+.lx-mkgcamp__step--active .lx-mkgcamp__dot {
+  background: var(--lx-color-primary);
+  border-color: var(--lx-color-primary);
+  color: #fff;
+  box-shadow: var(--lx-shadow-primary);
+}
+.lx-mkgcamp__step--done .lx-mkgcamp__dot {
+  background: var(--lx-color-success-soft);
+  border-color: var(--lx-color-success);
+  color: var(--lx-color-success);
+}
+.lx-mkgcamp__steplabel { font: 600 13px/1.2 var(--lx-font-body); color: var(--lx-color-slate); }
+.lx-mkgcamp__step--active .lx-mkgcamp__steplabel { color: var(--lx-color-primary); }
+.lx-mkgcamp__connector {
+  position: absolute;
+  top: 17px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--lx-color-border);
+}
+.lx-mkgcamp__step--done .lx-mkgcamp__connector { background: var(--lx-color-success); }
+.lx-mkgcamp__facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--lx-space-3); }
+.lx-mkgcamp__fact { display: flex; flex-direction: column; gap: var(--lx-space-2); padding: var(--lx-space-4); }
+.lx-mkgcamp__factlabel { font-size: 13px; color: var(--lx-color-muted); }
+.lx-mkgcamp__factvalue { font: 600 15px/1.4 var(--lx-font-body); color: var(--lx-color-ink); }
+
+/* ===== 客服中心 · 多渠道接入 ===== */
+.lx-chn-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--lx-space-3);
+}
+.lx-chn-card { padding: var(--lx-space-4); display: flex; flex-direction: column; gap: var(--lx-space-3); }
+.lx-chn-card__head { display: flex; align-items: center; gap: var(--lx-space-2); }
+.lx-chn-card__icon { display: inline-flex; font-size: 20px; color: var(--lx-color-primary); }
+.lx-chn-card__name { font: 600 15px/1.2 var(--lx-font-body); color: var(--lx-color-ink); flex: 1; }
+.lx-chn-card__stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--lx-space-2); text-align: center; }
+.lx-chn-card__num { display: block; font: 600 18px/1.1 var(--lx-font-body); color: var(--lx-color-ink); }
+.lx-chn-card__label { font-size: 12px; color: var(--lx-color-muted); }
+.lx-chn-card__btn { align-self: stretch; justify-content: center; }
+
+/* ===== 客服中心 · 实时在线沟通 ===== */
+.lx-chat { display: grid; grid-template-columns: minmax(280px, 320px) minmax(0, 1fr); gap: var(--lx-content-gap); min-height: 560px; }
+.lx-chat__list { display: flex; flex-direction: column; min-height: 0; }
+.lx-chat__sessions { display: flex; flex-direction: column; gap: var(--lx-space-2); overflow-y: auto; padding: var(--lx-space-2) 0; }
+.lx-chat__session { position: relative; text-align: left; border: 1px solid transparent; border-radius: var(--lx-radius-sm); background: transparent; padding: 10px 12px; cursor: pointer; transition: background .15s, border-color .15s; }
+.lx-chat__session:hover { background: var(--lx-color-primary-soft); }
+.lx-chat__session.is-active { background: var(--lx-color-primary-soft); border-color: var(--lx-color-primary-line); }
+.lx-chat__session-top { display: flex; align-items: center; justify-content: space-between; gap: var(--lx-space-2); }
+.lx-chat__session-sub { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 13px; }
+.lx-chat__badge { position: absolute; top: 8px; right: 8px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--lx-color-danger, #e5484d); color: #fff; font: 600 12px/18px var(--lx-font-body); text-align: center; }
+.lx-chat__window { display: flex; flex-direction: column; min-height: 0; }
+.lx-chat__window-head { display: flex; align-items: center; gap: var(--lx-space-2); padding-bottom: var(--lx-space-3); border-bottom: 1px solid var(--lx-color-border); }
+.lx-chat__typing { margin-left: auto; font-size: 12px; color: var(--lx-color-muted); font-style: italic; }
+.lx-chat__messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: var(--lx-space-3); padding: var(--lx-space-4) 0; }
+.lx-chat__bubble { max-width: 70%; display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border-radius: var(--lx-radius); font-size: 14px; }
+.lx-chat__bubble--in { align-self: flex-start; background: var(--lx-color-frost, #f2f4f7); color: var(--lx-color-ink); }
+.lx-chat__bubble--out { align-self: flex-end; background: var(--lx-color-primary-soft); color: var(--lx-color-ink); }
+.lx-chat__bubble-time { font-size: 11px; color: var(--lx-color-muted); }
+.lx-chat__compose { display: flex; gap: var(--lx-space-2); padding-top: var(--lx-space-3); border-top: 1px solid var(--lx-color-border); }
+.lx-chat__input { flex: 1; height: 38px; padding: 0 12px; border: 1px solid var(--lx-color-border); border-radius: var(--lx-radius-sm); background: var(--lx-color-card-solid); color: var(--lx-color-ink); font: 14px/1.2 var(--lx-font-body); }
+
+/* ===== 客服中心 · 全渠道沟通记录 ===== */
+.lx-rec__filters { display: flex; flex-wrap: wrap; gap: var(--lx-space-2); margin-bottom: var(--lx-space-4); }
+.lx-rec__timeline { list-style: none; margin: 0; padding: 0 0 0 var(--lx-space-2); border-left: 2px solid var(--lx-color-border); }
+.lx-rec__item { position: relative; padding: 0 0 var(--lx-space-4) var(--lx-space-4); }
+.lx-rec__dot { position: absolute; left: calc(-1 * var(--lx-space-2) - 7px); top: 4px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--lx-color-card-solid); }
+.lx-rec__dot--in { background: var(--lx-color-accent, #0e7c86); }
+.lx-rec__dot--out { background: var(--lx-color-primary); }
+.lx-rec__meta { display: flex; align-items: center; flex-wrap: wrap; gap: var(--lx-space-2); margin-bottom: 4px; }
+.lx-rec__time { font-size: 12px; color: var(--lx-color-muted); }
+.lx-rec__snippet { font-size: 14px; color: var(--lx-color-ink); }
+.lx-rec__empty { padding: var(--lx-space-6) 0; text-align: center; color: var(--lx-color-muted); }
+
+/* ===== 客服中心 · 工单详情 ===== */
+.lx-tk__back { margin-bottom: var(--lx-space-3); }
+.lx-tk__meta { display: flex; flex-wrap: wrap; gap: var(--lx-space-5); padding: var(--lx-space-4); }
+.lx-tk__meta-item { display: flex; flex-direction: column; gap: 4px; }
+.lx-tk__meta-label { font-size: 12px; color: var(--lx-color-muted); }
+.lx-tk__actions { display: flex; gap: var(--lx-space-3); margin-top: var(--lx-space-4); }
+.lx-tk__close { height: 38px; padding: 0 18px; border: 1px solid var(--lx-color-border); border-radius: var(--lx-radius-sm); background: var(--lx-color-card-solid); color: var(--lx-color-ink); font: 600 14px/1 var(--lx-font-body); cursor: pointer; }
+.lx-tk__close:disabled { opacity: .5; cursor: not-allowed; }
+.lx-tk__closed { margin-top: var(--lx-space-3); padding: var(--lx-space-3); border-radius: var(--lx-radius-sm); background: var(--lx-color-success-soft); color: var(--lx-color-success); font: 600 14px/1.4 var(--lx-font-body); }
+.lx-tk__detail { display: flex; flex-direction: column; gap: var(--lx-space-3); margin-top: var(--lx-space-3); padding: var(--lx-space-3) var(--lx-space-4) var(--lx-space-2); border-top: 1px solid var(--lx-color-border); }
+.lx-steps { list-style: none; display: flex; gap: var(--lx-space-2); margin: 0; padding: 0; flex-wrap: wrap; }
+.lx-steps__item { display: flex; align-items: center; gap: var(--lx-space-2); flex: 1; min-width: 120px; }
+.lx-steps__dot { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--lx-color-border); background: var(--lx-color-card-solid); color: var(--lx-color-muted); font: 600 13px/1 var(--lx-font-body); }
+.lx-steps__item.is-done .lx-steps__dot { background: var(--lx-color-success); border-color: var(--lx-color-success); color: #fff; }
+.lx-steps__item.is-active .lx-steps__dot { border-color: var(--lx-color-primary); color: var(--lx-color-primary); }
+.lx-steps__label { font: 600 14px/1.2 var(--lx-font-body); color: var(--lx-color-slate); }
+.lx-steps__item.is-active .lx-steps__label { color: var(--lx-color-primary); }
+
+/* ===== 总览枢纽 / 活动 响应式 ===== */
+@media (max-width: 1280px) {
+  .lx-mkgov__kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lx-mkgov__cols { grid-template-columns: minmax(0, 1fr); }
+  .lx-mkgov__quick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lx-mkgcamp__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ===== 客服中心 · 服务顾问工作台（2026-09-29 重构） =====
+   四能力（多渠道接入 / 实时在线沟通 / 全渠道沟通记录 / 服务工单）不再平铺成四个目录，
+   而是内聚进一个坐席工作台：左=接入与队列、中=实时对话、右=客户与工单上下文。
+   参考网易七鱼「统一客服平台」简化版。对话气泡/输入条复用 reception.css 的 .lx-rec__*，
+   工单状态机复用本文件的 .lx-steps / .lx-tk__*。 */
+.lx-svc-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+.lx-svc {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.lx-svc__grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr) 320px;
+  gap: 12px;
+}
+.lx-svc__inbox,
+.lx-svc__conversation,
+.lx-svc__context {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-lg);
+  background: var(--lx-color-card-solid);
+  overflow: hidden;
+}
+
+/* 左栏：渠道接入条 + 视图切换 + 列表/时间线 */
+.lx-svc__channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px;
+  border-bottom: 1px solid var(--lx-color-border);
+}
+.lx-svc__channel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: 999px;
+  background: var(--lx-color-card-solid);
+  font-size: 12px;
+  color: var(--lx-color-slate);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.lx-svc__channel.is-active {
+  border-color: var(--lx-color-primary-line);
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+}
+.lx-svc__channel.is-off { opacity: .55; }
+.lx-svc__channel-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--lx-color-success); }
+.lx-svc__channel.is-off .lx-svc__channel-dot { background: var(--lx-color-faint); }
+.lx-svc__channel-badge {
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+  background: var(--lx-color-danger); color: #fff; font-size: 11px; line-height: 16px; text-align: center;
+}
+.lx-svc__toggle {
+  display: flex; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--lx-color-border);
+}
+.lx-svc__toggle button {
+  padding: 5px 12px; border: 1px solid transparent; border-radius: 999px;
+  background: transparent; color: var(--lx-color-slate); font: 600 12.5px/1 var(--lx-font-body); cursor: pointer;
+}
+.lx-svc__toggle button.is-active {
+  color: var(--lx-color-primary); border-color: var(--lx-color-primary-line); background: var(--lx-color-primary-soft);
+}
+.lx-svc__list {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 8px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.lx-svc__session {
+  text-align: left; border: 1px solid transparent; border-radius: 10px; background: transparent;
+  padding: 8px 10px; cursor: pointer; transition: background .15s, border-color .15s;
+}
+.lx-svc__session:hover { background: var(--lx-color-frost); }
+.lx-svc__session.is-active { background: var(--lx-color-primary-soft); border-color: var(--lx-color-primary-line); }
+.lx-svc__session-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.lx-svc__session-name {
+  flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 13px; font-weight: 600; color: var(--lx-color-ink);
+}
+.lx-svc__session-meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 11.5px; color: var(--lx-color-muted); }
+.lx-svc__session-preview {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 12px; color: var(--lx-color-slate); margin-top: 2px;
+}
+.lx-svc__unread {
+  flex: 0 0 auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
+  background: var(--lx-color-danger); color: #fff; font-size: 11px; line-height: 18px; text-align: center;
+}
+.lx-svc__waiting { flex: 0 0 auto; font-size: 11px; color: var(--lx-color-muted); }
+
+/* 中间：对话窗（气泡/输入条复用 reception.css 的 .lx-rec__*） */
+.lx-svc__conv-head {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  border-bottom: 1px solid var(--lx-color-border);
+}
+.lx-svc__conv-title {
+  flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 14px; font-weight: 600; color: var(--lx-color-ink);
+}
+.lx-svc__typing { font-size: 12px; color: var(--lx-color-muted); font-style: italic; }
+.lx-svc__empty { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; color: var(--lx-color-muted); font-size: 13px; }
+
+/* 右栏：客户与工单 */
+.lx-svc__ctx-section { padding: 12px 14px; border-bottom: 1px solid var(--lx-color-border); }
+.lx-svc__ctx-title { font-size: 13px; font-weight: 600; color: var(--lx-color-ink); margin-bottom: 8px; }
+.lx-svc__field { display: flex; gap: 8px; padding: 4px 0; font-size: 13px; }
+.lx-svc__field-label { flex: 0 0 48px; color: var(--lx-color-muted); }
+.lx-svc__field-value { flex: 1 1 auto; min-width: 0; color: var(--lx-color-ink); }
+.lx-svc__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.lx-svc__ticket-empty { padding: 8px 0; color: var(--lx-color-muted); font-size: 12.5px; }
+.lx-svc__create {
+  margin-top: 10px; height: 36px; width: 100%; border: 1px solid var(--lx-color-primary-line);
+  border-radius: var(--lx-radius-sm); background: var(--lx-color-primary-soft); color: var(--lx-color-primary);
+  font: 600 13px/1 var(--lx-font-body); cursor: pointer;
+}
+
+/* 窄屏：先收起右栏，再窄则上下堆叠 */
+@media (max-width: 1180px) {
+  .lx-svc__grid { grid-template-columns: 260px minmax(0, 1fr); }
+  .lx-svc__context { display: none; }
+}
+@media (max-width: 760px) {
+  .lx-svc__grid { grid-template-columns: 1fr; grid-auto-rows: minmax(280px, auto); }
+  .lx-svc__context { display: flex; }
+}
+
+/* ===== 客服中心 · 顶部模式条 / 在线状态 ===== */
+.lx-svc__bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-lg);
+  background: var(--lx-color-card-solid);
+}
+.lx-svc__modes { display: flex; gap: 6px; flex-wrap: wrap; }
+.lx-svc__modes button {
+  padding: 6px 16px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--lx-color-slate);
+  font: 600 13px/1 var(--lx-font-body);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lx-svc__modes button.is-active {
+  color: var(--lx-color-primary);
+  border-color: var(--lx-color-primary-line);
+  background: var(--lx-color-primary-soft);
+}
+.lx-svc__presence { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.lx-svc__pres {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: 999px;
+  background: var(--lx-color-card-solid);
+  color: var(--lx-color-slate);
+  font: 600 12.5px/1 var(--lx-font-body);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lx-svc__pres.is-active {
+  border-color: var(--lx-color-primary-line);
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+}
+.lx-svc__pres-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lx-color-faint); flex: 0 0 auto; }
+.lx-svc__pres-dot.is-online { background: var(--lx-color-success); }
+.lx-svc__pres-dot.is-away { background: #f0a91a; }
+.lx-svc__pres-dot.is-offline { background: var(--lx-color-faint); }
+
+/* ===== 客服中心 · 历史会话视图 ===== */
+.lx-svc__hist {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 12px;
+}
+.lx-svc__hist-side {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-lg);
+  background: var(--lx-color-card-solid);
+  overflow: hidden;
+}
+.lx-svc__hist-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--lx-color-border);
+}
+.lx-svc__hist-date label { font-size: 13px; font-weight: 600; color: var(--lx-color-ink); flex: 0 0 auto; }
+.lx-svc__select {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-card-solid);
+  color: var(--lx-color-ink);
+  font: 13px/1 var(--lx-font-body);
+}
+.lx-svc__hist-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lx-svc__hist-list-title { font-size: 12px; color: var(--lx-color-muted); padding: 2px 4px 6px; }
+.lx-svc__hist-search { padding: 2px 4px 6px; }
+.lx-svc__hist-search .lx-search { width: 100%; }
+.lx-svc__hist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.lx-svc__hist-item:hover { background: var(--lx-color-frost); }
+.lx-svc__hist-item.is-active { background: var(--lx-color-primary-soft); border-color: var(--lx-color-primary-line); }
+.lx-svc__hist-item-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+.lx-svc__hist-item-count {
+  flex: 0 0 auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--lx-color-frost);
+  color: var(--lx-color-slate);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+.lx-svc__hist-detail {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-lg);
+  background: var(--lx-color-card-solid);
+  overflow: hidden;
+}
+
+/* ===== 客服中心 · 客户工单视图 ===== */
+.lx-svc__tickets {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+.lx-svc__tkcards {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.lx-svc__tkcard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid var(--lx-color-border);
+  border-left-width: 3px;
+  border-radius: var(--lx-radius-lg);
+  background: var(--lx-color-card-solid);
+  cursor: pointer;
+  text-align: left;
+}
+.lx-svc__tkcard.is-active { border-color: var(--lx-color-primary-line); background: var(--lx-color-primary-soft); }
+.lx-svc__tkcard--total { border-left-color: var(--lx-color-primary); }
+.lx-svc__tkcard--pending { border-left-color: #f0a91a; }
+.lx-svc__tkcard--overdue { border-left-color: var(--lx-color-danger); }
+.lx-svc__tkcard--closed { border-left-color: var(--lx-color-success); }
+.lx-svc__tkcard-value { font: 700 26px/1 var(--lx-font-body); color: var(--lx-color-ink); }
+.lx-svc__tkcard-label { font-size: 12.5px; color: var(--lx-color-muted); }
+.lx-svc__tktable-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-lg);
+  background: var(--lx-color-card-solid);
+}
+.lx-svc__tktable { width: 100%; border-collapse: collapse; font-size: 12.5px; table-layout: fixed; }
+.lx-svc__tktable th {
+  position: sticky;
+  top: 0;
+  background: var(--lx-color-frost);
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 600;
+  color: var(--lx-color-slate);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--lx-color-border);
+}
+.lx-svc__tktable td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--lx-color-border);
+  color: var(--lx-color-ink);
+  vertical-align: top;
+}
+/* 精简后的文本列：不换行、超出截断（fixed 布局下不会撑出横向滚动） */
+.lx-svc__tktable td.lx-cell-text,
+.lx-svc__tktable td.lx-cell-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lx-svc__tktable tr:hover td { background: var(--lx-color-frost); }
+.lx-svc__tkdesc { display: inline-block; max-width: 220px; color: var(--lx-color-slate); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.lx-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font: 600 12.5px/1.3 var(--lx-font-body);
+  color: var(--lx-color-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.lx-link:hover { text-decoration: underline; }
+.lx-svc__tkop { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; white-space: nowrap; }
+.lx-svc__tkop .lx-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font: 600 12.5px/1 var(--lx-font-body);
+  color: var(--lx-color-primary);
+}
+.lx-svc__tkop .lx-link:hover { text-decoration: underline; }
+.lx-svc__tkop-done { font: 600 12.5px/1 var(--lx-font-body); color: var(--lx-color-success); }
+@media (max-width: 1180px) {
+  .lx-svc__tkcards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lx-svc__hist { grid-template-columns: 240px minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .lx-svc__hist { grid-template-columns: 1fr; grid-auto-rows: minmax(240px, auto); }
+  .lx-svc__tkcards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ===== 配置中心 · 子页面包屑 ===== */
+.lx-crumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--lx-space-3);
+  font-size: 13px;
+  color: var(--lx-color-text-secondary);
+}
+.lx-crumb__link {
+  color: var(--lx-color-primary);
+  text-decoration: none;
+}
+.lx-crumb__link:hover { text-decoration: underline; }
+.lx-crumb__sep { color: var(--lx-color-border-strong); }
+
+/* ===== 配置中心 · 占位页（规划中） ===== */
+.lx-comingsoon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lx-space-3);
+  padding: 72px 24px;
+  text-align: center;
+}
+.lx-comingsoon__badge {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--lx-color-frost);
+  color: var(--lx-color-primary);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+.lx-comingsoon__desc {
+  max-width: 520px;
+  margin: 0;
+  color: var(--lx-color-text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.lx-comingsoon__hint {
+  max-width: 520px;
+  margin: 0;
+  color: var(--lx-color-text-secondary);
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+/* ===== 营销中心 · 总览页营销日历 ===== */
+.lx-grid--4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--lx-space-4);
+}
+@media (max-width: 1100px) {
+  .lx-grid--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.lx-ovcal { display: flex; flex-direction: column; gap: var(--lx-space-3); }
+.lx-ovcal__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lx-space-3);
+  flex-wrap: wrap;
+}
+.lx-ovcal__nav { display: inline-flex; align-items: center; gap: var(--lx-space-2); }
+.lx-ovcal__navbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--lx-radius);
+  border: 1px solid var(--lx-color-border);
+  background: var(--lx-color-card-solid);
+  color: var(--lx-color-ink);
+  cursor: pointer;
+}
+.lx-ovcal__navbtn:hover { border-color: var(--lx-color-primary); color: var(--lx-color-primary); }
+.lx-ovcal__period {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--lx-color-ink);
+  min-width: 92px;
+  text-align: center;
+}
+.lx-ovcal__seg {
+  display: inline-flex;
+  border: 1px solid var(--lx-color-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.lx-ovcal__segbtn {
+  padding: 5px 14px;
+  border: 0;
+  background: var(--lx-color-card-solid);
+  color: var(--lx-color-slate);
+  font: 600 13px/1 var(--lx-font-body);
+  cursor: pointer;
+}
+.lx-ovcal__segbtn + .lx-ovcal__segbtn { border-left: 1px solid var(--lx-color-border); }
+.lx-ovcal__segbtn.is-active { background: var(--lx-color-primary); color: #fff; }
+.lx-ovcal__legend { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; font-size: 12px; color: var(--lx-color-muted); }
+.lx-ovcal__leg { display: inline-flex; align-items: center; gap: 5px; }
+.lx-ovcal__swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; background: var(--ov); }
+.lx-ovcal__legsep { width: 1px; height: 14px; background: var(--lx-color-border); }
+.lx-ovcal__cat { display: inline-flex; color: var(--ov); }
+
+/* 事件三态色：颜色=状态，图标=类别（正交区分） */
+.lx-ovcal__event--done { --ov: var(--lx-color-success); }
+.lx-ovcal__event--running { --ov: var(--lx-color-primary); }
+.lx-ovcal__event--planned { --ov: var(--lx-color-warning); }
+
+/* 月视图网格 */
+.lx-ovcal__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.lx-ovcal__dow { text-align: center; font-size: 12px; font-weight: 600; color: var(--lx-color-muted); padding: 4px 0; }
+.lx-ovcal__cell {
+  min-height: 92px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-card-solid);
+  padding: 4px 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.lx-ovcal__cell.is-out { background: var(--lx-color-frost); opacity: 0.65; }
+.lx-ovcal__cell.is-today { border-color: var(--lx-color-primary); box-shadow: inset 0 0 0 1px var(--lx-color-primary); }
+.lx-ovcal__num { font-size: 12px; font-weight: 600; color: var(--lx-color-slate); }
+.lx-ovcal__cell.is-today .lx-ovcal__num { color: var(--lx-color-primary); }
+.lx-ovcal__events { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.lx-ovcal__event {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-left: 3px solid var(--ov);
+  border-radius: 3px;
+  background: var(--lx-color-frost);
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--lx-color-ink);
+  overflow: hidden;
+}
+.lx-ovcal__cat { color: var(--ov); display: inline-flex; flex-shrink: 0; }
+.lx-ovcal__etext { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lx-ovcal__more { font-size: 11px; color: var(--lx-color-muted); padding-left: 4px; }
+
+/* 周视图 */
+.lx-ovcal__week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.lx-ovcal__wcol {
+  min-height: 180px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-card-solid);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lx-ovcal__wcol.is-today { border-color: var(--lx-color-primary); box-shadow: inset 0 0 0 1px var(--lx-color-primary); }
+.lx-ovcal__whead { display: flex; align-items: center; justify-content: space-between; }
+.lx-ovcal__wdow { font-size: 11px; color: var(--lx-color-muted); }
+.lx-ovcal__wcol .lx-ovcal__event { font-size: 11.5px; }
+
+/* 年视图 */
+.lx-ovcal__year { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--lx-space-3); }
+.lx-ovcal__month {
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-card-solid);
+  padding: 8px;
+}
+.lx-ovcal__monthtitle {
+  border: 0;
+  background: transparent;
+  font: 700 13px/1 var(--lx-font-body);
+  color: var(--lx-color-ink);
+  cursor: pointer;
+  margin-bottom: 6px;
+  padding: 0;
+}
+.lx-ovcal__monthtitle:hover { color: var(--lx-color-primary); }
+.lx-ovcal__minigrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.lx-ovcal__minicell { display: flex; align-items: center; justify-content: center; height: 14px; border-radius: 2px; }
+.lx-ovcal__minicell.is-out { opacity: 0.4; }
+.lx-ovcal__minicell.is-today { box-shadow: inset 0 0 0 1px var(--lx-color-primary); }
+.lx-ovcal__minicell.has { background: var(--lx-color-frost); }
+.lx-ovcal__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ov); display: inline-block; }
+
+/* 总览页模块入口卡 */
+.lx-ovmod { margin-top: 0; }
+.lx-ovmod__card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-card-solid);
+  padding: 18px;
+  cursor: pointer;
+}
+.lx-ovmod__card:hover { border-color: var(--lx-color-primary); }
+.lx-ovmod__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+  font-size: 18px;
+}
+.lx-ovmod__title { font-size: 15px; font-weight: 700; color: var(--lx-color-ink); }
+.lx-ovmod__desc { font-size: 12.5px; color: var(--lx-color-muted); line-height: 1.5; }
+.lx-ovmod__enter { margin-top: auto; font-size: 13px; font-weight: 600; color: var(--lx-color-primary); }
+
+/* 营销中心总览页顶部：单行五快捷按钮（2026-10-06 改版）。
+   原来是「左迷你日历 + 右 2×2 按钮卡」两栏（.lx-ov-top / .lx-ov-top__cal /
+   .lx-ov-top__mods）；用户要求去掉顶部日历、恢复快捷按钮形式并把营销日历
+   升格为第一个按钮，故整段改为一行 chip 式按钮条。 */
+.lx-ov-modbar {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  gap: var(--lx-space-2);
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.lx-ovmod__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-card-solid);
+  cursor: pointer;
+  padding: 6px 14px;
+  white-space: nowrap;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.lx-ovmod__btn:hover { border-color: var(--lx-color-primary); }
+.lx-ovmod__btn.is-active {
+  border-color: var(--lx-color-primary);
+  background: var(--lx-color-primary-soft);
+  box-shadow: inset 0 0 0 1px var(--lx-color-primary);
+}
+.lx-ovmod__btn-icon { font-size: 15px; color: var(--lx-color-primary); display: inline-flex; }
+.lx-ovmod__btn-label { font-size: 13px; font-weight: 600; color: var(--lx-color-ink); line-height: 1.3; }
+.lx-ovmod__btn.is-active .lx-ovmod__btn-label { color: var(--lx-color-primary); }
+/* 内嵌模块页的嵌套 .lx-page 不再额外撑行距（正文间距由模块自身 .lx-page__body / .lx-section 负责） */
+.lx-ov-body > .lx-page { gap: 0; }
+
+/* 紧凑日历（总览页顶部）：跨天活动合并为一条横条（按周分段、整段一个标题），单日事件占一格；
+   每周 2 条泳道贪心放置，放不下的在日期右侧 +N；悬停横条/日期格原生弹窗展示详情。 */
+.lx-ovcal--compact { gap: 2px; }
+.lx-ovcal--compact .lx-ovcal__legend { display: none; }
+.lx-ovcal--compact .lx-ovcal__seg { display: none; }
+.lx-ovcal--compact .lx-ovcal__bar { margin-bottom: 1px; }
+.lx-ovcal--compact .lx-ovcal__nav { gap: 3px; }
+.lx-ovcal--compact .lx-ovcal__period { font-size: 11px; min-width: 64px; }
+.lx-ovcal--compact .lx-ovcal__navbtn { width: 20px; height: 20px; }
+.lx-ovcal--compact .lx-ovcal__grid { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 2px; }
+.lx-ovcal--compact .lx-ovcal__dowrow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.lx-ovcal--compact .lx-ovcal__dow { padding: 0; font-size: 9px; font-weight: 600; line-height: 1.1; }
+.lx-ovcal--compact .lx-ovcal__num { font-size: 8px; line-height: 1.2; }
+.lx-ovcal--compact .lx-ovcal__more { font-size: 8px; }
+/* 周块：第 1 行日期数字，第 2/3 行为事件横条泳道；不放单元格边框，横条才能跨列连续 */
+.lx-ovcal__weekrow {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: auto 1fr 1fr;
+  gap: 1px 2px;
+  overflow: hidden;
+}
+.lx-ovcal__day { display: flex; align-items: center; gap: 3px; min-width: 0; }
+.lx-ovcal__day .lx-ovcal__more { margin-left: auto; }
+.lx-ovcal__day.is-out { opacity: 0.55; }
+.lx-ovcal__day.is-today { background: var(--lx-color-primary-soft); border-radius: 4px; }
+.lx-ovcal__day.is-today .lx-ovcal__num {
+  background: var(--lx-color-primary);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0 4px;
+  font-weight: 700;
+}
+/* 跨天/单日事件横条：状态色圆圈 + 标题，宽度=跨越的天数；底色按状态加深、内容居中更醒目 */
+.lx-ovcal__bev {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  border: 0;
+  background: var(--lx-color-frost);
+  background: color-mix(in srgb, var(--ov) 22%, var(--lx-color-frost));
+  border-radius: 3px;
+  padding: 1px 4px;
+  font: 400 8px/1.2 var(--lx-font-body);
+  color: var(--lx-color-ink);
+  cursor: pointer;
+  overflow: hidden;
+  text-align: center;
+}
+.lx-ovcal__bev:hover { background: color-mix(in srgb, var(--ov) 34%, var(--lx-color-frost)); }
+.lx-ovcal__bev .lx-ovcal__etext { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lx-ovcal--compact .lx-ovcal__cdot { flex: 0 0 auto; width: 6px; height: 6px; border-radius: 50%; background: var(--ov); }
+
+/* 紧凑视图横条的类别图标 + 左侧状态色条 + 今天列高亮（2026-10-06 可视化增强）。
+   可视化不足的根因是"编码通道太少"：横条只有一个状态圆点，类别信息被丢掉，
+   读者必须 hover 才知道这一周排的是活动还是内容。这里补三条低成本的强化，
+   全部走既有令牌（`--ov` 状态色 + `--lx-color-primary`），不新增色相：
+     ① 类别图标 —— 颜色认状态、图标认类别，构成两条正交通道；
+     ② 左侧 3px 状态色条 —— 横条本身底色已按状态着色，再加一道竖条让
+        "这条横条的左端"成为状态的强锚点，跨周对比时一眼可辨；
+     ③ 今天所在列整列淡底 —— 原先只有"今天"那个日期数字带胶囊高亮，
+        跨天活动横条恰好盖住日期行时，今天就不显眼了。 */
+.lx-ovcal--compact .lx-ovcal__bcat {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  font-size: 8px;
+  color: var(--lx-color-muted);
+}
+
+.lx-ovcal--compact .lx-ovcal__bev {
+  box-shadow: inset 3px 0 0 var(--ov);
+}
+
+.lx-ovcal--compact .lx-ovcal__day.is-today { box-shadow: inset 0 0 0 1px var(--lx-color-primary); }
+
+/* 通用主按钮（表单页 / 模块页顶部 CTA） */
+.lx-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-card-solid);
+  color: var(--lx-color-ink);
+  font: 600 13px/1 var(--lx-font-body);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lx-btn:hover { border-color: var(--lx-color-primary-line); color: var(--lx-color-primary); }
+.lx-btn--primary { background: var(--lx-color-primary); border-color: var(--lx-color-primary); color: #fff; }
+.lx-btn--primary:hover { color: #fff; filter: brightness(1.05); }
+
+/* 分发 / 投放页顶部 CTA 条 */
+.lx-mktdist__bar, .lx-mktplace__bar { margin-bottom: var(--lx-space-3); }
+

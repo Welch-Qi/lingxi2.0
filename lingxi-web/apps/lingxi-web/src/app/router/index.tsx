@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router';
 import { RootLayout } from '@/app/layout/RootLayout';
 import { RequireAuth } from '@/app/router/RequireAuth';
+import { RequirePerm } from '@/app/router/RequirePerm';
 import { ErrorPage } from '@/components/ErrorPage';
 import { moduleConfigs } from '@/app/router/modules';
 import type { ModuleRoute } from '@/app/router/types';
@@ -36,9 +37,31 @@ function withAuth(Component: ComponentType) {
  *
  * 为什么必须转：react-router 不允许非 index 子路由的 path 为空，
  * 而「一级菜单点击后落在分区首页」正是这种情形（如 /customer 自身）。
+ *
+ * `permCode` 在此**第一次被真正消费**（2026-10-06 接线）。此前它被本函数整个丢掉，
+ * 于是所有 `permCode` 声明都是摆设——权限管理页改什么都不影响真实行为。
+ * 现在把页面组件包进 <RequirePerm>，无权限即渲染 403（不静默跳转，理由见 RequirePerm 注释）。
+ *
+ * 为什么用 lazy 返回 element 而不是顶层 element 属性：lazy 里包一层守卫后，
+ * 页面模块仍只在真正命中该路由时才下载（保持分包收益），而守卫本身只依赖
+ * PermissionContext（@lingxi/ui 的叶子包），不引入额外加载。
  */
 function toChildRoute(moduleBasePath: string, route: ModuleRoute) {
-  const lazy = async () => ({ Component: (await route.element()).default });
+  const code = route.permCode;
+  const lazy = async () => {
+    const mod = await route.element();
+    const Page = mod.default;
+    if (!code) return { Component: Page };
+    return {
+      Component: function GuardedRoute() {
+        return (
+          <RequirePerm code={code}>
+            <Page />
+          </RequirePerm>
+        );
+      },
+    };
+  };
   if (route.path === moduleBasePath) {
     return { index: true as const, lazy };
   }

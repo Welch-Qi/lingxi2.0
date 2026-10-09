@@ -25,8 +25,8 @@
 
 | 用途 | 文档 |
 |---|---|
-| 产品是什么 | [`lingxi-docs/01-product/灵犀系统产品规划说明书2.0.md`](lingxi-docs/01-product/) |
-| 做哪些功能 | [`lingxi-docs/01-product/灵犀系统功能清单V2.0.md`](lingxi-docs/01-product/)（净 266 项：P0-A 98 + P0-B 53） |
+| 产品是什么 | [`lingxi-docs/01-product/灵犀系统产品规划说明书2.0.md`](lingxi-docs/01-product/)（**内容版本 V2.1.1**，结论式表述） |
+| 做哪些功能 | [`lingxi-docs/01-product/灵犀系统功能清单V2.0.md`](lingxi-docs/01-product/)（**净 271 项：P0-A 97 + P0-B 71**；客户域三中心：客户 / 商机进 P0，线索进 P2） |
 | 技术怎么选 | [`lingxi-docs/08-standards/灵犀系统技术架构和组件选型方案2.0.md`](lingxi-docs/08-standards/) |
 | **编码怎么守规矩** | [`lingxi-docs/08-standards/灵犀系统技术规约2.0.md`](lingxi-docs/08-standards/)（**唯一技术规范**） |
 

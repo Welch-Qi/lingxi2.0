@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 // 类型专用导入：运行时会被完全擦除，因此不会把 echarts 拉回静态依赖图（首屏）。
 // 不用 Promise<typeof import('./echarts-lazy')> 这种内联写法——那会触发
 // @typescript-eslint/consistent-type-imports（`import()` 类型注解被禁止）。
-import type * as echartsLazy from './echarts-lazy';
 import type { ECharts, EChartsCoreOption } from './echarts-lazy';
+import { loadECharts } from './echarts-loader';
 
 /**
  * 图表组件 LxChart（技术规约2.0 §4.6 指定的 lingxi-ui 业务组件之一）。
@@ -20,30 +20,9 @@ import type { ECharts, EChartsCoreOption } from './echarts-lazy';
  */
 
 /**
- * echarts 按需加载，且整个会话只注册一次。
- *
- * 为什么走 ./echarts-lazy 这个中间模块、而不是在这里 `await import('echarts/charts')`：
- *   动态 import 得到的是命名空间对象，Rollup 无法对其 tree-shaking，会把整个模块打包。
- *   实测：直接动态 import 子模块会让 chunk 从 524 kB 膨胀到 1092 kB（= echarts 全量）。
- *   ./echarts-lazy 用静态命名导入保住摇树，再由这里动态 import 把它挪出首屏。
- *
- * 为什么要挪出首屏：
- *   echarts/core + zrender + 折线/柱状 + 网格/提示/图例 实测约 524 kB
- *   （对照：echarts 全量 min 1096 kB、echarts.simple 489 kB）。
- *   12 个一级菜单里只有工作台用到图表，其余页面不该白付这份体积。
- *
- * 用模块级 promise 记忆化：多个图表实例并发挂载时也只注册一次、只请求一次。
- * 失败时清空记忆，否则一次网络抖动会让本会话后续所有图表永久加载不出来。
+ * echarts 由 ./echarts-loader 统一懒加载并记忆化（见该文件注释：
+ * 为什么走 ./echarts-lazy 中间模块、为什么必须挪出首屏）。此处只负责消费。
  */
-let echartsModule: Promise<typeof echartsLazy> | null = null;
-
-function loadECharts(): Promise<typeof echartsLazy> {
-  echartsModule ??= import('./echarts-lazy').catch((error: unknown) => {
-    echartsModule = null;
-    throw error;
-  });
-  return echartsModule;
-}
 
 /** 令牌名 → 兜底色值。兜底色与 design-tokens.css 保持一致，防止令牌缺失时图表失效。 */
 const TOKENS = {

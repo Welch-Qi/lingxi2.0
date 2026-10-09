@@ -3,7 +3,7 @@ import { useAuth } from '@/app/providers/AuthProvider';
 import { useUiStore } from '@/stores/uiStore';
 
 /**
- * 底部状态栏（改造指引 4.10 + 产品规划说明书2.0 §5.1）。
+ * 底部状态栏（改造指引 4.10 + 产品规划说明书 V2.1 §6.1）。
  *
  * 三个状态指示器：智能体运行状态 / 数据同步状态 / 连接健康。
  * 为什么常驻：这三项是"系统是否在正常干活"的最小可观测面，

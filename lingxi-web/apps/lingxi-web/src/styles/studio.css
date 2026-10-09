@@ -1,0 +1,542 @@
+/**
+ * AI 内容生成工作台（.lx-studio）—— 配套 AIContentStudio.tsx。
+ *
+ * 颜色一律取 var(--lx-*)：暗色主题由 design-tokens.css 整段重定义同名变量，
+ * 本文件不需要（也不应该）为暗色另写一套规则。
+ *
+ * 三条形状约束：
+ *   ① 每个可压缩的文本行都必须自带 min-width:0 + 省略号，窄栏里宁可截断不可溢出
+ *      （英文态是照妖镜：中文不断字的地方英文会断）；
+ *   ② 图片一律 object-fit:cover + 固定比例，避免不同分辨率把卡片撑成不同高度；
+ *   ③ 栏内滚动交给 .lx-studio__card--grow，抽屉本身不滚，生成中状态才不会跟着抖。
+ */
+
+.lx-studio-drawer .ant-drawer-body {
+  padding: 0;
+  background: var(--lx-color-bg);
+}
+
+.lx-studio {
+  box-sizing: border-box;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+/* ① 内容类型条 */
+.lx-studio__types {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-lg);
+  background: var(--lx-color-card-solid);
+}
+
+.lx-studio__label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+  white-space: nowrap;
+}
+
+.lx-studio__typebtns {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.lx-studio__typebtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 12.5px;
+  color: var(--lx-color-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lx-studio__typebtn.is-active {
+  background: var(--lx-color-primary);
+  color: #fff;
+}
+
+.lx-studio__hint {
+  min-width: 0;
+  flex: 1 1 240px;
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+/* 三栏骨架：中文按 1.25 : 1 : 1，预览栏留够缩略图的宽度 */
+.lx-studio__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.lx-studio__col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.lx-studio__card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-lg);
+  background: var(--lx-color-card-solid);
+}
+
+.lx-studio__card--grow {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.lx-studio__cardtitle {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-studio__cardsub {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--lx-color-muted);
+}
+
+.lx-studio__input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-bg);
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--lx-color-ink);
+  resize: vertical;
+}
+
+.lx-studio__input::placeholder {
+  color: var(--lx-color-faint);
+}
+
+.lx-studio__input--tall {
+  min-height: 220px;
+  line-height: 1.6;
+}
+
+/* 素材多选 */
+.lx-studio__mats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lx-studio__mat {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-card-solid);
+  cursor: pointer;
+  text-align: left;
+}
+
+.lx-studio__mat.is-active {
+  border-color: var(--lx-color-primary);
+  background: var(--lx-color-primary-soft);
+}
+
+.lx-studio__matimg {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--lx-radius-sm);
+  object-fit: cover;
+}
+
+.lx-studio__matbody {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.lx-studio__matname {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--lx-color-ink);
+}
+
+.lx-studio__matok {
+  flex: 0 0 auto;
+  font-size: 14px;
+  color: var(--lx-color-primary);
+}
+
+.lx-studio__upload {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px dashed var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-md);
+  background: transparent;
+  font-size: 12px;
+  color: var(--lx-color-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lx-studio__upload:hover {
+  color: var(--lx-color-primary);
+  border-color: var(--lx-color-primary-line);
+}
+
+/* 生成模型 chips */
+.lx-studio__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lx-studio__chip {
+  padding: 4px 11px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: 999px;
+  background: var(--lx-color-card-solid);
+  font-size: 12px;
+  color: var(--lx-color-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lx-studio__chip.is-active {
+  background: var(--lx-color-primary);
+  border-color: var(--lx-color-primary);
+  color: #fff;
+}
+
+/* 预置 / 自定义 */
+.lx-studio__segment {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+}
+
+.lx-studio__seg {
+  flex: 1 1 0;
+  padding: 4px 0;
+  border: 0;
+  border-radius: var(--lx-radius-sm);
+  background: transparent;
+  font-size: 12px;
+  color: var(--lx-color-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lx-studio__seg.is-active {
+  background: var(--lx-color-primary);
+  color: #fff;
+}
+
+.lx-studio__scripts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lx-studio__script {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-card-solid);
+  cursor: pointer;
+  text-align: left;
+}
+
+.lx-studio__script.is-active {
+  border-color: var(--lx-color-primary);
+  background: var(--lx-color-primary-soft);
+}
+
+.lx-studio__scriptname {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-studio__scriptdesc {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+/* 预览栏 */
+.lx-studio__generate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 0;
+  border: 0;
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-primary);
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+}
+
+.lx-studio__generate:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.lx-studio__spark {
+  font-size: 13px;
+}
+
+.lx-studio__wait {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 26px 10px;
+  border: 1px dashed var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-lg);
+}
+
+.lx-studio__spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid var(--lx-color-primary-soft);
+  border-top-color: var(--lx-color-primary);
+  border-radius: 50%;
+  animation: lx-studio-spin 0.9s linear infinite;
+}
+
+@keyframes lx-studio-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.lx-studio__waitmain {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-studio__waitsub {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+  text-align: center;
+}
+
+.lx-studio__preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lx-studio__poster {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--lx-radius-lg);
+  overflow: hidden;
+  background: var(--lx-color-frost);
+}
+
+.lx-studio__poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lx-studio__postertitle {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 14px 10px 8px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-studio__thumbs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.lx-studio__thumbs img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: var(--lx-radius-sm);
+  opacity: 0.85;
+}
+
+.lx-studio__player {
+  position: relative;
+  border-radius: var(--lx-radius-lg);
+  overflow: hidden;
+  background: #0f172a;
+  aspect-ratio: 16 / 9;
+}
+
+.lx-studio__player img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.7;
+}
+
+.lx-studio__playbtn {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: #fff;
+}
+
+.lx-studio__playerlabel {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 14px 10px 8px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+  font-size: 11.5px;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-studio__progress {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.lx-studio__progress i {
+  display: block;
+  width: 33%;
+  height: 100%;
+  background: var(--lx-color-primary);
+}
+
+.lx-studio__metaline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-sm);
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-studio__note {
+  margin: 0;
+  padding: 5px;
+  border: 1px dashed var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-sm);
+  font-size: 11px;
+  color: var(--lx-color-muted);
+  text-align: center;
+}
+
+.lx-studio__draft {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-frost);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--lx-color-ink);
+  overflow-wrap: break-word;
+}
+
+.lx-studio__submit {
+  padding: 7px 0;
+  border: 1px solid var(--lx-color-primary-line);
+  border-radius: var(--lx-radius-md);
+  background: transparent;
+  font-size: 12.5px;
+  color: var(--lx-color-primary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lx-studio__submit:hover {
+  background: var(--lx-color-primary-soft);
+}
+
+.lx-studio__empty {
+  margin: 0;
+  padding: 30px 12px;
+  border: 1px dashed var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-lg);
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+  text-align: center;
+}
+
+/* 窄抽屉（<1080）塌成上下两段，避免三栏各剩一条 */
+@media (max-width: 1080px) {
+  .lx-studio__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

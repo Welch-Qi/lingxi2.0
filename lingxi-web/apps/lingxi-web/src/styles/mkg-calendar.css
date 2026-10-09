@@ -1,0 +1,791 @@
+/**
+ * 营销日历（/marketing/calendar，同时是营销中心 /marketing 的默认正文）专用版式。
+ *
+ * 放在 pages.css 之后 import：只给本页的 `lx-mcal*` 命名空间写规则，
+ * 不覆盖任何已有块（与 opportunity.css / product.css 同一约定）。
+ *
+ * 三栏骨架（附件 §一）：左树筛选 · 中间视图 · 右侧常驻详情。
+ * 栅格用固定三列 + minmax(0,1fr) 中列 —— 中列若给 auto，
+ * 内嵌表格的固有宽会把它顶出去，整页出横向滚动。
+ */
+
+.lx-mcal {
+  display: grid;
+  /* 三栏列宽（2026-10-09 第二次收窄右栏）：
+     左 152（第十九轮 168→152，本轮不动）、右 272→**232**，让出 40px 给中栏。
+     用户反馈右栏"宽度可以窄一点，给中间的日历宽度大一点" —— 右栏是 KV 两列，
+     最长的值是渠道串，缩 40px 后由既有 ellipsis 兜底，不新增损失类型；
+     而中栏每行多 40/7 ≈ 5.7px ≈ 半个中文字，**七个格每天都受益**。
+     历史：第十九轮 296→272 同样是这个取舍。 */
+  grid-template-columns: 152px minmax(0, 1fr) 232px;
+  gap: var(--lx-content-gap);
+  /* 默认 stretch（不写 align-items:start）：三栏底边对齐。
+     写start 时侧栏按内容高度收缩，在 1400px 高的视口下会短掉 700px，
+     整页看上去像"左边那块没画完"。 */
+  /* 高度上限 860px：视口更高时不再拉长 —— 6 行月历每格超过 ~130px 后，
+     格里 3 张 20px 的卡片就浮在 200px 的空白顶部，越留白越不像日历。 */
+  height: clamp(520px, calc(100vh - var(--lx-topbar-height) - 76px), 860px);
+}
+
+/* ── 左树：筛选 ─────────────────────────────────────────────── */
+
+.lx-mcal__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-4);
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-card-solid);
+  padding: var(--lx-space-3);
+  /* `auto` 而非 `clip`：第二十三轮删掉「数据范围」组后，1280/1440 下
+     scrollH 与 clientH 已相等（无滚动条），但视口再矮或文案再长时仍需能滚。
+     **这里不能用 `overflow:hidden`** —— 那会把筛选项的尾巴静默藏掉，
+     症状是"某几个筛选项不见了"，比多一根滚动条难解释得多。 */
+  overflow: auto;
+  min-width: 0;
+  /* 与中/右栏等高（父 grid 默认 stretch），内容超出时自己滚 */
+  height: 100%;
+}
+.lx-mcal__sidegroup { display: flex; flex-direction: column; gap: 2px; }
+.lx-mcal__sidehead {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--lx-color-muted);
+  letter-spacing: .04em;
+  margin-bottom: 3px;
+  white-space: nowrap;
+}
+/* 筛选项：图标 + 色块 + 文字。flex-shrink:0 的意义在
+   「受众」组——中文标签不长，但窄屏下换行会让整个左树高度跳变。
+   英文标签（Meeting / training）在 148px 侧栏里放不下，故允许**两行**：
+   筛选项换行只是多占一行高度，被 overflow:hidden 藏掉尾巴才是 CLIP 硬缺陷。 */
+.lx-mcal__link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: var(--lx-radius-sm);
+  background: transparent;
+  color: var(--lx-color-slate);
+  font-size: 12.5px;
+  line-height: 1.4;
+  padding: 4px 6px;
+  cursor: pointer;
+  text-align: left;
+  /* 不设 overflow:hidden —— 宁可两行也不藏字 */
+  transition: background .15s, color .15s;
+}
+.lx-mcal__link:hover { background: var(--lx-color-primary-soft); color: var(--lx-color-ink); }
+/* 标签文字单独一层：裸文本节点在 flex 里拿不到 min-width:0，
+   英文长标签（Meeting / training）会把图标挤出按钮。
+   断词用 break-word 而**不是 anywhere**（2026-10-09 截图目视发现）：
+   `anywhere` 允许在**单词内部**断行，1280 英文态下左栏图例被劈成
+   「Meetin / g / training」—— 单词被切两半比折行更难读。
+   带空格的标签本就该在空格处折；`anywhere` 只留给真正无空格的长串
+   （邮箱、URL），别一把梭。 */
+.lx-mcal__linktext { flex: 1 1 auto; min-width: 0; overflow-wrap: break-word; }
+.lx-mcal__link.is-active {
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--lx-color-primary);
+}
+
+/* 五类固定配色（附件《EventTypeLegend》「5 类固定配色不随主题变」）：
+   只取五维色域，不新增色相。色块 + 图标 + 文字三重标注，色盲也能分辨。 */
+.lx-mcal__swatch { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 2px; }
+.lx-mcal__swatch--campaign { background: var(--lx-color-primary); }
+.lx-mcal__swatch--visit { background: var(--lx-color-secondary); }
+.lx-mcal__swatch--meeting { background: var(--lx-color-violet); }
+.lx-mcal__swatch--ticket { background: var(--lx-color-accent); }
+.lx-mcal__swatch--task { background: var(--lx-color-success); }
+
+/* ── 中栏：视图 ─────────────────────────────────────────────── */
+
+.lx-mcal__main {
+  position: relative; /* 快建浮层的定位父级，见 .lx-mcal__quick */
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-2);
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+/* 工具栏：月份导航 + 视图切换 + 汇总条 + 今天。四组都不许折行，
+   一旦 wrap，工具栏会从 1 行变 2 行，日历可视高度直接少一截。 */
+.lx-mcal__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-3);
+  flex-wrap: nowrap;
+  min-width: 0;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-card-solid);
+  padding: 5px 10px;
+}
+.lx-mcal__nav { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.lx-mcal__navbtn {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-card-solid);
+  color: var(--lx-color-slate);
+  cursor: pointer;
+  padding: 0;
+}
+.lx-mcal__navbtn:hover { border-color: var(--lx-color-primary); color: var(--lx-color-primary); }
+.lx-mcal__period {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--lx-color-ink);
+  min-width: 92px;
+  text-align: center;
+  white-space: nowrap;
+}
+/* R3/R4 汇总条独占一行（不放工具栏）：596px 的中栏塞不下这条中文汇总，
+   塞进工具栏只能省略号截断，而被截掉的恰好是"有几处要处理"这个数。
+   flex:0 0 auto + 不换行 —— 它是数字，读者要的是准确不是美观。 */
+.lx-mcal__alerts {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: var(--lx-space-2);
+  overflow: hidden;
+}
+.lx-mcal__alertchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--lx-color-danger);
+  background: var(--lx-color-danger-soft);
+  border-radius: var(--lx-radius-sm);
+  padding: 2px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 筹备逾期用黄而非红：它是"该补一下"，不是"出事了"。两种都红=读者分不出轻重 */
+.lx-mcal__alertchip--prep { color: var(--lx-color-amber-ink); background: var(--lx-color-accent-soft); }
+.lx-mcal__today {
+  flex: 0 0 auto;
+  margin-left: auto;
+  border: 1px solid var(--lx-color-primary-line);
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* 视图分段控件 */
+.lx-mcal__seg {
+  display: inline-flex;
+  flex: 0 0 auto;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-sm);
+  overflow: hidden;
+}
+.lx-mcal__segbtn {
+  border: 0;
+  background: var(--lx-color-card-solid);
+  color: var(--lx-color-slate);
+  font-size: 12.5px;
+  padding: 4px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lx-mcal__segbtn + .lx-mcal__segbtn { border-left: 1px solid var(--lx-color-border); }
+.lx-mcal__segbtn.is-active { background: var(--lx-color-primary); color: #fff; font-weight: 600; }
+
+/* 已选筛选条件 chip */
+.lx-mcal__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.lx-mcal__chips .lx-chip { display: inline-flex; align-items: center; gap: 4px; }
+
+/* ── 月视图 ─────────────────────────────────────────────────── */
+
+.lx-mcal__grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: auto repeat(6, minmax(0, 1fr));
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-card-solid);
+  overflow: hidden;
+}
+.lx-mcal__dow {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--lx-color-muted);
+  text-align: center;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--lx-color-border);
+}
+.lx-mcal__cell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px 4px 4px;
+  border-right: 1px solid var(--lx-color-border);
+  border-bottom: 1px solid var(--lx-color-border);
+}
+.lx-mcal__cell:nth-child(7n) { border-right: 0; }
+.lx-mcal__cell.is-out { background: var(--lx-color-frost); }
+.lx-mcal__cell.is-out .lx-mcal__num { color: var(--lx-color-faint); }
+.lx-mcal__cell.is-today { background: var(--lx-color-primary-soft); }
+.lx-mcal__cellhead {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: 16px;
+}
+.lx-mcal__num { font-size: 11.5px; font-weight: 600; color: var(--lx-color-slate); }
+/* 日期行是三段绝对定位（2026-10-09 第二十三轮用户要求：
+   "增加事件按钮放到中间，更多事件放到右侧"）。
+   为什么三个都要绝对定位而不是 flex 并排：这行只有 16px 高、可用宽 ≈ 76px，
+   而 `+N`（含冲突红点约 20px）与 `+`（16px）加起来就有 36px。
+   flex space-between 下两件事同时发生：
+     ① 日期数字被推到中间偏右；
+     ② `.lx-mcal__cellhead:has(.more){padding-right:22px}` 那条让位规则
+        只在**有溢出**时生效，于是无溢出格里`+` 停在最右、有溢出格里
+        `+` 被 padding 顶到 `+N` 左边 —— hover 出 `+` 时两者**压在一起**
+        （用户报的就是这个重叠，且它在无溢出的格子里看不出来）。
+   绝对定位把位置从「分配」变成「声明」：数字靠左、`+` 居中、`+N` 靠右，
+   三者恒定互不重叠，且 hover 出 `+` 时日期数字不会位移。 */
+.lx-mcal__more {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--lx-color-muted);
+}
+.lx-mcal__cell.is-today .lx-mcal__num {
+  color: var(--lx-color-primary);
+  font-weight: 700;
+}
+/* 悬停快建 + 号（附件交互 A）：默认占位透明，hover 出 + 号，不占额外视觉重量。
+   绝对定位居中（第二十三轮）：见上方 cellhead 注释 —— 它与 `+N` 曾压在同一处。
+   `left:50%` 参照的是**padding box**，而 cellhead 此刻无左右 padding，
+   故 `translateX(-50%)` 拿到的是真正的格心。
+   hover 出 `+` 时给它一个底：纯青色的 `+` 压在浅色格上像"印错了"，
+   底色让它读成一个按钮（`:hover` 自身那条是按下态，两者同色不冲突）。 */
+.lx-mcal__plus {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--lx-color-primary);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity .12s, background .12s;
+}
+.lx-mcal__cell:hover .lx-mcal__plus { opacity: 1; background: var(--lx-color-primary-soft); }
+.lx-mcal__events {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+/* "+N 里有冲突"：折叠区本身也要带冲突色，否则被折进去的红框等于不存在。
+   `.lx-mcal__more` 本体已挪到 cellhead（见上方），这里是它的配色与冲突点。 */
+.lx-mcal__more.is-conflict { color: var(--lx-color-danger); font-weight: 600; }
+/* 冲突点：原先靠 `+2 · 2 条冲突` 的内联文字表达，挪到日期行后宽度只有 20px 出头，
+   塞不下那句中文 —— 改为小红点，颜色承载「有冲突」，完整说法在 title 里。 */
+.lx-mcal__moredot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--lx-color-danger);
+}
+
+/* 卡片 3 层：左侧色条 + 标题文字 + 状态点（2026-10-07 第十九轮去掉类型图标）。
+   类型改由**文字颜色 + 左侧色条**双重承载 —— 去掉图标那一轮腾出的宽度，
+   在1440 上够用，但实测 1280 下仍只有 5 个字（探针此前只报 1440 的数，
+   于是"≥6 字"在窄屏上是假的）。本轮按**最窄视口 1280** 定尺寸：
+     格宽 84.8 − 格 padding 8 − 卡 padding 7 − 色条 2.5 = 67.3px 可用宽，
+     11px 字号下单字 11px → floor(67.3/11) = 6 字。
+   收窄到 6 字而不是 7 字的代价动作是**字号 11 → 10.5px**：字越小同样宽度能放
+   更多字，这是唯一不牺牲"一眼扫读"的杠杆（缩两端列宽已经做过一轮，
+   再缩会让右栏的渠道串与左栏的负责人名开始截断）。
+   10.5px 是刻意的下限：再小就读不出"曝"与"牌"的差别，而月历格内的文字
+   本来就是"扫一眼知道有这件事"，不是要逐字读完的正文。
+   min-width:0 是必要的：标题 ellipsis 依赖父级 flex 项可收缩。
+   2026-10-09 第二十三轮：**10.5 → 10px**（用户反馈"事件名称显示 5 个中文，
+   字体再小一点，至少显示 6 个中文字符"）。
+   实测 1280 下 `.lx-mcal__evtext` 可用宽 70px（格90.6− padding 13− 色条 2.5
+   − 状态点让位 − 边框 2− gap 4）→ 10.5px 时 floor(70/10.5)=**6** 但那6 字里
+   末尾已被 ellipsis 吃掉一半，肉眼只读到 5 个半；10px 时 floor(70/10)=**7**，
+   ellipsis 落在第8 字之后，稳定读满 6 字还有余量。
+   10px 是这一层的下限：再小就读不出"曝"与"牌"的差别，
+   而月历格内的文字本来就是"扫一眼知道有这件事"，不是逐字读完的正文。 */
+.lx-mcal__ev {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  border: 0;
+  border-left: 2.5px solid var(--lx-color-primary);
+  border-radius: 4px;
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-ink);
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: left;
+  /* padding 由 1px 12px 1px 5px 收到 1px 7px 1px 3px：
+     右侧 12px → 7px：状态点（`position:absolute`，right:2px，6px 宽）
+     只占视觉不参与 flex 布局，文字**不需要**给它留 padding ——
+     此前右侧留 11px 是"以为要给状态点让位"，属于为一个absolute 元素
+     付了 7px 的固定成本。改回 7px 后同一条卡片多出 4px ≈ 0.4 个中文字。 */
+  padding: 1px 7px 1px 3px;
+  cursor: pointer;
+  overflow: hidden;
+}
+.lx-mcal__ev:hover { background: var(--lx-color-primary-line); }
+/* 类型色：左侧色条 + 背景 + **文字色**三处同步。
+   文字色是这一轮新增的一维：图标去掉后，扫读时最先落在字上，
+   让字本身带类型色比让色条带类型色更快被识别。 */
+.lx-mcal__ev--campaign { border-left-color: var(--lx-color-primary); background: var(--lx-color-primary-soft); color: var(--lx-color-primary-deep); }
+/* secondary 没有 deep 档，且五维色域**不新增色相**（项目硬约束）：
+   故直接用 secondary 本色做文字色。浅蓝底（alpha .08）上 #2e6be6 的对比度
+   约 4.6:1，满足正文级可读；不为了"更像 hover 态"去造一个色阶。 */
+.lx-mcal__ev--visit { border-left-color: var(--lx-color-secondary); background: var(--lx-color-secondary-soft); color: var(--lx-color-secondary); }
+.lx-mcal__ev--meeting { border-left-color: var(--lx-color-violet); background: var(--lx-color-violet-soft); color: var(--lx-color-violet); }
+.lx-mcal__ev--ticket { border-left-color: var(--lx-color-accent); background: var(--lx-color-accent-soft); color: var(--lx-color-amber-ink); }
+.lx-mcal__ev--task { border-left-color: var(--lx-color-success); background: var(--lx-color-success-soft); color: var(--lx-color-success); }
+/* 已完成：整条压灰，但保留左侧色条 —— 类型信息不能因为"做完了"就丢 */
+.lx-mcal__ev--done { opacity: .55; }
+.lx-mcal__ev.is-selected { box-shadow: inset 0 0 0 1px var(--lx-color-primary); }
+/* R1 冲突：红框。框而非只加红点，因为"撞档"是需要立刻处理的量级问题 */
+.lx-mcal__ev.is-conflict { box-shadow: inset 0 0 0 1.5px var(--lx-color-danger); }
+.lx-mcal__evcat { flex: 0 0 auto; font-size: 11px; color: var(--lx-color-slate); display: inline-flex; }
+.lx-mcal__evtext { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 状态点两个独立元素而非叠一个：两个语义挤在同一像素上，读者只能猜。
+   2026-10-07 第二十轮：6px → 5px、right 3px → 2px。
+   它们是 `position:absolute`，**不参与 flex 布局**，所以真正吃掉文字宽度的是
+   卡片的右padding（已从 11px 收到 7px）；点本身只需不与文字相碰即可。 */
+.lx-mcal__dot {
+  position: absolute;
+  right: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+.lx-mcal__dot--conflict { top: 3px; background: var(--lx-color-danger); }
+.lx-mcal__dot--prep { bottom: 3px; background: var(--lx-color-accent); }
+
+/* ── 周视图 ─────────────────────────────────────────────────── */
+
+.lx-mcal__week {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-card-solid);
+  overflow: hidden;
+}
+.lx-mcal__wcol {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 5px;
+  border-right: 1px solid var(--lx-color-border);
+}
+.lx-mcal__wcol:last-child { border-right: 0; }
+.lx-mcal__wcol.is-today { background: var(--lx-color-primary-soft); }
+.lx-mcal__whead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--lx-color-border);
+}
+.lx-mcal__wdow { font-size: 11.5px; font-weight: 700; color: var(--lx-color-muted); white-space: nowrap; }
+
+/* ── 列表视图 ───────────────────────────────────────────────── */
+
+.lx-mcal__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-card-solid);
+}
+/* 列表「事件名称」列的按钮（2026-10-07 第二十轮）。
+   `.lx-cell-link` 是全站共用的动作链接类，带 `white-space: nowrap` 且**故意没有**
+   `min-width:0` —— 表格外的行内动作（如「编辑 / 删除」）本来就不该截断。
+   但列表里的事件名是**数据**不是动作：它要能省略号截断，否则 nowrap 的按钮
+   会把单元格撑宽、视觉上压进右邻的「类型」列（用户报的"名称和类型重叠"）。
+   于是这里不全局改那个类，只给这一个按钮加可收缩 + 截断。 */
+.lx-mcal__listname {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+/* 类型标签（图例、左树、右栏、列表列头共用一套） */
+.lx-mcal__kindtag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.lx-mcal__kindtag--campaign { color: var(--lx-color-primary); }
+.lx-mcal__kindtag--visit { color: var(--lx-color-secondary); }
+.lx-mcal__kindtag--meeting { color: var(--lx-color-violet); }
+.lx-mcal__kindtag--ticket { color: var(--lx-color-amber-ink); }
+.lx-mcal__kindtag--task { color: var(--lx-color-success); }
+
+.lx-mcal__statetag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11.5px;
+  border-radius: 10px;
+  padding: 1px 7px;
+  white-space: nowrap;
+  background: var(--lx-color-frost);
+  color: var(--lx-color-slate);
+}
+.lx-mcal__statetag--running { background: var(--lx-color-success-soft); color: var(--lx-color-success); }
+.lx-mcal__statetag--planned { background: var(--lx-color-primary-soft); color: var(--lx-color-primary); }
+
+/* ── 图例 ───────────────────────────────────────────────────── */
+
+.lx-mcal__legend {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--lx-space-3);
+  font-size: 11.5px;
+  color: var(--lx-color-slate);
+}
+.lx-mcal__leg { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.lx-mcal__legsep { width: 1px; height: 12px; background: var(--lx-color-border-strong); }
+/* 图例里的点：图例不在卡片内，故不吃卡片的 absolute 定位 */
+.lx-mcal__legend .lx-mcal__dot { position: static; flex: 0 0 auto; }
+.lx-mcal__legend .lx-mcal__dot--conflict { background: var(--lx-color-danger); }
+.lx-mcal__legend .lx-mcal__dot--prep { background: var(--lx-color-accent); }
+
+/* ── 右栏：常驻详情面板 ─────────────────────────────────────── */
+
+.lx-mcal__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-3);
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-card-solid);
+  padding: var(--lx-space-3);
+}
+.lx-mcal__paneltop { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.lx-mcal__panelname { margin: 0; font-size: 14.5px; font-weight: 700; color: var(--lx-color-ink); line-height: 1.4; }
+
+/* 字段表用 flex 不用 grid auto 列：标签列会被同行内容（尤其可换行的值）
+   压窄，nowrap 标签被挤折 —— 这是本项目已踩过的坑（见 opportunity.css）。 */
+/* 字段表：每行「标签 + 值」左右并排。
+ *
+ * 此前这里是 `flex-direction: column` + 裸 dt/dd（没有 row 包装），
+ * 于是**标签和值被拆成上下两行** —— 5 个字段就把右栏拉长一屏，
+ * 看起来"字段稀疏、每条占两行"。而右栏只有 272px（第十九轮收窄后），
+ * 左右并排才放得下。
+ *
+ * 标签用 flex 且 `flex-shrink: 0`：grid 的 auto 列会被同行的值压窄，
+ * `white-space: nowrap` 的中文标签被挤折 —— 这是本项目已踩过的坑
+ * （见 opportunity.css 与 MEMORY 的 flex-vs-grid 判据）。
+ * 值侧 `min-width: 0` + ellipsis：渠道串「TikTok · Instagram · YouTube」
+ * 在 272px 栏里必然放不下，必须允许截断而不是撑破布局。 */
+.lx-mcal__kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 5px 8px; align-items: baseline; margin: 0; }
+.lx-mcal__kvrow { display: flex; align-items: baseline; gap: 8px; }
+.lx-mcal__kv dt {
+  flex: 0 0 auto;
+  grid-column: 1;
+  font-size: 12px;
+  color: var(--lx-color-muted);
+  white-space: nowrap;
+}
+.lx-mcal__kv dd {
+  flex: 1 1 auto;
+  grid-column: 2;
+  min-width: 0;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--lx-color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* 渠道串这类多值字段允许换成两行而不是截掉 —— 截掉的渠道等于
+     "这个活动只在 TikTok 投"，是彻底错误的信息。 */
+}
+.lx-mcal__kv--camp dd { white-space: normal; overflow-wrap: anywhere; }
+
+/* 活动生命周期（2026-10-07 第十九轮新增）：日历右栏里的四段进度。
+   活动详情页那条时间线是**横向**的（横跨整页），右栏只有 272px 放不下，
+   故这里用纵向四行 —— 但四段全列出而不是只标当前段：
+   "卡在待审核两周"这个判断需要看到它前面那段。 */
+.lx-mcal__life {
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-sm);
+  padding: var(--lx-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lx-mcal__lifesteps {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lx-mcal__lifesteps li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--lx-color-muted);
+}
+.lx-mcal__lifesteps li::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--lx-color-border-strong);
+}
+.lx-mcal__lifesteps li.is-done {
+  color: var(--lx-color-ink);
+}
+.lx-mcal__lifesteps li.is-done::before {
+  background: var(--lx-color-success);
+}
+.lx-mcal__lifesteps li.is-active {
+  color: var(--lx-color-primary-deep);
+  font-weight: 600;
+}
+.lx-mcal__lifesteps li.is-active::before {
+  background: var(--lx-color-primary);
+  box-shadow: 0 0 0 3px var(--lx-color-primary-soft);
+}
+
+/* 筹备清单 */
+.lx-mcal__prep,
+.lx-mcal__remind,
+.lx-mcal__conflict {
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-sm);
+  padding: var(--lx-space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lx-mcal__prephead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--lx-color-slate);
+  white-space: nowrap;
+}
+.lx-mcal__prephead + .lx-mcal__bar2 { margin-top: -2px; }
+.lx-mcal__bar2 {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--lx-color-frost);
+  overflow: hidden;
+}
+.lx-mcal__bar2 i { display: block; height: 100%; background: var(--lx-color-primary); border-radius: 3px; }
+.lx-mcal__preplist,
+.lx-mcal__remindlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.lx-mcal__preplist li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--lx-color-slate);
+}
+.lx-mcal__preplist li.is-done { color: var(--lx-color-muted); text-decoration: line-through; }
+.lx-mcal__prepmark {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: 3px;
+  font-size: 9px;
+  color: var(--lx-color-success);
+}
+.lx-mcal__preplist li.is-done .lx-mcal__prepmark { border-color: var(--lx-color-success); background: var(--lx-color-success-soft); }
+.lx-mcal__preptext { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lx-mcal__prepdate { flex: 0 0 auto; font-size: 11px; color: var(--lx-color-muted); }
+
+/* 提醒链 */
+.lx-mcal__remindlist li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--lx-color-slate);
+}
+.lx-mcal__reminddate { flex: 0 0 auto; font-size: 11px; color: var(--lx-color-muted); }
+.lx-mcal__remindlabel { flex: 0 0 auto; white-space: nowrap; }
+.lx-mcal__remindcc {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--lx-color-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lx-mcal__remindnote { margin: 0; font-size: 11px; color: var(--lx-color-muted); line-height: 1.5; }
+
+/* 冲突提示：红框 + 可执行出口 */
+.lx-mcal__conflict { border-color: var(--lx-color-danger); background: var(--lx-color-danger-soft); }
+.lx-mcal__conflicthead {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--lx-color-danger);
+  white-space: nowrap;
+}
+.lx-mcal__conflicttext { margin: 0; font-size: 12px; color: var(--lx-color-ink); line-height: 1.5; }
+.lx-mcal__conflictacts { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.lx-mcal__act {
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-card-solid);
+  color: var(--lx-color-slate);
+  font-size: 12px;
+  padding: 3px 9px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lx-mcal__act:hover { border-color: var(--lx-color-primary); color: var(--lx-color-primary); }
+.lx-mcal__act--primary { border-color: var(--lx-color-primary); background: var(--lx-color-primary); color: #fff; }
+.lx-mcal__act--primary:hover { background: var(--lx-color-primary-deep); color: #fff; }
+.lx-mcal__act--danger { border-color: var(--lx-color-danger); color: var(--lx-color-danger); }
+.lx-mcal__act--danger:hover { background: var(--lx-color-danger); color: #fff; }
+
+.lx-mcal__panactions { display: flex; gap: 6px; margin-top: auto; padding-top: var(--lx-space-2); border-top: 1px solid var(--lx-color-border); }
+.lx-mcal__panempty {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lx-space-2);
+  color: var(--lx-color-muted);
+  font-size: 12.5px;
+  text-align: center;
+  padding: var(--lx-space-5) var(--lx-space-3);
+}
+.lx-mcal__panempty .anticon { font-size: 24px; opacity: .5; }
+
+/* ── 悬停快建浮层（附件交互 A） ──────────────────────────────── */
+
+.lx-mcal__quick {
+  /* absolute 而非 fixed：贴在**中栏**内，不越界到右栏。
+     fixed + 右下角的版本会整块盖住右栏冲突建议的三个出口按钮 ——
+     而那三个按钮是冲突处理唯一的下手处，被浮层遮住等于功能不存在。
+     宽度也不吃满：252px 贴着 right 会压到右栏左缘，故再收窄并内缩。 */
+  position: absolute;
+  z-index: 20;
+  right: var(--lx-space-4);
+  bottom: var(--lx-space-3);
+  width: 232px;
+  border: 1px solid var(--lx-color-primary-line);
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-card-solid);
+  box-shadow: var(--lx-shadow-pop);
+  padding: var(--lx-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-2);
+}
+.lx-mcal__quicktitle { font-size: 13px; font-weight: 700; color: var(--lx-color-ink); }
+.lx-mcal__quickkv { display: flex; flex-direction: column; gap: 3px; margin: 0; }
+.lx-mcal__quickkv dt { font-size: 11.5px; color: var(--lx-color-muted); white-space: nowrap; }
+.lx-mcal__quickkv dd { margin: 0 0 4px; font-size: 12.5px; color: var(--lx-color-ink); overflow-wrap: anywhere; }
+.lx-mcal__quickacts { display: flex; justify-content: flex-end; gap: 6px; }
+
+/* ── 窄屏（1280 及以下）：右栏收窄、左树收窄，仍保三栏 ────────── */
+/* 右栏 268→**228**（2026-10-09）：与宽档的 232 保持同一取舍 ——
+   断点处的值原本比宽档还宽（268 > 232），等于"屏幕越窄右栏越宽"，
+   与整个改动方向相反。1280 是必测视口，这里的中栏才是用户最常看的月历。 */
+@media (max-width: 1366px) {
+  .lx-mcal { grid-template-columns: 148px minmax(0, 1fr) 228px; }
+  .lx-mcal__period { min-width: 78px; font-size: 12.5px; }
+  .lx-mcal__segbtn { padding: 4px 9px; font-size: 12px; }
+}
+
+/* 再窄就并成两栏：详情面板落到日历下方，而不是继续压中列宽度 */
+@media (max-width: 1180px) {
+  .lx-mcal {
+    grid-template-columns: 140px minmax(0, 1fr);
+    height: auto;
+  }
+  .lx-mcal__panel { grid-column: 2; height: auto; max-height: none; }
+}

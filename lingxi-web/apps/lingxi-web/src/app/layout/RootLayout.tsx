@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router';
+import { Outlet, useLocation } from 'react-router';
 import { SideNav } from '@/app/layout/SideNav';
 import { TopBar } from '@/app/layout/TopBar';
 import { StatusBar } from '@/app/layout/StatusBar';
@@ -11,12 +11,15 @@ import { AgentTaskDrawer } from '@/features/agent-task/AgentTaskDrawer';
  * 且任何滚动位置都可见（fixed + z-index 100）；
  * 侧边栏与顶栏的 sticky 偏移同为其高度，否则色带会被遮住。
  *
- * 交互约定（产品规划说明书2.0 交互逻辑章）：
+ * 交互约定（产品规划说明书 V2.1 交互逻辑章）：
  *  - 双通道：任何业务对象都可在界面直接操作，不被藏在对话流里
  *  - 入口铁律：任一功能入口不超过 2 次点击
  *  - 接管铁律：智能体任务随时可人工接管（右下角任务抽屉常驻）
  */
 export function RootLayout() {
+  const location = useLocation();
+  /* 顶层路由段（如 workbench / marketing / intel），供 CSS 按页面作用域微调版式。 */
+  const route = location.pathname.split('/')[1] || 'home';
   return (
     <>
       <div className="lx-aurora" aria-hidden="true" />
@@ -24,7 +27,7 @@ export function RootLayout() {
         <SideNav />
         <div className="lx-main">
           <TopBar />
-          <main className="lx-content">
+          <main className="lx-content" data-route={route}>
             <Outlet />
           </main>
           <StatusBar />

@@ -31,7 +31,7 @@ export interface ModuleConfig {
   titleKey: string;
   /** 顶栏副标题 i18n key（说明"这个分区管什么"） */
   subtitleKey?: string;
-  /** 对应功能编号（便于与功能清单 V2.0 对照） */
+  /** 对应功能编号（便于与功能清单 V2.1 对照） */
   bizCodes: string;
   /** 权限码前缀，如 'cus' */
   permPrefix: string;

@@ -130,18 +130,19 @@ done
 if [ "${OFFENDERS}" -eq 0 ]; then ok '子模块未见依赖硬写版本（全部从 BOM 继承）'; fi
 
 # ---------------------------------------------------------------- 5. 前端
-title '[5/9] 前端工程（11 个路由分区 + 5 个内部包）'
+title '[5/9] 前端工程（13 个路由分区 + 5 个内部包）'
 WEB_ROOT="${ROOT_DIR}/lingxi-web/apps/lingxi-web/src/routes"
-for r in workbench customer product order service marketing intel analytics agent knowledge config; do
+for r in workbench customer lead opportunity product order service marketing intel analytics agent knowledge config; do
   need_dir "lingxi-web/apps/lingxi-web/src/routes/${r}"
 done
-# 排除 login：它是身份跳转中转页，不属 11 个一级菜单分区
+# 排除两个**身份跳转中转页**（不进菜单树）：login（登录）、workspace-select（选租户/工作区）。
+# 计数口径 = 目录数 − 这两个；新增一级菜单分区时必须同步这里与下面的期望值。
 ROUTE_COUNT=$(find "${ROOT_DIR}/lingxi-web/apps/lingxi-web/src/routes" -mindepth 1 -maxdepth 1 -type d \
-  -not -name 'login' 2>/dev/null | wc -l | tr -d ' ')
-if [ "${ROUTE_COUNT}" -ne 11 ]; then
-  bad "一级菜单路由分区数量 = ${ROUTE_COUNT}（期望 11；login 为登录中转页不计）"
+  -not -name 'login' -not -name 'workspace-select' 2>/dev/null | wc -l | tr -d ' ')
+if [ "${ROUTE_COUNT}" -ne 13 ]; then
+  bad "一级菜单路由分区数量 = ${ROUTE_COUNT}（期望 13；login 与 workspace-select 为跳转中转页不计）"
 else
-  ok '一级菜单路由分区数量 = 11（另含 login 中转页）'
+  ok '一级菜单路由分区数量 = 13（另含 login / workspace-select 两个跳转中转页）'
 fi
 for p in ui request types utils i18n; do need_dir "lingxi-web/packages/lingxi-${p}"; done
 need_file 'lingxi-web/pnpm-workspace.yaml'

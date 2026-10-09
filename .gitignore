@@ -81,11 +81,16 @@ Thumbs.db
 
 # ---- 构建与验收产物 ----
 # 例外：artifacts/ 下的验收结论（qa-result.json / result.json）是评审证据，必须入库
-artifacts/**/logs/
-artifacts/**/tmp/
 *.tgz
 *.zip
+# ⚠️ 这条反向规则必须排在下面两条**之前**：git 对同一路径取**最后一条匹配**的规则，
+# 早先把 artifacts/**/tmp/ 写在它前面，于是 tmp/ 被 !artifacts/** 重新包含 ——
+# 两条忽略规则形同失效，`git status` 会直接冒出 `?? artifacts/tmp/`。
+# （它同时还负责让 artifacts/ 下的 *.log / *.zip / *.tgz 也能入库，故不能删。）
 !artifacts/**
+# 临时目录与日志一律不进库，必须写在 !artifacts/** 之后
+artifacts/**/tmp/
+artifacts/**/logs/
 
 # ---- 数据库本地转储（迁移前备份，体积大且含真实数据）----
 backup/

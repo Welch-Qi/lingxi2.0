@@ -14,12 +14,25 @@
  * 改成 `import('echarts/charts')`——那会把体积打回全量。
  */
 import * as echarts from 'echarts/core';
-import { BarChart, LineChart } from 'echarts/charts';
-import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
+import { BarChart, LineChart, MapChart } from 'echarts/charts';
+import { GeoComponent, GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
-// 刻意不注册 DatasetComponent：LxChart 的 option 用 series.data 直接喂数，不走 dataset。
-echarts.use([LineChart, BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
+// 刻意不注册 DatasetComponent：图表 option 用 series.data 直接喂数，不走 dataset。
+//
+// MapChart 供 LxWorldMap 使用（经营分析的全球销量热度地图）。
+// 它的地图数据不走 ECharts 内置注册表，而由 LxWorldMap 在运行时
+// fetch /geo/world.json 后调 registerMap —— 见该组件注释里对体积与离线可用性的说明。
+echarts.use([
+  LineChart,
+  BarChart,
+  MapChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  GeoComponent,
+  CanvasRenderer,
+]);
 
 export { echarts };
 export type { ECharts, EChartsCoreOption } from 'echarts/core';

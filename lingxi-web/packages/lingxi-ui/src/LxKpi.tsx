@@ -102,7 +102,25 @@ export interface LxKpiProps {
   spark?: readonly number[] | undefined;
   /** sm 用于内容营销等次级指标行（22px），默认 md（24px） */
   size?: 'md' | 'sm' | undefined;
+  /**
+   * 数值的时点标签（如「今日」），显示在**数值行右端**。
+   *
+   * 为什么需要：同一张卡里同时有「本日」与「本月」两个口径时，大字究竟是哪个口径
+   * 必须被写明——只靠 sub 里带个「本月」前缀，扫读时仍会先把大字认成月累计。
+   *
+   * 为什么放在数值行而不是标签行（2026-09-23 改）：挂在标签行右端时，
+   * 指标名能用的宽度被它切掉一大块（窄卡里约 1/4），「高意向客户数」这种
+   * 6 字指标名会被折行。挪到数值行后整行标签归指标名，而数值行本就宽裕。
+   * 语义上也更顺：它说明的就是它旁边那个大字。
+   * 不传时不渲染，保持既有页面的版式不变。
+   */
+  valueLabel?: string | undefined;
   onClick?: (() => void) | undefined;
+  /**
+   * 选中态：指标卡作为"筛选/切换列表"的入口时，高亮当前生效的那张卡。
+   * 仅当传了 onClick 才有意义（纯展示卡不需要选中态）。
+   */
+  active?: boolean | undefined;
 }
 
 export function LxKpi({
@@ -114,16 +132,23 @@ export function LxKpi({
   color = 'primary',
   spark,
   size = 'md',
+  valueLabel,
   onClick,
+  active = false,
 }: LxKpiProps) {
-  const className = `lx-glass lx-kpi lx-hoverable${onClick ? ' lx-focusable' : ''}`;
+  const className = `lx-glass lx-kpi lx-hoverable${onClick ? ' lx-focusable' : ''}${active ? ' lx-kpi--active' : ''}`;
   const body: ReactNode = (
     <>
       <span className="lx-kpi__label">
         <span className={`lx-kpi__tick ${TICK_CLASS[color]}`} />
-        {label}
+        {/* 指标名单独成 span 而不是裸文本：flex 容器里的裸文本会变成匿名项，
+            既加不了 min-width:0 也截不断，nowrap 之后只会直接溢出卡片。 */}
+        <span className="lx-kpi__name">{label}</span>
       </span>
-      <span className={`lx-kpi__value lx-num${size === 'sm' ? ' lx-kpi__value--sm' : ''}`}>{value}</span>
+      <span className="lx-kpi__valuerow">
+        <span className={`lx-kpi__value lx-num${size === 'sm' ? ' lx-kpi__value--sm' : ''}`}>{value}</span>
+        {valueLabel ? <span className="lx-kpi__badge">{valueLabel}</span> : null}
+      </span>
       {sub || (trend && delta) ? (
         <span className="lx-kpi__foot">
           {sub ? <span className="lx-kpi__sub">{sub}</span> : null}

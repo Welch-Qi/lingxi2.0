@@ -1,0 +1,719 @@
+/* --------------------------------------------------------------------------
+   录入表单页与批量导入向导（components/EntityForm.tsx · components/ImportWizard.tsx）
+
+   这两个骨架被五个「新建」页与三个「导入」页共用，所以版式规则只写在这里一份。
+   文件名前缀 `form.` 的块归 EntityForm，`imp.` 的块归 ImportWizard，
+   `filepick.` 的块两边都用（选文件这件事只有一种长相）。
+
+   三条纪律（沿用 workspace.css / pages.css 的既有约定，不另起一套）：
+    1. 凡 flex 承载多段文本，**指定压缩的承担者**：字段标签与动作按钮不压缩
+       （nowrap + flex-shrink:0），只让说明文字去缩或折行。中文看不出差别，
+       英文一长就炸。
+    2. 需要省略号的叶子必须**成块**并挂 min-width: 0（span 默认 inline 时
+       overflow 无效）。
+    3. 折行 / 溢出只活在中间宽度带，所以栅格在 ≤1280 塌缩成单列 ——
+       两列字段在 1280 上英文标签会把控件挤到放不下。
+
+   暗色不用单独写规则：颜色一律取 var(--lx-*)，design-tokens.css
+   在 [data-lx-theme='dark'] 下整段重定义同名变量。
+   -------------------------------------------------------------------------- */
+
+/* ===== 表单页 ===== */
+
+.lx-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-4);
+}
+
+.lx-form__back {
+  align-self: flex-start;
+}
+
+.lx-form__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-3);
+}
+
+.lx-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--lx-space-3) var(--lx-space-4);
+}
+
+.lx-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lx-field--wide {
+  grid-column: 1 / -1;
+}
+
+.lx-field__label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--lx-color-slate);
+  min-width: 0;
+}
+
+.lx-field__required {
+  color: var(--lx-color-danger);
+  font-weight: 700;
+}
+
+.lx-field__hint {
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+  overflow-wrap: break-word;
+}
+
+.lx-form__control {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  font-family: var(--lx-font-body);
+  font-size: 13px;
+  color: var(--lx-color-ink);
+  background: var(--lx-color-card-solid);
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-sm);
+  outline: none;
+}
+
+.lx-form__control::placeholder {
+  color: var(--lx-color-faint);
+}
+
+.lx-form__control:hover {
+  border-color: var(--lx-color-primary-line);
+}
+
+.lx-form__control:focus {
+  border-color: var(--lx-color-primary);
+  box-shadow: 0 0 0 3px var(--lx-color-primary-soft);
+}
+
+.lx-form__control.is-invalid {
+  border-color: var(--lx-color-danger);
+}
+
+textarea.lx-form__control {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.lx-form__foot {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--lx-space-2);
+}
+
+/* 正文末尾的自定义区（2026-10-07 加，商品编辑页的素材管理段）。
+   **独立成块**而不是塞进 .lx-form__foot 里：那一行是「取消 / 保存」两个按钮，
+   `justify-content: flex-end` 决定了它们贴右；把一整段素材清单塞进去，
+   素材会把两个按钮挤到只剩一个很窄的可用区，且清单本身无法换行成多行。
+   独立成块后：素材占满内容宽，保存按钮仍固定在整页最后一行的右侧。 */
+.lx-form__footextra {
+  min-width: 0;
+}
+
+.lx-form__cancel,
+.lx-form__submit,
+.lx-imp__ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-family: var(--lx-font-body);
+  border-radius: var(--lx-radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.lx-form__cancel,
+.lx-imp__ghost {
+  color: var(--lx-color-slate);
+  background: var(--lx-color-card-solid);
+  border: 1px solid var(--lx-color-border-strong);
+}
+
+.lx-imp__ghost:disabled {
+  color: var(--lx-color-faint);
+  cursor: not-allowed;
+}
+
+.lx-form__submit {
+  color: #fff;
+  background: var(--lx-color-primary);
+  border: 1px solid var(--lx-color-primary);
+  font-weight: 600;
+}
+
+.lx-form__submit:hover {
+  background: var(--lx-color-primary-deep);
+}
+
+/* 表单页头第一行：返回键 + 右上角自定义入口（如「管理 SKU」） */
+.lx-form__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--lx-space-3);
+}
+
+.lx-form__top-extra {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-2);
+}
+
+/* ===== 紧凑变体（商品 / SKU / 内容 / 活动 录入页共用）=====
+   背景：用户反馈「输入框太宽、实际填写内容很少、紧贴背景框、不够精细化」。
+   升级为更紧凑的多列布局：
+   ① 表单限宽居中成「一块」，不再铺满整页；
+   ② 字段改为「标签上 · 控件下」堆叠，列宽变窄后控件不再被撑宽；
+   ③ 一行 3~4 个属性：栅格用 auto-fill（宽屏 4 列、中屏 3 列、窄屏逐级塌缩）；
+   ④ 面板内边距：原 .lx-glass/.lx-panel 自身不带 padding，表单 section 直接贴边 ——
+      这是「标题与输入框紧贴背景框」的根因，这里给 section 补上留白。 */
+.lx-form--compact {
+  /* width:100% 必须显式给 —— 本元素是 .lx-page__body（flex 列）的子项，
+     交叉轴上的 auto margin 会让 fit-content 优先于 stretch：内容固有宽度不足 max-width 时
+     整块会缩窄而不是顶到 max-width。 */
+  width: 100%;
+  max-width: 1080px;
+  margin-inline: auto;
+}
+
+/* 面板内边距：让字段与背景框之间留白（覆盖原 section 直接贴边的问题） */
+.lx-form--compact .lx-form__section {
+  padding: 18px 20px;
+}
+
+/* 一行 3~4 个属性：响应式自动填充，宽屏 4 列、中屏 3 列、窄屏逐级塌缩 */
+.lx-form--compact .lx-form__grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--lx-space-3);
+}
+
+/* 字段改为「标签上 · 控件下」堆叠：列宽变窄后控件不再被撑到横跨整页 */
+.lx-form--compact .lx-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lx-form--compact .lx-field__hint {
+  margin: 0;
+}
+
+.lx-form--compact .lx-field--wide {
+  grid-column: 1 / -1;
+}
+
+/* ===== 编辑抽屉（客户360 / 商机详情 的「编辑 XX」）=====
+   字段栅格直接复用 .lx-form--compact（标签上·控件下 + auto-fill 多列），
+   只覆盖一条：section 的内边距。
+
+   为什么必须去掉：compact 变体给 section 补 `padding: 18px 20px`，
+   那是在修「录入页的 section 直接贴背景框」的根因。抽屉的 body 自带 24px 内边距，
+   再叠 18px 会在 720 宽里白吃掉 36px，auto-fill(220px) 于是从 3 列掉到 2 列 ——
+   字段没变少却多占一行，纯粹是内边距吃掉的。
+
+   限宽与居中不覆盖：max-width:1080 在 720/880 的抽屉里不生效（本就小于它），
+   `width:100%` 下的 `margin-inline:auto` 也不产生偏移，故两条留着无害。
+
+   抽屉宽度决定列数：720 → auto-fill(220px) 落 2~3 列；880 落 3~4 列。
+   与整页 4 列的差别不是不一致，是容器变窄还硬要 4 列会让控件放不下英文标签。 */
+.lx-form--drawer .lx-form__section {
+  padding: 0;
+}
+
+.lx-form__drawersub {
+  margin: 0 0 var(--lx-space-3);
+  font-size: 12.5px;
+  color: var(--lx-color-muted);
+  overflow-wrap: break-word;
+}
+
+/* 只读字段（2026-10-07）：出纯文本而非禁用态 input。
+   视觉上要一眼看出"这是值，不是待填的空格"—— 用输入框同样的底与边框，
+   但去掉聚焦反馈、字色与已填内容一致，只是**不做任何交互**。
+   若用 `disabled` 样式的灰底，用户会以为这一格"还没填"。 */
+.lx-form__readonly {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 6px 11px;
+  border: 1px solid var(--lx-color-frost);
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-frost);
+  font-size: 13.5px;
+  color: var(--lx-color-slate);
+  overflow-wrap: anywhere;
+  cursor: default;
+}
+
+/* 抽屉里的自定义段（联系人清单编辑器）。与 `.lx-form__section` 同内边距，
+   故在 `--drawer` 下同样归零 —— 抽屉 body 已自带 24px 内边距。 */
+.lx-form__section--slot {
+  min-width: 0;
+}
+
+/* ===== 导入向导 ===== */
+
+.lx-imp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-4);
+}
+
+.lx-imp__topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lx-space-2);
+}
+
+.lx-imp__note {
+  font-size: 12px;
+  color: var(--lx-color-muted);
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.lx-imp__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-3);
+}
+
+/* ===== 文件拾取区（导入向导「选文件」步 与 表单里的文件字段 共用）=====
+
+   两处只是**同一个视觉**的两种落点：向导里它是整整一步，表单里它是若干字段之一。
+   写成两套会让"选文件"这件事在同一个应用里出现两种虚线框 —— 所以类名中性化，
+   用一次算一次。 */
+
+.lx-filepick__drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 30px 16px;
+  border: 1px dashed var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-primary-soft);
+  cursor: pointer;
+}
+
+.lx-filepick__drop:hover {
+  border-color: var(--lx-color-primary);
+}
+
+.lx-filepick__drop.is-invalid {
+  border-color: var(--lx-color-danger);
+}
+
+.lx-filepick__icon {
+  font-size: 26px;
+  color: var(--lx-color-primary);
+}
+
+.lx-filepick__title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-filepick__sub {
+  font-size: 12px;
+  color: var(--lx-color-muted);
+  text-align: center;
+}
+
+/* 原生 file input 必须留在 DOM 里（点了才弹系统选择框），只是不让它占位。
+   用 display:none 而不是 visibility —— 前者不参与布局，后者会留一个空行。 */
+.lx-filepick__input {
+  display: none;
+}
+
+.lx-filepick__file {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-3);
+  padding: 12px 14px;
+  background: var(--lx-color-card-solid);
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+}
+
+.lx-filepick__fileicon {
+  font-size: 20px;
+  color: var(--lx-color-success);
+  flex-shrink: 0;
+}
+
+.lx-filepick__filebody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.lx-filepick__filename,
+.lx-filepick__filesize {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-filepick__filename {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-filepick__filesize {
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-filepick__filebtn {
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--lx-color-primary);
+  background: var(--lx-color-primary-soft);
+  border: 1px solid var(--lx-color-primary-line);
+  border-radius: var(--lx-radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.lx-imp__filefoot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lx-space-2);
+}
+
+.lx-imp__maplist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lx-imp__maprow {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-3);
+}
+
+.lx-imp__maplabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 190px;
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--lx-color-slate);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-imp__maparrow {
+  color: var(--lx-color-muted);
+  flex-shrink: 0;
+}
+
+.lx-imp__mapselect {
+  max-width: 300px;
+  flex: 0 1 auto;
+}
+
+.lx-imp__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lx-space-2);
+}
+
+.lx-imp__stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--lx-color-slate);
+  background: var(--lx-color-card-solid);
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-sm);
+  white-space: nowrap;
+}
+
+.lx-imp__stat b {
+  font-family: var(--lx-font-numeric);
+  font-size: 15px;
+}
+
+.lx-imp__stat.is-ok b {
+  color: var(--lx-color-success);
+}
+
+.lx-imp__stat.is-bad b {
+  color: var(--lx-color-danger);
+}
+
+.lx-imp__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  table-layout: fixed;
+}
+
+.lx-imp__table th,
+.lx-imp__table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--lx-color-border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-imp__table th {
+  font-weight: 600;
+  color: var(--lx-color-slate);
+  background: var(--lx-color-primary-soft);
+}
+
+.lx-imp__table th:first-child,
+.lx-imp__table td:first-child {
+  width: 88px;
+}
+
+.lx-imp__table th:nth-child(2),
+.lx-imp__table td:nth-child(2) {
+  width: 26%;
+}
+
+.lx-imp__reason {
+  color: var(--lx-color-danger);
+}
+
+.lx-imp__clean {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--lx-color-success);
+}
+
+.lx-imp__summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px var(--lx-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lx-imp__summary li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-imp__summary li b {
+  color: var(--lx-color-ink);
+  font-size: 13px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-imp__warn {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--lx-color-slate);
+  background: var(--lx-color-accent-soft);
+  border-radius: var(--lx-radius-sm);
+  overflow-wrap: break-word;
+}
+
+.lx-imp__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--lx-space-2);
+}
+
+/* 两列栅格在 1280 及以下塌缩：英文标签 + 控件的组合在窄栏里放不下 */
+@media (max-width: 1280px) {
+  .lx-form__grid,
+  .lx-imp__summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lx-imp__maprow {
+    flex-wrap: wrap;
+  }
+
+  .lx-imp__maplabel {
+    width: auto;
+    max-width: 100%;
+  }
+}
+
+/* ==========================================================================
+   联系人清单编辑器（客户 360「编辑客户」抽屉，2026-10-07）
+   为什么单独一段而不是并进 `.lx-form__grid`：清单是**可增删的行**，
+   而 `lx-form__grid` 表达的是"一段 + 若干标量字段"。塞进去只能把一整张清单
+   做成"一行文本装 JSON"，那不是简化是降级。
+   ========================================================================== */
+
+.lx-cedit__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 每行 = 上方两列字段、下方一条动作线。
+   `min-width: 0` 不可省：抽屉 720px，四个字段两列各 ~330px，
+   不设的话长邮箱能把整行顶破抽屉宽度（flex 子项的固有宽是 min-content）。 */
+.lx-cedit__row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 11px 8px;
+  border: 1px solid var(--lx-color-frost);
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-frost);
+  min-width: 0;
+}
+
+.lx-cedit__row.is-primary {
+  border-color: var(--lx-color-primary-line);
+  background: var(--lx-color-primary-soft);
+  box-shadow: inset 2px 0 0 var(--lx-color-primary);
+}
+
+.lx-cedit__grid {
+  display: grid;
+  /* 两列而非 auto-fill(220px)：抽屉内宽固定 720（wide 版 880），
+     auto-fill 会按容器宽算出 3 列或 1 列，两种结果都不好看；
+     两列是"四个字段两行"这个确定布局。 */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 10px;
+  min-width: 0;
+}
+
+.lx-cedit__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.lx-cedit__label {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--lx-color-muted);
+}
+
+.lx-cedit__acts {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lx-cedit__setprimary,
+.lx-cedit__del,
+.lx-cedit__primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: var(--lx-radius-sm);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.lx-cedit__setprimary {
+  border: 1px solid var(--lx-color-border-strong);
+  background: var(--lx-color-card-solid);
+  color: var(--lx-color-slate);
+}
+
+.lx-cedit__setprimary:hover {
+  border-color: var(--lx-color-primary-line);
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+}
+
+/* 已是主联系人时那枚标记**不给按钮样式** —— 它不可点，
+   做成可点样式的星标会引出"再点一次会怎样"的疑问，而实际答案是"什么都不会发生"。 */
+.lx-cedit__primary {
+  color: var(--lx-color-primary);
+  background: transparent;
+  cursor: default;
+}
+
+/* 删除：描边 + 危险色，不用纯文字链接。
+   删联系人会连带改写主联系人回写，属不可逆动作，
+   视觉上必须与「设为主」分得开 —— 两个一样轻的文字链接并排时，
+   用户会先点靠右那个。 */
+.lx-cedit__del {
+  border: 1px solid var(--lx-color-danger);
+  background: transparent;
+  color: var(--lx-color-danger);
+}
+
+.lx-cedit__del:hover {
+  background: var(--lx-color-danger-soft);
+}
+
+.lx-p360__contactempty {
+  margin: 0;
+  padding: 12px 11px;
+  border: 1px dashed var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-sm);
+  font-size: 12.5px;
+  color: var(--lx-color-muted);
+  text-align: center;
+}
+
+/* 窄视口两列塌成一列：720 的抽屉在 1280 视口下已是满宽，
+   英文标签（`Uploaded by` 之类）+ 邮箱放进 330px 会折行。 */
+@media (max-width: 1100px) {
+  .lx-cedit__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

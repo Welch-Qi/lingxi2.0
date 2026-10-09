@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   BookOutlined,
@@ -5,28 +6,51 @@ import {
   CommentOutlined,
   FileAddOutlined,
   FileTextOutlined,
+  ImportOutlined,
   QuestionCircleOutlined,
   RobotOutlined,
+  TagsOutlined,
 } from '@ant-design/icons';
-import type { ModuleHomeRow } from '@/components/ModuleHome';
-import { ModuleHome } from '@/components/ModuleHome';
-import { LxTag } from '@lingxi/ui';
+import {
+  LxActionBar,
+  LxAssetGrid,
+  LxFilterButton,
+  LxNavGrid,
+  LxSearchInput,
+  LxSectionHeader,
+  LxTable,
+  LxTableCard,
+  LxTag,
+  LxWorkList,
+} from '@lingxi/ui';
+import type { LxAssetItem, LxNavItem, LxWorkItem } from '@lingxi/ui';
+import { PageContainer } from '@/components/PageContainer';
 
 /**
- * 知识中心首页（/knowledge）—— 组织知识资产（产品规划说明书 §2.10）。
+ * 知识中心首页（/knowledge）—— 组织知识资产（产品规划说明书 V2.1 §2.12）。
  *
- * 四类资产各有明确消费者：
- *  模板 / 话术 → 人工通道（业务员直接引用）
- *  QA 库      → 营销客服智能体（标准答疑）
- *  提示词库   → 智能体通道（版本化 + A/B，代码只引用编码，禁止内联）
+ * 典型使用者：一线业务员与内容创意总监（主要消费）+ 知识运营（维护）。
+ * 业务员进来时心里已经有明确目标（"我要找催复话术"），所以本页是**分类直达**结构，
+ * 不是待办队列——用队列会凭空造一堆"待办"，反而挡住真正的检索路径。
  *
- * 提示词入库是硬要求（技术规约2.0 §3.6 G7）：代码内联提示词会导致
- * 改一句话要发一次版，且无法做 A/B 与回归评测。
+ * 四类资产各有明确消费者，分类导航里逐条写清"谁在用"，
+ * 因为混在一起会导致"写完没人用"：
+ *   模板 / 话术 → 人工通道（业务员直接引用）
+ *   QA 库       → 营销客服智能体（标准答疑）
+ *   提示词库     → 智能体通道（版本化 + A/B，代码只引用场景码）
+ *
+ * 待维护队列是知识运营的视角：30 天零引用的资产、新产品缺话术、QA 未命中。
+ * 它放在侧栏而不是首屏——维护是低频动作，业务员不该被它挡住。
+ *
+ * 关于智能体：知识萃取的 AI 能力体现为操作条上的「从优秀记录萃取」入口，
+ * 以及队列行里的「AI 建议补充」标记，不设独立的建议区块。
+ *
+ * 文案一律走 i18n key（附录D 规则10），故演示数据定义在组件作用域内。
  *
  * 静态骨架：占位演示数据，接入后走 /api/v1/kc/assets。
  */
 
-interface AssetRow extends ModuleHomeRow {
+interface AssetRow {
   id: string;
   nameKey: string;
   code: string;
@@ -60,6 +84,111 @@ const TYPE_ICON = {
 
 export default function KnowledgeHomePage() {
   const { t } = useTranslation();
+  const [keyword, setKeyword] = useState('');
+
+  /** 四类知识资产 + 消费者说明。 */
+  const navItems: readonly LxNavItem[] = [
+    {
+      key: 'template',
+      title: t('kc.nav.template.title'),
+      desc: t('kc.nav.template.desc'),
+      icon: <FileTextOutlined />,
+      badge: '86',
+    },
+    {
+      key: 'phrase',
+      title: t('kc.nav.phrase.title'),
+      desc: t('kc.nav.phrase.desc'),
+      icon: <CommentOutlined />,
+      tone: 'secondary',
+      badge: '420',
+    },
+    {
+      key: 'qa',
+      title: t('kc.nav.qa.title'),
+      desc: t('kc.nav.qa.desc'),
+      icon: <QuestionCircleOutlined />,
+      tone: 'success',
+      badge: '158',
+    },
+    {
+      key: 'prompt',
+      title: t('kc.nav.prompt.title'),
+      desc: t('kc.nav.prompt.desc'),
+      icon: <RobotOutlined />,
+      tone: 'violet',
+      badge: '34',
+    },
+  ];
+
+  /** 待维护队列（知识运营视角）：每行一个"该补/该改"的知识点。 */
+  const maintainItems: readonly LxWorkItem[] = [
+    {
+      key: 'k1',
+      title: t('kc.item.k1.title'),
+      sub: t('kc.item.k1.sub'),
+      tags: [{ label: t('kc.item.k1.tag1'), variant: 'review' }],
+      value: 'v2',
+      actionLabel: t('kc.item.k1.action'),
+      actionPrimary: true,
+    },
+    {
+      key: 'k2',
+      title: t('kc.item.k2.title'),
+      sub: t('kc.item.k2.sub'),
+      tags: [{ label: t('kc.item.k2.tag1'), variant: 'review' }],
+      agentLabel: t('kc.item.k2.agent'),
+      actionLabel: t('kc.item.k2.action'),
+      actionPrimary: true,
+    },
+    {
+      key: 'k3',
+      title: t('kc.item.k3.title'),
+      sub: t('kc.item.k3.sub'),
+      tags: [{ label: t('kc.item.k3.tag1'), variant: 'review' }],
+      agentLabel: t('kc.item.k3.agent'),
+      value: t('kc.item.k3.value'),
+      valueTone: 'danger',
+      actionLabel: t('kc.item.k3.action'),
+      actionPrimary: true,
+    },
+  ];
+
+  /** 高频使用：业务员最常引用的资产，直接放到分类导航下面一眼可达。 */
+  const hotAssets: readonly LxAssetItem[] = [
+    {
+      key: 'h1',
+      title: t('kc.asset.h1.title'),
+      sub: t('kc.asset.h1.sub'),
+      icon: <FileTextOutlined />,
+      tag: { label: t('kc.type.template'), variant: 'graphic' },
+    },
+    {
+      key: 'h2',
+      title: t('kc.asset.h2.title'),
+      sub: t('kc.asset.h2.sub'),
+      icon: <CommentOutlined />,
+      tag: { label: t('kc.type.phrase'), variant: 'lang' },
+    },
+    {
+      key: 'h3',
+      title: t('kc.asset.h3.title'),
+      sub: t('kc.asset.h3.sub'),
+      icon: <RobotOutlined />,
+      tag: { label: t('kc.type.prompt'), variant: 'video' },
+    },
+    {
+      key: 'h4',
+      title: t('kc.asset.h4.title'),
+      sub: t('kc.asset.h4.sub'),
+      icon: <QuestionCircleOutlined />,
+      tag: { label: t('kc.type.qa'), variant: 'done' },
+    },
+  ];
+
+  const visibleRows = keyword
+    ? ROWS.filter((row) => t(row.nameKey).includes(keyword) || row.code.includes(keyword))
+    : ROWS;
 
   const columns = [
     {
@@ -109,38 +238,85 @@ export default function KnowledgeHomePage() {
   ];
 
   return (
-    <ModuleHome<AssetRow>
-      titleKey="kc.page.home"
-      subtitleKey="kc.page.homeSub"
-      kpis={[
-        { labelKey: 'kc.kpi.templates', value: '86', sub: t('kc.kpi.sub.scenes'), trend: 'up', delta: '6', color: 'primary', spark: [4, 5, 6, 6, 7, 8, 8, 9] },
-        { labelKey: 'kc.kpi.phrases', value: '420', sub: t('kc.kpi.sub.multilang'), trend: 'up', delta: '32', color: 'secondary', spark: [20, 24, 28, 32, 36, 40, 44, 48] },
-        { labelKey: 'kc.kpi.qa', value: '158', sub: t('kc.kpi.sub.coverage'), trend: 'up', delta: '12', color: 'accent', spark: [8, 10, 12, 14, 16, 18, 20, 22] },
-        { labelKey: 'kc.kpi.promptVersions', value: '34', sub: t('kc.kpi.sub.ab'), trend: 'up', delta: '4', color: 'success', spark: [2, 3, 3, 4, 4, 5, 5, 6] },
-      ]}
-      insightsTitleKey="kc.insight.title"
-      insightsSubKey="kc.insight.sub"
-      insightsMoreKey="kc.insight.more"
-      insights={[
-        { typeKey: 'kc.insight.ab.type', textKey: 'kc.insight.ab.text', sourceKey: 'kc.insight.ab.source', accent: 'primary', tone: 'muse', icon: <BulbOutlined /> },
-        { typeKey: 'kc.insight.gap.type', textKey: 'kc.insight.gap.text', sourceKey: 'kc.insight.gap.source', accent: 'accent', tone: 'muse', icon: <QuestionCircleOutlined /> },
-        { typeKey: 'kc.insight.extract.type', textKey: 'kc.insight.extract.text', sourceKey: 'kc.insight.extract.source', accent: 'success', tone: 'sage', icon: <BookOutlined /> },
-      ]}
-      quicks={[
-        { titleKey: 'kc.quick.template', descKey: 'kc.quick.templateDesc', icon: <FileAddOutlined />, tone: 'primary' },
-        { titleKey: 'kc.quick.phrase', descKey: 'kc.quick.phraseDesc', icon: <CommentOutlined />, tone: 'accent' },
-        { titleKey: 'kc.quick.prompt', descKey: 'kc.quick.promptDesc', icon: <RobotOutlined />, tone: 'secondary' },
-      ]}
-      listTitleKey="kc.list.title"
-      listSubKey="kc.list.sub"
-      listMoreKey="kc.list.more"
-      searchPlaceholderKey="kc.list.search"
-      filterLabelKey="kc.list.filter"
-      columns={columns}
-      rows={ROWS}
-      emptyTextKey="kc.list.empty"
-      emptyHintKey="kc.list.emptyHint"
-      total={698}
-    />
+    <PageContainer titleKey="kc.page.home" hideTitle>
+      <LxActionBar
+        primary={{ key: 'create', label: t('kc.bar.create'), icon: <FileAddOutlined /> }}
+        items={[
+          { key: 'extract', label: t('kc.bar.extract'), icon: <BulbOutlined /> },
+          { key: 'import', label: t('kc.bar.import'), icon: <ImportOutlined /> },
+          { key: 'version', label: t('kc.bar.version'), icon: <TagsOutlined /> },
+        ]}
+        note={
+          <>
+            {t('kc.note.prefix')}
+            <b>698</b>
+            {t('kc.note.suffix')}
+          </>
+        }
+      />
+
+      <div className="lx-workgrid">
+        <div className="lx-workgrid__col">
+          <section className="lx-glass lx-panel">
+            <div className="lx-panel__head">
+              <div>
+                <div className="lx-panel__title">{t('kc.navpanel.title')}</div>
+                <div className="lx-panel__sub">{t('kc.navpanel.sub')}</div>
+              </div>
+            </div>
+            <LxNavGrid items={navItems} />
+          </section>
+        </div>
+
+        <div className="lx-workgrid__col">
+          <LxWorkList
+            title={t('kc.queue.title')}
+            sub={t('kc.queue.sub')}
+            count={3}
+            tone="accent"
+            moreLabel={t('kc.queue.more')}
+            items={maintainItems}
+            emptyText={t('kc.queue.empty')}
+          />
+        </div>
+      </div>
+
+      <section className="lx-section">
+        <LxSectionHeader
+          title={t('kc.hot.title')}
+          sub={t('kc.hot.sub')}
+          actionLabel={t('kc.hot.more')}
+        />
+        <LxAssetGrid items={hotAssets} columns={4} />
+      </section>
+
+      <section className="lx-section">
+        <LxSectionHeader
+          title={t('kc.list.title')}
+          sub={t('kc.list.sub')}
+          actionLabel={t('kc.list.more')}
+        />
+        <LxTableCard
+          tools={
+            <>
+              <LxSearchInput value={keyword} placeholder={t('kc.list.search')} onChange={setKeyword} />
+              <LxFilterButton label={t('kc.list.filter')} />
+              <span className="lx-tools-note">
+                <BookOutlined />
+                {t('kc.list.scopeHint')}
+              </span>
+            </>
+          }
+        >
+          <LxTable<AssetRow>
+            columns={columns}
+            dataSource={[...visibleRows]}
+            total={698}
+            pageNo={1}
+            pageSize={20}
+          />
+        </LxTableCard>
+      </section>
+    </PageContainer>
   );
 }

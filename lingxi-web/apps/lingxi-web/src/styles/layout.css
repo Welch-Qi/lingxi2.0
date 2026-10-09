@@ -26,7 +26,7 @@
   width: 100%;
   max-width: var(--lx-content-max-width);
   margin: 0 auto;
-  padding: var(--lx-space-5) var(--lx-content-padding-x) 48px;
+  padding: var(--lx-space-2) var(--lx-content-padding-x) var(--lx-space-5);
 }
 
 /* --------------------------------------------------------------------------
@@ -303,6 +303,17 @@
 .lx-chip__caret {
   font-size: 10px;
   color: var(--lx-color-muted);
+}
+
+/*
+  语言切换胶囊：与租户、角色同用 .lx-chip（三者视觉上成一族），
+  只收窄横向占用——顶栏右侧本来就要放租户、角色、铃铛、语言、头像五个元素。
+  单独给修饰类而不是直接改 .lx-chip，否则会连带压缩另外两个胶囊。
+*/
+.lx-chip--lang {
+  padding: 0 10px;
+  gap: 5px;
+  font-size: 12px;
 }
 
 .lx-iconbtn {

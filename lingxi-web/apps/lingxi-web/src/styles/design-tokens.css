@@ -88,11 +88,11 @@
   /* ===== 布局尺寸 ===== */
   --lx-aurora-height: 3px;      /* 极光色带高度，sticky 元素偏移量同此值 */
   --lx-sidenav-width: 224px;
-  --lx-topbar-height: 62px;
+  --lx-topbar-height: 52px;
   --lx-statusbar-height: 40px;
-  --lx-content-max-width: 1280px;
-  --lx-content-padding-x: 28px;
-  --lx-content-gap: 22px;
+  --lx-content-max-width: 1440px;
+  --lx-content-padding-x: 12px;
+  --lx-content-gap: 10px;
 }
 
 /* ===== 深色主题（可选扩展）：仅覆盖令牌，组件代码无需改动 ===== */
