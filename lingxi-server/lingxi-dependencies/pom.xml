@@ -78,7 +78,7 @@
   <dependencyManagement>
     <dependencies>
 
-      <!-- ---------- 1. 官方 BOM 导入（顺序有意义：后导入者优先） ---------- -->
+      <!-- ========== 1. 官方 BOM 导入（顺序有意义：后导入者优先） ========== -->
       <dependency>
         <groupId>org.springframework.cloud</groupId>
         <artifactId>spring-cloud-dependencies</artifactId>
@@ -122,7 +122,7 @@
         <scope>import</scope>
       </dependency>
 
-      <!-- ---------- 2. 数据访问 ---------- -->
+      <!-- ========== 2. 数据访问 ========== -->
       <!-- MyBatis-Plus：Boot 4 专用 starter（普通 boot3-starter 在 Boot 4 下不兼容） -->
       <dependency>
         <groupId>com.baomidou</groupId>
@@ -150,7 +150,7 @@
         <version>${pgvector.version}</version>
       </dependency>
 
-      <!-- ---------- 3. 领域能力 ---------- -->
+      <!-- ========== 3. 领域能力 ========== -->
       <!-- 权限决策：功能 / 行级 / 字段三层（技术规约2.0 §4.9.2） -->
       <dependency>
         <groupId>org.casbin</groupId>
@@ -181,14 +181,14 @@
         <version>${spring-statemachine.version}</version>
       </dependency>
 
-      <!-- ---------- 4. 接口与契约 ---------- -->
+      <!-- ========== 4. 接口与契约 ========== -->
       <dependency>
         <groupId>org.springdoc</groupId>
         <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         <version>${springdoc.version}</version>
       </dependency>
 
-      <!-- ---------- 5. 存储 ---------- -->
+      <!-- ========== 5. 存储 ========== -->
       <!-- 主路径：云对象存储（S3 兼容），文件走预签名 URL 直传（§3.4 C10） -->
       <dependency>
         <groupId>software.amazon.awssdk</groupId>
@@ -202,7 +202,7 @@
         <version>${minio.version}</version>
       </dependency>
 
-      <!-- ---------- 6. 测试与架构校验 ---------- -->
+      <!-- ========== 6. 测试与架构校验 ========== -->
       <dependency>
         <groupId>com.tngtech.archunit</groupId>
         <artifactId>archunit-junit5</artifactId>
@@ -210,7 +210,7 @@
         <scope>test</scope>
       </dependency>
 
-      <!-- ---------- 7. 内部模块（业务模块引用 Starter 时不写版本） ---------- -->
+      <!-- ========== 7. 内部模块（业务模块引用 Starter 时不写版本） ========== -->
       <dependency>
         <groupId>com.lingxi</groupId>
         <artifactId>lingxi-starter-core</artifactId>
@@ -237,8 +237,91 @@
         <version>${lingxi.version}</version>
       </dependency>
 
+      <!-- L0 平台公共服务 -->
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-platform</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+
+      <!-- L1 数据底座 -->
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-data</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+
+      <!-- L2 业务模块（11 个一级菜单业务域） -->
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-workbench</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-customer</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-product</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-order</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-service</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-marketing</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-intel</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-analytics</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-agent</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-knowledge</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-configcenter</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+
+      <!-- 独立部署进程 -->
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-agent-runtime</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-data-jobs</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+
       <!--
-        ---------- 8. 待接入（暂不锁定，避免引入未验证的 release train） ----------
+        ========== 8. 待接入（暂不锁定，避免引入未验证的 release train） ==========
 
         Nacos 2.x（注册与配置，Apache-2.0，§3.3）：
           <dependency><groupId>com.alibaba.cloud</groupId>

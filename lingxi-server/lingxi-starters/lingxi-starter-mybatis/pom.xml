@@ -8,6 +8,7 @@
     <groupId>com.lingxi</groupId>
     <artifactId>lingxi-server</artifactId>
     <version>2.0.0-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <artifactId>lingxi-starter-mybatis</artifactId>

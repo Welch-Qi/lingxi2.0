@@ -103,12 +103,12 @@
          本地无容器环境时通过 -Dtest.exclude=*IT 跳过，改为连隧道端口 -->
     <dependency>
       <groupId>org.testcontainers</groupId>
-      <artifactId>junit-jupiter</artifactId>
+      <artifactId>testcontainers-junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
-      <artifactId>postgresql</artifactId>
+      <artifactId>testcontainers-postgresql</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -231,6 +231,11 @@
                   <excludes>
                     <exclude>com.github.docker-java:*</exclude>
                   </excludes>
+                  <includes>
+                    <!-- 例外：Testcontainers 供 CI 集成测试（test 作用域）必然传递依赖 docker-java；
+                         仅放行 test 作用域，生产（compile/runtime）仍禁止 -->
+                    <include>com.github.docker-java:*:*:*:test</include>
+                  </includes>
                 </bannedDependencies>
               </rules>
             </configuration>
