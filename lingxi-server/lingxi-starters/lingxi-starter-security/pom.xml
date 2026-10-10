@@ -25,6 +25,16 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
+    <!--
+      AOP：RequirePermissionAspect / RequireDataScope 以 @Aspect + @Before 切面实现。
+      Spring Boot 4.1 已把 starter 由 spring-boot-starter-aop 更名为
+      spring-boot-starter-aspectj（aspectjweaver），旧坐标在 4.1 BOM 中不存在。
+      版本由 spring-boot-dependencies 管理，此处不写版本号。
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-aspectj</artifactId>
+    </dependency>
     <!-- Keycloak：OIDC / OAuth2.1，JWT RS256 校验（§4.9.1） -->
     <dependency>
       <groupId>org.springframework.boot</groupId>

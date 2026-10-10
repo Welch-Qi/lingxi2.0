@@ -34,6 +34,16 @@
       <artifactId>spring-boot-configuration-processor</artifactId>
       <optional>true</optional>
     </dependency>
+    <!--
+      MyBatis-Plus：AuditMetaObjectHandler（审计字段自动填充）实现 MetaObjectHandler，
+      该职责按《技术架构和组件选型方案2.0》§2.2 归属 starter-core。
+      不能改为依赖 lingxi-starter-mybatis —— 它已依赖本模块，反向依赖会成环。
+      版本由 lingxi-dependencies BOM 锁定，此处不写版本号。
+    -->
+    <dependency>
+      <groupId>com.baomidou</groupId>
+      <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
+    </dependency>
   </dependencies>
 
 </project>
