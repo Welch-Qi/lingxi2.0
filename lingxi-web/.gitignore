@@ -21,8 +21,8 @@ secrets/
 node_modules/
 dist/
 # vite 构建前 `mv dist dist_stale_rXX` 的遗留快照（可删构建产物，非源码）。
-# 注意：WorkBuddy 的 safe-delete 回收站在本机对删除操作 fail-closed，
-# 这类目录需在本工具外（系统终端 / 文件管理器）手动 rm，或加此忽略避免污染 git status。
+# **清理判据**：`dist_stale*/` / `dist_prev*/` 只在「保留当前 dist」时有意义 ——
+# 体积是源码的百倍量级（曾单轮堆到 336MB），确认不再回看就删，别让它们跨轮累积。
 dist_stale*/
 build/
 coverage/
@@ -40,6 +40,10 @@ yarn-error.log*
 dist_stale*/
 dist_prev*/
 dist_*/
+
+# vite/esbuild 的中间目录：构建时临时落盘，可再生，不入库。
+# 不加会让空目录在`git status` 里挂 `??`（git 不跟踪空目录，但构建残留文件会）。
+esbuild-tmp/
 
 # ---- 由 OpenAPI 生成的类型：入库（保证构建可复现），但不允许手工改 ----
 # packages/lingxi-types/src/api.gen.ts  ← 有意不忽略
@@ -59,11 +63,10 @@ artifacts/**/.chrome-profile/
 # monorepo 根的 tmp/：探针与门禁的临时产物（devserver.log、tsc 输出、esbuild 产物）。
 # 不入库也不会被 lint/tsc 扫到 —— 见 eslint.config.js 的 ignores，两边必须同步加。
 tmp/
-# 本机删除 fail-closed 的暂存区：WorkBuddy 的安全删除回收站在本机对 rm /
-# os.remove / fs.rm 一律 SIGTERM 中断，删除动作改为 `mv <目标> .trash/`。
+# 删除动作的暂存区（历史上因 safe-delete fail-closed 而 `mv <目标> .trash/`）。
 # **绝不能入库** —— 里面是过程文件（一次性补键脚本、旧轮次截图、构建快照），
-# 入库等于把几十 M 垃圾写进历史。清理动作请在本工具外（系统终端 / 文件管理器）
-# 手动删除整个 .trash/ 目录。
+# 入库等于把几十 M 垃圾写进历史。当前 `Remove-Item -Recurse -Force` 在本机可用，
+# 可直接删除，不必再 mv 到这里。
 .trash/
 
 # ---- IDE 与 AI Coding 本地缓存 ----

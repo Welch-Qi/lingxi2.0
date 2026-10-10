@@ -35,6 +35,9 @@ export default tseslint.config(
       // **加任何新的忽略目录都必须同时改这两处**，否则门禁会以解析错误的形式失败，
       // 而失败信息里根本不出现"这是忽略目录"这几个字。
       '.trash/**',
+      // esbuild/vite 的中间目录：构建时落盘又被清空，留下的残片会被
+      // projectService 当成源码扫。与 .gitignore 的 `esbuild-tmp/` 同步。
+      '**/esbuild-tmp/**',
       'eslint.config.js',
     ],
   },
