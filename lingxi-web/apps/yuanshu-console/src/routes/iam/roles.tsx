@@ -11,7 +11,8 @@ import { roleMemberCount, useCcStore, type RoleRow } from './cc-store';
 import { CcCrumb } from './_shared';
 
 /**
- * 角色权限（/config/roles）—— 四大核心「权限管理」的落地页。
+ * 角色权限（/iam/roles）—— 元枢四类能力「多租户会话与权限」的授权矩阵（CC-13~18）。
+ * 本页面自 lingxi-web `routes/config/roles.tsx` 迁入（归口表：界面归属 = 元枢管理台）。
  *
  * ## 2026-10-06 改造前
  *

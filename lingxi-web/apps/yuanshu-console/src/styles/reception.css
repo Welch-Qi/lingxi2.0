@@ -1,0 +1,337 @@
+/* --------------------------------------------------------------------------
+   「沟通记录」页内面板（routes/opportunity/ReceptionPanel.tsx）
+
+   2026-09-28 由抽屉改为**页内面板**：商机列表与沟通记录是同一页的两种视图，
+   点「沟通记录」把列表换掉，而不是在旁边再压一层 —— 抽屉挡住的正是用户刚在看的那张表。
+
+   三条版式纪律（沿用 workspace.css 的既有约定，不另起一套）：
+    1. 凡 flex 承载多段文本，**指定压缩的承担者**：潜客名与头像不压缩，
+       让副说明（摘要 / meta）去缩。中文看不出差别，英文一长就炸。
+    2. 需要省略号的叶子必须**成块**（span 默认 inline 时 overflow 无效），
+       并挂 min-width: 0。
+    3. 时刻（10:38）是数据的尾巴，跟着 meta 一起省略；正文气泡允许折行，
+       因为 1.0 的对话里就有"阶梯报价"这种长句。
+
+   暗色不用单独写规则：颜色一律取 var(--lx-*)，暗色下 design-tokens.css
+   会整段重定义同名变量，这里不需要再写一遍。
+   -------------------------------------------------------------------------- */
+
+.lx-rec {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* 抽屉给的是固定视口高度，页内没有这个约束 —— 给个最小高度，
+   避免两栏在内容少时被压成一条。对话区仍按内容自增：
+   整页滚一次比在页面里再套一个内滚动条好。 */
+.lx-rec--inline {
+  min-height: 560px;
+}
+
+/* ---- 两栏：潜客清单 + 对话 ---- */
+.lx-rec__cols {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 12px;
+}
+
+.lx-rec__leads {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 10px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-lg);
+  background: var(--lx-color-card-solid);
+  overflow: auto;
+}
+
+.lx-rec__block-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-rec__block-sub {
+  margin: 2px 0 8px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--lx-color-muted);
+}
+
+.lx-rec__leadlist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lx-rec__lead {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lx-rec__lead:hover {
+  background: var(--lx-color-frost);
+}
+
+.lx-rec__lead.is-selected {
+  border-color: var(--lx-color-primary-line);
+  background: var(--lx-color-primary-soft);
+}
+
+.lx-rec__lead-avatar {
+  flex: 0 0 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--lx-color-slate);
+  background: var(--lx-color-frost);
+}
+
+.lx-rec__lead-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lx-rec__lead-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lx-rec__lead-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-rec__lead-sum,
+.lx-rec__lead-meta {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-rec__lead-sum {
+  color: var(--lx-color-slate);
+}
+
+.lx-rec__unread {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: #fff;
+  background: var(--lx-color-danger);
+}
+
+/* ---- 对话区 ---- */
+.lx-rec__chat {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-lg);
+  background: var(--lx-color-card-solid);
+}
+
+.lx-rec__chat-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--lx-color-border);
+}
+
+.lx-rec__chat-headline {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.lx-rec__chat-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-rec__chat-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-rec__convert {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid var(--lx-color-primary-line);
+  border-radius: 999px;
+  background: var(--lx-color-primary-soft);
+  font-size: 12.5px;
+  white-space: nowrap;
+  color: var(--lx-color-primary);
+  cursor: pointer;
+}
+
+.lx-rec__msgs {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--lx-color-frost);
+}
+
+.lx-rec__msg {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 78%;
+}
+
+.lx-rec__msg--agent {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.lx-rec__msg--customer {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.lx-rec__msg-meta {
+  font-size: 11px;
+  color: var(--lx-color-faint);
+}
+
+.lx-rec__bubble {
+  display: inline-block;
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--lx-color-ink);
+  word-break: break-word;
+}
+
+.lx-rec__msg--agent .lx-rec__bubble {
+  border-bottom-left-radius: 4px;
+  background: var(--lx-color-primary-soft);
+}
+
+.lx-rec__msg--customer .lx-rec__bubble {
+  border: 1px solid var(--lx-color-border);
+  border-bottom-right-radius: 4px;
+  background: var(--lx-color-card-solid);
+}
+
+.lx-rec__composer {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--lx-color-border);
+}
+
+.lx-rec__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: 999px;
+  background: var(--lx-color-card-solid);
+  font-size: 13px;
+  color: var(--lx-color-ink);
+}
+
+.lx-rec__input::placeholder {
+  color: var(--lx-color-faint);
+}
+
+.lx-rec__input:focus {
+  outline: none;
+  border-color: var(--lx-color-primary-line);
+  box-shadow: 0 0 0 3px var(--lx-color-primary-soft);
+}
+
+.lx-rec__send {
+  flex: 0 0 auto;
+  height: 34px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 999px;
+  font-size: 13px;
+  white-space: nowrap;
+  color: #fff;
+  background: var(--lx-color-primary);
+  cursor: pointer;
+}
+
+/* 窄抽屉：两栏挤成上下栏，清单先给一个有限高度，别把对话顶出可视区 */
+@media (max-width: 900px) {
+  .lx-rec__cols {
+    grid-template-columns: 1fr;
+  }
+
+  .lx-rec__leads {
+    max-height: 220px;
+  }
+
+  .lx-rec__msg {
+    max-width: 92%;
+  }
+}

@@ -46,7 +46,7 @@ build:frontend:
     - pnpm -s run typecheck
     - pnpm -s run build
   artifacts:
-    paths: [lingxi-web/apps/lingxi-web/dist]
+    paths: [lingxi-web/apps/lingxi-web/dist, lingxi-web/apps/yuanshu-console/dist]
     expire_in: 1 day
 
 # ---------------------------------------------------------------- 2. 架构边界（强制）

@@ -168,6 +168,30 @@ else
   bad '路由注册表 app/router/modules.ts 缺失——新增分区将无法注册'
 fi
 
+# 元枢管理台（yuanshu-console）：与 lingxi-web 同层的独立 app，5 个管理台分区
+title '[5/9b] 元枢管理台前端（独立 app + 5 个分区）'
+CONSOLE_ROUTES="${ROOT_DIR}/lingxi-web/apps/yuanshu-console/src/routes"
+for r in overview iam governance prompts metrics; do
+  need_dir "lingxi-web/apps/yuanshu-console/src/routes/${r}"
+done
+need_file 'lingxi-web/apps/yuanshu-console/package.json'
+need_file 'lingxi-web/apps/yuanshu-console/src/app/router/modules.ts'
+if [ -d "${CONSOLE_ROUTES}" ]; then
+  CONSOLE_COUNT=$(find "${CONSOLE_ROUTES}" -mindepth 1 -maxdepth 1 -type d \
+    -not -name 'login' -not -name 'workspace-select' 2>/dev/null | wc -l | tr -d ' ')
+  if [ "${CONSOLE_COUNT}" -ne 5 ]; then
+    bad "元枢管理台分区数量 = ${CONSOLE_COUNT}（期望 5：overview/iam/governance/prompts/metrics）"
+  else
+    ok '元枢管理台分区数量 = 5（另含 login / workspace-select 中转页）'
+  fi
+fi
+# 开物前端一期不建 app（只登记预留分区名）
+if [ -d "${ROOT_DIR}/lingxi-web/apps/kaiwu-web" ] || [ -d "${ROOT_DIR}/lingxi-web/apps/kaiwu-console" ]; then
+  bad '禁止项：开物前端一期只登记预留分区，不建 app 目录'
+else
+  ok '开物前端基线：0 个 app'
+fi
+
 # ---------------------------------------------------------------- 6. 配置文件
 title '[6/9] 配置模板（5 个 yml，非敏感；密钥走 .env）'
 for f in app db cache model tunnel; do need_file "lingxi-ops/config/${f}.yml"; done

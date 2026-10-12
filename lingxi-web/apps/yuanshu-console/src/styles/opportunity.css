@@ -1,0 +1,574 @@
+/**
+ * 商机详情页（/opportunity/:id）版式。
+ *
+ * 与 `styles/studio.css` 同一处理：一个页面一套 `lx-oppd__*` 前缀，
+ * 不往 workspace.css 里继续堆 —— 后者已 3000+ 行，新页混进去就再也分不清
+ * "这块是该页的"还是"该收敛进全局"了。
+ *
+ * 三条硬约束（见 MEMORY §四）：
+ *   ① 自有样式只用 `var(--lx-*)`，暗色由 design-tokens.css 整段重定义同名变量；
+ *   ② flex 行里只有**副说明**承担压缩，标题与动作 `nowrap + flex-shrink: 0`；
+ *   ③ 内容区在 1280 视口只有 998px、1366 视口 1084px（1440 及以上封顶 1222px），
+ *      所有"可以折行"的地方都要按**英文**长度预留，不能按中文。
+ */
+
+/* ── 页面顶栏（返回链接） ───────────────────────────────── */
+.lx-oppd__topbar {
+  margin-bottom: 8px;
+}
+
+.lx-oppd__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 13px;
+  color: var(--lx-color-text-secondary);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.lx-oppd__back:hover {
+  color: var(--lx-color-primary);
+}
+
+/* ── 页头 ──────────────────────────────────────────────── */
+.lx-oppd__hero {
+  padding: 16px 20px 18px;
+}
+
+.lx-oppd__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  /* 允许折行：页头是"这一单是什么"，名称折行比把它挤出容器好 */
+  flex-wrap: wrap;
+}
+
+.lx-oppd__idblock {
+  /* 压缩的承担者：名称长时先挤这里 */
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+/* 页头右上角的「编辑商机」（2026-10-07 第二十轮）。
+   视觉与客户 360 的「编辑客户」刻意一致（同为档案页的自我修正入口），
+   但**不复用那个类**：它是 `lx-p360__` 命名空间的样式，跨域引用会让
+   "客户域的页头长什么样"反过来被商机域决定。两处规则同形、各自成文，
+   改一处不会波及另一处 —— 命名前缀的用处正在于此。
+
+   类名带 `btn` 后缀（`lx-oppd__editbtn` 而不是 `lx-oppd__edit`）：
+   本文件下方 480 行附近已有一个 `.lx-oppd__edit`（右栏「意向等级」那个下拉，
+   2026-10-06 加的）。同名两处各自带自己的声明，看起来"都能用"，
+   实则后写的规则会覆盖前一个的 border/height —— 按钮被套上下拉的样式，
+   而探针是按类名选择器的，两个元素一起命中、strict mode 直接崩。
+   撞名的当场表现是"页头有 2 个编辑按钮"，很容易被当成渲染重复而不是样式撞名。 */
+/* 页头动作组：跟进 / 关闭 / 编辑（2026-10-07 用户要求三者同处右上角）。
+   `flex-shrink: 0` 是硬约束 —— 动作组是页头里唯一不许被挤的东西，
+   被压窄时按钮里的词会被拆开（"跟进 / 关闭 / 编辑" 断成两行），
+   而断行的按钮看上去像"这里还有别的按钮"，用户会点错。 */
+.lx-oppd__acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 三个按钮的共同底座。视觉档位在下面各自覆盖 —— 同组按钮必须有主次，
+   三个一样重的按钮等于没有主次（用户会随便点一个，然后不知道自己刚做了什么）。 */
+.lx-oppd__acts button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-card-solid);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--lx-color-slate);
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+/* 跟进 = 主动作（实心渐变）。流转中商机最高频的动作，给视觉重心。
+   渐变与阴影沿用 `.lx-entrybar__create` 的写法（同一套令牌、同一档位），
+   不自造一套 —— 页头按钮与页头右侧「新建」按钮并排时，
+   两个"主按钮"长得不一样会被读成"它们不是一回事"。 */
+.lx-oppd__followbtn {
+  border: 0;
+  background: linear-gradient(135deg, var(--lx-color-primary) 0%, var(--lx-color-primary-deep) 100%);
+  color: #fff;
+  box-shadow: var(--lx-shadow-primary);
+}
+
+.lx-oppd__followbtn:hover {
+  filter: brightness(1.06);
+  color: #fff;
+}
+
+/* 关闭 = 危险动作（描边 + 危险色）。
+   刻意**不放在最右**：最右是鼠标默认落点，把不可逆动作放那里等于邀请误点。
+   它排在跟进之后、编辑之前 —— 危险动作夹在两个安全动作之间，比贴边安全。
+   `danger-soft` 是已定义令牌（rgba .12 底），不需要 `--danger-line`。 */
+.lx-oppd__closebtn {
+  border-color: var(--lx-color-danger);
+  color: var(--lx-color-danger);
+}
+
+.lx-oppd__closebtn:hover {
+  background: var(--lx-color-danger-soft);
+  border-color: var(--lx-color-danger);
+}
+
+/* 编辑 = 次动作（描边中性）。改信息是偶发动作，不该抢页头的视觉重心。 */
+.lx-oppd__editbtn:hover {
+  color: var(--lx-color-primary);
+  border-color: var(--lx-color-primary-line);
+  background: var(--lx-color-primary-soft);
+}
+
+/* 已关闭商机只剩「编辑」一个按钮时它会孤零零站在最左 ——
+   页头动作组是 `flex-end` 对齐的（见 `.lx-oppd__head`），
+   所以它仍然贴右，不会跑到客户名旁边。 */
+
+.lx-oppd__name {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--lx-color-text);
+  overflow-wrap: break-word;
+}
+
+.lx-oppd__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.lx-oppd__tagsub {
+  font-size: 12px;
+  color: var(--lx-color-text-secondary);
+}
+
+.lx-oppd__tagsub a,
+.lx-oppd__tagsub button {
+  padding: 0;
+  font-size: inherit;
+  color: var(--lx-color-primary);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.lx-oppd__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  /* 动作不参与压缩 —— 排布一乱，按钮就地换行，整页会跳一下 */
+  flex-shrink: 0;
+}
+
+/* ── 事实数字带 ─────────────────────────────────────────── */
+.lx-oppd__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--lx-color-border);
+}
+
+.lx-oppd__fact dt {
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--lx-color-text-secondary);
+  /* 指标名不折行：折了会与相邻卡的标签不齐（栅格卡内容区约 125px） */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lx-oppd__fact dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--lx-color-text);
+  word-break: break-word;
+}
+
+.lx-oppd__fact--warn dd {
+  color: var(--lx-color-danger);
+}
+
+.lx-oppd__factdd {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.lx-oppd__facttag {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* ── 主体两栏 ───────────────────────────────────────────── */
+.lx-oppd__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.lx-oppd__col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.lx-oppd__block {
+  padding: 14px 16px 16px;
+}
+
+.lx-oppd__blockhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-bottom: 12px;
+}
+
+.lx-oppd__blocktitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lx-color-text);
+  /* 标题不参与压缩 —— 挤了就成"详情关…"，章节等于没标题 */
+  flex-shrink: 0;
+}
+
+.lx-oppd__blocksub {
+  font-size: 12px;
+  color: var(--lx-color-text-secondary);
+}
+
+/* ── 生命周期阶段轨道 ───────────────────────────────────── */
+.lx-oppd__track {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.lx-oppd__step {
+  flex: 1 1 0;
+  min-width: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  /* 轨道可以横滚，但每个节点自己不许被压变形 */
+  flex-shrink: 1;
+}
+
+.lx-oppd__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--lx-color-frost);
+  border: 2px solid var(--lx-color-border);
+  box-sizing: border-box;
+}
+
+.lx-oppd__step--done .lx-oppd__dot {
+  background: var(--lx-color-primary);
+  border-color: var(--lx-color-primary);
+}
+
+.lx-oppd__step--active .lx-oppd__dot {
+  width: 14px;
+  height: 14px;
+  background: var(--lx-color-primary);
+  border-color: var(--lx-color-card-solid);
+  box-shadow: 0 0 0 3px var(--lx-color-primary-soft);
+}
+
+.lx-oppd__step--lost .lx-oppd__dot {
+  background: var(--lx-color-danger);
+  border-color: var(--lx-color-danger);
+}
+
+/* 序号是编码（01/02…），语言中立、不翻译，故不设 nowrap 之外的特殊处理 */
+.lx-oppd__index {
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-oppd__label {
+  font-size: 12px;
+  color: var(--lx-color-text-secondary);
+  text-align: center;
+  /* 阶段名只允许在词内折行（英文 Proposal / Closed lost），
+     `overflow-wrap` 而非 `word-break`：不让它在汉字中间断开 */
+  overflow-wrap: break-word;
+  line-height: 1.35;
+}
+
+.lx-oppd__step--active .lx-oppd__label {
+  font-weight: 600;
+  color: var(--lx-color-text);
+}
+
+/* ── 提示条（SLA / 重评 / 关闭提醒） ────────────────────── */
+.lx-oppd__alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  font-size: 12px;
+  border-radius: 8px;
+  background: var(--lx-color-frost);
+  color: var(--lx-color-text-secondary);
+}
+
+.lx-oppd__alert--warn {
+  background: var(--lx-color-accent-soft);
+  color: var(--lx-color-text);
+}
+
+.lx-oppd__alert--danger {
+  background: var(--lx-color-danger-soft);
+  color: var(--lx-color-danger);
+}
+
+.lx-oppd__alert b {
+  font-weight: 600;
+}
+
+/* ── 散文块（BANT / 竞品 / 小结） ───────────────────────── */
+.lx-oppd__prose {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--lx-color-text-secondary);
+  overflow-wrap: break-word;
+  white-space: pre-line;
+}
+
+.lx-oppd__kv {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 12px;
+  font-size: 13px;
+}
+
+.lx-oppd__kv dt {
+  color: var(--lx-color-muted);
+  white-space: nowrap;
+}
+
+.lx-oppd__kv dd {
+  margin: 0;
+  color: var(--lx-color-text-secondary);
+  overflow-wrap: break-word;
+}
+
+/* ── 跟进时间轴 ─────────────────────────────────────────── */
+.lx-oppd__timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.lx-oppd__tlitem {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--lx-color-border);
+}
+
+.lx-oppd__tlitem:first-child {
+  border-top: 0;
+}
+
+.lx-oppd__tltime {
+  font-size: 12px;
+  color: var(--lx-color-text-secondary);
+}
+
+.lx-oppd__tlbody {
+  min-width: 0;
+}
+
+.lx-oppd__tlmeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 12px;
+  color: var(--lx-color-muted);
+  margin-bottom: 4px;
+}
+
+.lx-oppd__tltext {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--lx-color-text-secondary);
+  overflow-wrap: break-word;
+}
+
+/* ── 关闭与回流 ─────────────────────────────────────────── */
+.lx-oppd__closerow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.lx-oppd__closerow dt {
+  color: var(--lx-color-muted);
+}
+
+.lx-oppd__closerow dd {
+  margin: 0;
+  color: var(--lx-color-text);
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+
+/* ── 归属客户卡 ─────────────────────────────────────────── */
+.lx-oppd__custlink {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 13px;
+  text-align: left;
+  color: var(--lx-color-text);
+  background: var(--lx-color-frost);
+  border: 1px solid var(--lx-color-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.lx-oppd__custlink:hover {
+  border-color: var(--lx-color-primary);
+  color: var(--lx-color-primary);
+}
+
+.lx-oppd__custname {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.lx-oppd__custmeta {
+  font-size: 12px;
+  color: var(--lx-color-text-secondary);
+}
+
+/* ── 可编辑控件（阶段 / 意向等级，2026-10-06） ─────────────
+   flex 行而非 `<dl>` 两列 grid：grid 的 `auto` 标签列会被同行的下拉压窄到折行
+   （探针 WRAP=1，硬缺陷），flex + `flex-shrink:0` 才是硬约束。
+   两个下拉都套用既有视觉：阶段沿用 `lx-oppstage` 徽标配色（同一阶段在任何
+   页面长得一样），意向等级沿用 `lx-form__control`（录入页同一控件）。
+   `<select>` 的 UA 默认外观会盖掉徽标配色，故要清 appearance / background /
+   border / padding / font，只保留 `.lx-oppstage` 给的那几条。 */
+.lx-oppd__stagesel {
+  appearance: none;
+  -webkit-appearance: none;
+  /* 下拉箭头：chevron 用内联 SVG 而非图片资源，避免多一次请求且能跟随 currentColor。
+     右侧留 20px 恰好让文字不压箭头。 */
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b7a88' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  padding-right: 20px;
+  /* 下拉的固有宽度 = 最长 option，英文 "Commercial negotiation" 会把页头 tags 行顶宽；
+     给上限，徽标只显示当前值，其余选项交给原生下拉面板承接。 */
+  max-width: 168px;
+  font-family: inherit;
+  border: 0;
+  cursor: pointer;
+}
+
+.lx-oppd__stagesel:focus-visible {
+  outline: 2px solid var(--lx-color-primary);
+  outline-offset: 1px;
+}
+
+/* 右栏「意向等级」块的三行（标签 · 值）。
+   只给标签写 `flex-shrink:0`，宽度靠 nowrap 自然撑开：中文「最近复评依据」约 78px，
+   英文 "Basis of last review" 更长 —— 写死像素值必有一端被截。 */
+.lx-oppd__kvrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 28px;
+  font-size: 13px;
+  color: var(--lx-color-text-secondary);
+}
+
+.lx-oppd__kvlabel {
+  /* 只写 shrink:0 不写 basis：`flex-basis` 不接受 minmax()（非法值会被整条丢弃）。
+     标签靠 nowrap 自然撑开，shrink:0 保证控件再宽也压不动它。 */
+  flex-shrink: 0;
+  color: var(--lx-color-muted);
+  white-space: nowrap;
+  /* 标签被压到极限时截断而不是折行 —— 折行会把这一行撑成两行，整块随之错位 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 值列里的下拉：允许压缩到 0 但不失内容（英文长选项由 select 自身滚动承接） */
+.lx-oppd__edit {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 200px;
+  padding: 5px 8px;
+  font-size: 13px;
+}
+
+.lx-oppd__edit:disabled {
+  color: var(--lx-color-faint);
+  cursor: not-allowed;
+}
+
+/* ── 跟进记录页（/opportunity/:id/follow） ────────────────────
+   复用 `.lx-form--compact` 的4 列栅格，只补本页特有的一条：新建卡里的
+   「方式 / 等级 / 阶段 / 下次跟进」在窄列下需要各占一格，而 `.lx-oppf__new`
+   本身已由compact 变体限宽居中，此处只调section 的间距。 */
+.lx-oppf__new {
+  gap: var(--lx-space-4);
+}
+
+.lx-oppf__new .lx-form__foot {
+  margin-top: var(--lx-space-2);
+}
+
+/* 时间轴每条记录的方式标签：与 `.lx-oppd__tltime` 上下排（96px 列放不下「日期+方式」） */
+.lx-oppf__tlmode {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+/* ── 窄屏塌缩 ───────────────────────────────────────────── */
+@media (max-width: 1080px) {
+  .lx-oppd__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

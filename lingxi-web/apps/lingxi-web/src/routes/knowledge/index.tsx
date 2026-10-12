@@ -9,7 +9,6 @@ import {
   ImportOutlined,
   QuestionCircleOutlined,
   RobotOutlined,
-  TagsOutlined,
 } from '@ant-design/icons';
 import {
   LxActionBar,
@@ -37,7 +36,10 @@ import { PageContainer } from '@/components/PageContainer';
  * 因为混在一起会导致"写完没人用"：
  *   模板 / 话术 → 人工通道（业务员直接引用）
  *   QA 库       → 营销客服智能体（标准答疑）
- *   提示词库     → 智能体通道（版本化 + A/B，代码只引用场景码）
+ *
+ * ⚠️ 三产品升级（元枢归口）：提示词库（KC-16~19 / 22，版本化 + A/B）
+ *   属元枢智能体工厂的提示词资产，已迁至 apps/yuanshu-console/routes/prompts；
+ *   本中心只留 KC-07~15 话术 / 模板 / QA 内容（不留提示词死链）。
  *
  * 待维护队列是知识运营的视角：30 天零引用的资产、新产品缺话术、QA 未命中。
  * 它放在侧栏而不是首屏——维护是低频动作，业务员不该被它挡住。
@@ -64,7 +66,6 @@ const ROWS: readonly AssetRow[] = [
   { id: '1', nameKey: 'kc.asset.r1', code: 'KC-TPL-0042', type: 'template', sceneKey: 'demo.scene.outreach', lang: 'EN', version: 'v3' },
   { id: '2', nameKey: 'kc.asset.r2', code: 'KC-PHR-0186', type: 'phrase', sceneKey: 'demo.scene.followup', lang: 'DE', version: 'v2' },
   { id: '3', nameKey: 'kc.asset.r3', code: 'KC-QA-0231', type: 'qa', sceneKey: 'demo.scene.afterSales', lang: 'EN', version: 'v5' },
-  { id: '4', nameKey: 'kc.asset.r4', code: 'KC-PRM-0034', type: 'prompt', sceneKey: 'demo.scene.contentGen', lang: '-', version: 'v2' },
   { id: '5', nameKey: 'kc.asset.r5', code: 'KC-TPL-0038', type: 'template', sceneKey: 'demo.scene.quotation', lang: 'ES', version: 'v1' },
 ];
 
@@ -110,14 +111,6 @@ export default function KnowledgeHomePage() {
       icon: <QuestionCircleOutlined />,
       tone: 'success',
       badge: '158',
-    },
-    {
-      key: 'prompt',
-      title: t('kc.nav.prompt.title'),
-      desc: t('kc.nav.prompt.desc'),
-      icon: <RobotOutlined />,
-      tone: 'violet',
-      badge: '34',
     },
   ];
 
@@ -169,13 +162,6 @@ export default function KnowledgeHomePage() {
       sub: t('kc.asset.h2.sub'),
       icon: <CommentOutlined />,
       tag: { label: t('kc.type.phrase'), variant: 'lang' },
-    },
-    {
-      key: 'h3',
-      title: t('kc.asset.h3.title'),
-      sub: t('kc.asset.h3.sub'),
-      icon: <RobotOutlined />,
-      tag: { label: t('kc.type.prompt'), variant: 'video' },
     },
     {
       key: 'h4',
@@ -244,7 +230,6 @@ export default function KnowledgeHomePage() {
         items={[
           { key: 'extract', label: t('kc.bar.extract'), icon: <BulbOutlined /> },
           { key: 'import', label: t('kc.bar.import'), icon: <ImportOutlined /> },
-          { key: 'version', label: t('kc.bar.version'), icon: <TagsOutlined /> },
         ]}
         note={
           <>

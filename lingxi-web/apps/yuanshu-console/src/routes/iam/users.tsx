@@ -20,11 +20,12 @@ import { useSyncViewingUser } from './useSyncViewingUser';
 import { CcCrumb } from './_shared';
 
 /**
- * 用户管理（/config/users）—— 四大核心之一。
+ * 用户管理（/iam/users）—— 元枢四类能力「多租户会话与权限」的界面载体（CC-13~18）。
+ * 本页自 lingxi-web `routes/config/users.tsx` 迁入（归口表：界面归属 = 元枢管理台）。
  *
  * ## 2026-10-06 改造前，这一页的每个动作都是死的
  *
- *  - 「新建用户」跳 `/config/users?mode=create`，而全仓**没有一处消费 mode 参数**；
+ *  - 「新建用户」跳 `/iam/users?mode=create`，而全仓**没有一处消费 mode 参数**；
  *  - 「配置权限」按钮**没有 onClick**，点了什么也不发生；
  *  - `total={48} pageNo={1}` 写死，与表里 5 行对不上。
  *
