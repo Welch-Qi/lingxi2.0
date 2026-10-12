@@ -61,6 +61,9 @@ api 包只放 DTO / 接口 / 事件，禁止放实现
 
 由 **ArchUnit 在 CI 强制校验**，本地跑不过 CI 也过不了。
 
+> **三产品包名与方向约束**：元枢底座模块用 `com.yuanshu.*`（groupId 统一保留 `com.lingxi`），灵犀业务集群用 `com.lingxi.*`。
+> `com.yuanshu..` 禁依赖 `com.lingxi.{业务域}..`（元枢不承载业务）；集群跨产品只能依赖对方 `api` 包（不建第二套底座能力）。
+
 ### 必须遵守
 
 - **ID 一律雪花 `Long`**，禁止 `UUID` 与自增主键混用
@@ -95,6 +98,7 @@ api 包只放 DTO / 接口 / 事件，禁止放实现
 - **禁止手写接口类型**：`@lingxi/types` 由后端 OpenAPI 契约生成
 - **文案一律走 i18n key**：禁止硬编码中文（zh-CN / en-US 双语）
 - **设计令牌双轨**：CSS 变量 + AntD theme token；禁止写死颜色 / 字号 / 圆角
+- **两独立 app**：`apps/lingxi-web`（灵犀工作台）与 `apps/yuanshu-console`（元枢管理台）各自构建部署、共享 `packages/*`；元枢管理台界面（IAM/治理/提示词）归 console，不在 lingxi-web 重复建
 - **新增模块 = 新增路由分区 + 登记 `module.config.ts`**：禁止私挂路由与菜单
 - **权限判断用 `<LxPermission>`**：无权限**不渲染**（而非渲染后禁用）
 - **AI 产出必须标记**：`<LxAgentSourceTag>`，用户需一眼分辨人写还是智能体写
