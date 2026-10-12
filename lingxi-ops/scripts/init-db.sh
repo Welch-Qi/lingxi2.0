@@ -67,11 +67,11 @@ fi
 # ---- 执行迁移（Flyway Maven 插件，位置清单见 config/db.yml）----
 log "执行 Flyway 迁移…"
 cd "${ROOT:-${OPS_ROOT}/../lingxi-server}" 2>/dev/null || cd "${OPS_ROOT}/../lingxi-server"
-mvn -q -pl lingxi-platform -am flyway:migrate \
+mvn -q -pl :yuanshu-platform -am flyway:migrate \
   -Dflyway.url="jdbc:postgresql://127.0.0.1:${DB_LOCAL_PORT}/${DB_NAME}" \
   -Dflyway.user="${LX_DB_USER}" \
   -Dflyway.password="${LX_DB_PASSWORD}" \
-  -Dflyway.locations="filesystem:lingxi-platform/src/main/resources/db/migration/sys,filesystem:lingxi-data/src/main/resources/db/migration/dt,filesystem:lingxi-agent/src/main/resources/db/migration/ag" \
+  -Dflyway.locations="filesystem:yuanshu/yuanshu-platform/src/main/resources/db/migration/sys,filesystem:yuanshu/yuanshu-data/src/main/resources/db/migration/dt,filesystem:lingxi/lingxi-agent/src/main/resources/db/migration/ag" \
   || fail "迁移失败；可用最新备份回滚：${BACKUP_FILE}"
 
 log "迁移完成。已发布脚本禁止修改（§3.3 D8），修正请新增脚本"

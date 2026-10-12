@@ -35,7 +35,7 @@ log "回滚：$(basename "${CURRENT_TARGET}") -> ${PREV_VERSION}"
 
 PORT="${LX_ROLLBACK_PORT:-18081}"
 ( cd "${PREV_DIR}" && nohup java -Dspring.profiles.active="${SPRING_PROFILES_ACTIVE:-prod}" \
-    -jar lingxi-platform.jar --server.port="${PORT}" \
+    -jar yuanshu-platform.jar --server.port="${PORT}" \
     > "${PREV_DIR}/app.rollback.log" 2>&1 & echo $! > "${PREV_DIR}/app.pid" )
 
 for _ in $(seq 1 30); do

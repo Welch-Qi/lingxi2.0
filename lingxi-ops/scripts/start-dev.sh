@@ -67,7 +67,7 @@ if is_running "${BACKEND_PID}"; then
 else
   port_busy "${BACKEND_PORT}" && fail "端口 ${BACKEND_PORT} 已被占用，请先执行 stop-dev.sh 或排查占用进程"
   log "启动后端（spring-boot:run，profile=${SPRING_PROFILES_ACTIVE:-dev}）…"
-  ( cd "${SERVER_DIR}" && nohup mvn -q -pl lingxi-platform -am spring-boot:run \
+  ( cd "${SERVER_DIR}" && nohup mvn -q -pl :yuanshu-platform -am spring-boot:run \
       -Dspring-boot.run.profiles="${SPRING_PROFILES_ACTIVE:-dev}" \
       > "${LOG_DIR}/backend.log" 2>&1 & echo $! > "${BACKEND_PID}" )
   log "后端 PID=$(cat "${BACKEND_PID}")，日志：${LOG_DIR}/backend.log"

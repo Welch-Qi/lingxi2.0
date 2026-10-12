@@ -23,7 +23,7 @@ fail() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] [deploy] [FAIL] $*" >&2; exit 1;
 
 # ---- 发布 Checklist（缺一不可，§4.14.2）----
 log "发布前 Checklist 校验…"
-[[ -f "${RELEASE_DIR}/lingxi-server.jar" || -f "${RELEASE_DIR}/lingxi-platform.jar" ]] \
+[[ -f "${RELEASE_DIR}/lingxi-server.jar" || -f "${RELEASE_DIR}/yuanshu-platform.jar" ]] \
   || fail "缺失构建产物；请先完成构建并放入 ${RELEASE_DIR}"
 [[ -z "${LX_SKIP_ENV_CHECK:-}" ]] && bash "${SCRIPT_DIR}/check-env.sh" || log "跳过环境体检（LX_SKIP_ENV_CHECK）"
 [[ -n "${LX_MIGRATION_VERIFIED:-}" ]] || log "[提醒] 需确认：迁移脚本已在 staging 验证通过"
@@ -35,7 +35,7 @@ PID_FILE="${RELEASE_DIR}/app.pid"
 NEW_PORT="${LX_NEW_INSTANCE_PORT:-18080}"
 log "启动新实例 version=${VERSION} port=${NEW_PORT}"
 ( cd "${RELEASE_DIR}" && nohup java -XX:+UseZGC -Dspring.profiles.active="${SPRING_PROFILES_ACTIVE:-prod}" \
-    -jar lingxi-platform.jar --server.port="${NEW_PORT}" \
+    -jar yuanshu-platform.jar --server.port="${NEW_PORT}" \
     > "${RELEASE_DIR}/app.log" 2>&1 & echo $! > "${PID_FILE}" )
 
 log "等待健康检查（就绪探测，最多 120 秒）…"

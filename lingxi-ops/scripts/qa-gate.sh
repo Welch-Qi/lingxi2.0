@@ -43,9 +43,9 @@ else
 fi
 
 # ============================================================ 2. 架构边界（ArchUnit）
-log "---- 2/6 架构边界校验（ArchUnit：五层分层 + 跨模块只依赖 api 包）----"
-ARCH_TEST_REPORT="${SERVER_DIR}/lingxi-platform/target/surefire-reports"
-if ls "${ARCH_TEST_REPORT}"/com.lingxi.sys.architecture.ArchitectureRuleTest.txt >/dev/null 2>&1; then
+log "---- 2/6 架构边界校验（ArchUnit：五层分层 + 跨模块只依赖 api 包 + 跨产品方向规则）----"
+ARCH_TEST_REPORT="${SERVER_DIR}/yuanshu/yuanshu-platform/target/surefire-reports"
+if ls "${ARCH_TEST_REPORT}"/com.yuanshu.sys.architecture.ArchitectureRuleTest.txt >/dev/null 2>&1; then
   mark_pass "ArchUnit 规则全部通过"
 else
   mark_fail "ArchUnit 未执行或未通过（技术规约2.0 §2.2 为强制项）"

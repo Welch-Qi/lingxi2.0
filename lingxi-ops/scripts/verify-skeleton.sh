@@ -52,21 +52,27 @@ else
   bad '.gitignore 缺失，无法保证 .env 不入库'
 fi
 
-# ---------------------------------------------------------------- 2. 后端模块
-title '[2/9] 后端 Maven 模块（口径：14 = 11 业务 + data + platform + BOM）'
+# ---------------------------------------------------------------- 2. 后端模块（三产品：元枢底座 + 灵犀集群）
+title '[2/9] 后端 Maven 模块（口径：单体 15 = 元枢 4 + 灵犀 11；另有 BOM 与 2 独立进程）'
 BIZ_MODULES="workbench customer product order service marketing intel analytics agent knowledge configcenter"
-for m in ${BIZ_MODULES}; do need_dir "lingxi-server/lingxi-${m}"; done
-need_dir 'lingxi-server/lingxi-data'
-need_dir 'lingxi-server/lingxi-platform'
+for m in ${BIZ_MODULES}; do need_dir "lingxi-server/lingxi/lingxi-${m}"; done
+need_dir 'lingxi-server/yuanshu/yuanshu-platform'
+need_dir 'lingxi-server/yuanshu/yuanshu-data'
+need_dir 'lingxi-server/yuanshu/yuanshu-semantic'
+need_dir 'lingxi-server/yuanshu/yuanshu-agent-factory'
 need_dir 'lingxi-server/lingxi-dependencies'
+need_dir 'lingxi-server/yuanshu'          # 元枢中间聚合 POM
+need_dir 'lingxi-server/lingxi'           # 灵犀中间聚合 POM
 BIZ_COUNT=$(printf '%s\n' ${BIZ_MODULES} | wc -l | tr -d ' ')
-ok "业务模块计数 = ${BIZ_COUNT}（期望 11）"
-if [ "${BIZ_COUNT}" -ne 11 ]; then bad "业务模块数量口径不符（实际 ${BIZ_COUNT}，期望 11）"; fi
+ok "灵犀业务模块计数 = ${BIZ_COUNT}（期望 11）"
+if [ "${BIZ_COUNT}" -ne 11 ]; then bad "灵犀业务模块数量口径不符（实际 ${BIZ_COUNT}，期望 11）"; fi
+# 开物一期不建任何目录（归口表 §6.4）；出现 kaiwu 目录即为越界
+if [ -d "${ROOT_DIR}/lingxi-server/kaiwu" ]; then bad '禁止项：lingxi-server/kaiwu 目录已提前创建（开物一期只登记契约不建目录）'; else ok '开物目录基线：0（一期不建目录，符合归口表 §6.4）'; fi
 
-title '[2b/9] 公共 Starter 组（5 个）与独立进程（2 个）'
+title '[2b/9] 公共 Starter 组（5 个）与元枢独立进程（2 个）'
 for s in core security mybatis llm observability; do need_dir "lingxi-server/lingxi-starters/lingxi-starter-${s}"; done
-need_dir 'lingxi-server/lingxi-agent-runtime'
-need_dir 'lingxi-server/lingxi-data-jobs'
+need_dir 'lingxi-server/yuanshu/yuanshu-agent-runtime'
+need_dir 'lingxi-server/yuanshu/yuanshu-data-jobs'
 
 # ---------------------------------------------------------------- 3. 分层与 BOM
 title '[3/9] 模块内五层分层（api / app / domain / infra / starter）'
@@ -78,9 +84,9 @@ for pair in "workbench:wb" "customer:cus" "product:prd" "order:ord" "service:svc
   mod="${pair%%:*}"
   pkg="${pair##*:}"
   for layer in api app domain infra starter; do
-    if [ ! -d "${ROOT_DIR}/lingxi-server/lingxi-${mod}/src/main/java/com/lingxi/${pkg}/${layer}" ]; then
+    if [ ! -d "${ROOT_DIR}/lingxi-server/lingxi/lingxi-${mod}/src/main/java/com/lingxi/${pkg}/${layer}" ]; then
       LAYER_MISSING=$((LAYER_MISSING + 1))
-      warn "缺失分层目录：lingxi-${mod} → com/lingxi/${pkg}/${layer}"
+      warn "缺失分层目录：lingxi/lingxi-${mod} → com/lingxi/${pkg}/${layer}"
     fi
   done
 done
@@ -89,13 +95,22 @@ if [ "${LAYER_MISSING}" -eq 0 ]; then
 else
   bad "存在 ${LAYER_MISSING} 个缺失的分层目录（ArchUnit 与代码组织会错位）"
 fi
-# 数据底座与平台模块的各层
-for pair in "data:dt" "platform:sys"; do
+# 元枢底座模块的各层（包前缀 com.yuanshu，模块名与包名显式映射）
+for pair in "yuanshu-platform:sys" "yuanshu-data:dt" "yuanshu-semantic:sem" "yuanshu-agent-factory:ac"; do
   mod="${pair%%:*}"; pkg="${pair##*:}"
-  if [ -d "${ROOT_DIR}/lingxi-server/lingxi-${mod}/src/main/java/com/lingxi/${pkg}" ]; then
-    ok "lingxi-${mod} 分层根存在（com/lingxi/${pkg}）"
+  if [ -d "${ROOT_DIR}/lingxi-server/yuanshu/${mod}/src/main/java/com/yuanshu/${pkg}" ]; then
+    ok "${mod} 分层根存在（com/yuanshu/${pkg}）"
   else
-    bad "lingxi-${mod} 分层根缺失（com/lingxi/${pkg}）"
+    bad "${mod} 分层根缺失（com/yuanshu/${pkg}）"
+  fi
+done
+# 独立进程包根
+for pair in "yuanshu-agent-runtime:agentruntime" "yuanshu-data-jobs:datajobs"; do
+  mod="${pair%%:*}"; pkg="${pair##*:}"
+  if [ -d "${ROOT_DIR}/lingxi-server/yuanshu/${mod}/src/main/java/com/yuanshu/${pkg}" ]; then
+    ok "${mod} 包根存在（com/yuanshu/${pkg}）"
+  else
+    bad "${mod} 包根缺失（com/yuanshu/${pkg}）"
   fi
 done
 
@@ -201,7 +216,7 @@ for f in "lingxi-docs/02-data" "lingxi-docs/03-api" "lingxi-docs/04-tenant" "lin
   cnt=$(find "${ROOT_DIR}/${f}" -maxdepth 1 -name '*.md' -not -name '_index.md' 2>/dev/null | wc -l | tr -d ' ')
   if [ "${cnt}" -eq 0 ]; then warn "${f} 权威文档未产出（对应任务 M0000-008）"; fi
 done
-for repo in "lingxi-server" "lingxi-web" "lingxi-ops" "lingxi-data-worker" "lingxi-docs"; do
+for repo in "lingxi-server" "lingxi-web" "lingxi-ops" "yuanshu-data-worker" "lingxi-docs"; do
   if [ -d "${ROOT_DIR}/${repo}/.git" ]; then
     ok "${repo} 已初始化 Git（分支 $(cd "${ROOT_DIR}/${repo}" && git branch --show-current 2>/dev/null)）"
   else
