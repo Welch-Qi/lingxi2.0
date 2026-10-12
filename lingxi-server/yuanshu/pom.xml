@@ -25,6 +25,8 @@
   <modules>
     <module>yuanshu-platform</module>     <!-- L0 平台公共：认证 / IAM / 租户 / 审计（原 lingxi-platform）；启动模块 -->
     <module>yuanshu-data</module>        <!-- L1 大数据：DT-01~07 / GM-01~12（原 lingxi-data） -->
+    <module>yuanshu-semantic</module>    <!-- 【新】语义管理：行业本体 / 术语编码 / 指标口径 / 行业包托管 / 知识引擎框架 -->
+    <module>yuanshu-agent-factory</module> <!-- 【新】智能体工厂：AC-01~09 / AG-07~09 治理面 / 提示词资产 -->
     <module>yuanshu-agent-runtime</module> <!-- 智能体运行时，独立进程（原 lingxi-agent-runtime） -->
     <module>yuanshu-data-jobs</module>   <!-- 数据任务进程，独立单实例（原 lingxi-data-jobs） -->
   </modules>

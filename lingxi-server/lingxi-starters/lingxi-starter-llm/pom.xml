@@ -21,7 +21,7 @@
       <groupId>com.lingxi</groupId>
       <artifactId>lingxi-starter-core</artifactId>
     </dependency>
-    <!-- 业务内嵌 AI（单轮、低延迟、与业务同事务）—— 长时编排只在 lingxi-agent-runtime（§4.6.1） -->
+    <!-- 业务内嵌 AI（单轮、低延迟、与业务同事务）—— 长时编排只在 yuanshu-agent-runtime（§4.6.1） -->
     <dependency>
       <groupId>org.springframework.ai</groupId>
       <artifactId>spring-ai-starter-model-openai</artifactId>

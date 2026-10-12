@@ -11,10 +11,10 @@
     <relativePath>../..</relativePath>
   </parent>
 
-  <artifactId>lingxi-data</artifactId>
+  <artifactId>yuanshu-data</artifactId>
   <packaging>jar</packaging>
-  <name>lingxi-data</name>
-  <description>灵犀系统 L1 数据底座（DT-）：数据源接入 · 企业实体中心 · 数据资产 · 指标体系 · 数据质量 · 即时沉淀</description>
+  <name>yuanshu-data</name>
+  <description>元枢 L1 大数据底座（DT- / GM-）：数据源接入 · 企业实体中心 · 数据资产 · 数据质量 · 即时沉淀 · 公域数据（指标口径 DT-05 能力已迁 yuanshu-semantic）</description>
 
   <dependencies>
     <!-- L0 公共能力（禁止自行实现，技术规约2.0 §4.8.1） -->

@@ -11,10 +11,10 @@
     <relativePath>../..</relativePath>
   </parent>
 
-  <artifactId>lingxi-data-jobs</artifactId>
+  <artifactId>yuanshu-data-jobs</artifactId>
   <packaging>jar</packaging>
-  <name>lingxi-data-jobs</name>
-  <description>灵犀系统数据任务进程（外部数据源拉取 / 清洗 / 实体归并批处理 / 指标刷新），独立部署进程、单实例运行</description>
+  <name>yuanshu-data-jobs</name>
+  <description>元枢数据任务进程（外部数据源拉取 / 清洗 / 实体归并批处理 / 指标刷新），独立部署进程、单实例运行</description>
 
   <dependencies>
     <dependency>
@@ -36,12 +36,12 @@
 
     <!--
       L1 数据底座契约（DataSourceAdapter / 实体消歧规则 / 指标定义）。
-      仅允许 import com.lingxi.dt.api.*，禁止依赖 lingxi-data 的 app / domain / infra 包。
-      边界由 ArchUnit 校验（lingxi-platform 的 ArchitectureRuleTest）。
+      仅允许 import com.yuanshu.dt.api.*，禁止依赖 yuanshu-data 的 app / domain / infra 包。
+      边界由 ArchUnit 校验（yuanshu-platform 的 ArchitectureRuleTest）。
     -->
     <dependency>
       <groupId>com.lingxi</groupId>
-      <artifactId>lingxi-data</artifactId>
+      <artifactId>yuanshu-data</artifactId>
     </dependency>
 
     <dependency>

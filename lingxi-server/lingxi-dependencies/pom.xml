@@ -237,21 +237,33 @@
         <version>${lingxi.version}</version>
       </dependency>
 
-      <!-- L0 平台公共服务 -->
+      <!-- 元枢 L0 平台公共服务（启动模块） -->
       <dependency>
         <groupId>com.lingxi</groupId>
-        <artifactId>lingxi-platform</artifactId>
+        <artifactId>yuanshu-platform</artifactId>
         <version>${lingxi.version}</version>
       </dependency>
 
-      <!-- L1 数据底座 -->
+      <!-- 元枢 L1 大数据底座 -->
       <dependency>
         <groupId>com.lingxi</groupId>
-        <artifactId>lingxi-data</artifactId>
+        <artifactId>yuanshu-data</artifactId>
         <version>${lingxi.version}</version>
       </dependency>
 
-      <!-- L2 业务模块（11 个一级菜单业务域） -->
+      <!-- 元枢 语义管理（本体 / 术语编码 / 指标口径 / 行业包托管）与 智能体工厂（配置 / 调度 / 监控 / 提示词） -->
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>yuanshu-semantic</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>yuanshu-agent-factory</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+
+      <!-- 灵犀营销服集群 L2 业务模块（11 个业务域，承载 9 个一级菜单） -->
       <dependency>
         <groupId>com.lingxi</groupId>
         <artifactId>lingxi-workbench</artifactId>
@@ -308,15 +320,15 @@
         <version>${lingxi.version}</version>
       </dependency>
 
-      <!-- 独立部署进程 -->
+      <!-- 独立部署进程（元枢，不计入单体模块口径） -->
       <dependency>
         <groupId>com.lingxi</groupId>
-        <artifactId>lingxi-agent-runtime</artifactId>
+        <artifactId>yuanshu-agent-runtime</artifactId>
         <version>${lingxi.version}</version>
       </dependency>
       <dependency>
         <groupId>com.lingxi</groupId>
-        <artifactId>lingxi-data-jobs</artifactId>
+        <artifactId>yuanshu-data-jobs</artifactId>
         <version>${lingxi.version}</version>
       </dependency>
 
