@@ -5,12 +5,17 @@
   <modelVersion>4.0.0</modelVersion>
 
   <!--
-    灵犀系统 —— 后端聚合父 POM
+    灵犀系统 —— 后端聚合父 POM（三产品：灵犀 · 开物 · 元枢）
 
-    部署形态：模块化单体（一个 jar）+ 两个独立进程（agent-runtime / data-jobs）。
-    模块计数口径（技术规约2.0 §2.2）：
-        14 个 Maven 模块 = 11 业务模块 + lingxi-data + lingxi-platform + lingxi-dependencies(BOM)
-        lingxi-starters（5 个 Starter）为公共组件组，lingxi-agent-runtime / lingxi-data-jobs 为独立部署进程，均不计入。
+    部署形态：模块化单体（一个 jar）+ 两个独立进程（yuanshu-agent-runtime / yuanshu-data-jobs）。
+    聚合结构（一底两翼，见《灵犀·开物·元枢三产品架构规划-20260930》）：
+        yuanshu/    —— 元枢数智底座（L0 平台 / L1 数据 / 语义 / 智能体工厂 / 独立进程）
+        lingxi/     —— 灵犀营销服智能体集群（11 个业务域模块）
+        kaiwu/      —— 开物工业智能体集群：一期不建目录（归口表 §6.4），二期需求确认后新增同级聚合
+    模块计数口径（技术规约2.0 §2.2 + 三产品归口）：
+        15 个单体模块 = 元枢 4（platform / data / semantic / agent-factory）+ 灵犀 11
+        lingxi-starters（5 个 Starter）为公共组件组，yuanshu-agent-runtime / yuanshu-data-jobs
+        为独立部署进程（归元枢），均不计入。
 
     环境基线：JDK 25 LTS + Spring Boot 4.1.x（3.5 已于 2026-06-30 OSS EOL，禁止使用）
   -->
@@ -38,36 +43,19 @@
     <jacoco.line.coverage.min.new>0.80</jacoco.line.coverage.min.new>
   </properties>
 
-  <!-- ============================================================ 模块清单 -->
+  <!-- ============================================================ 模块清单（三产品聚合） -->
   <modules>
-    <!-- 版本定义（BOM）：必须第一个，保证后续模块可解析 -->
+    <!-- 版本定义（BOM）：必须第一个，保证后续模块可解析；三产品共用版本源 -->
     <module>lingxi-dependencies</module>
 
     <!-- 公共 Starter 组（5 个）：core / security / mybatis / llm / observability -->
     <module>lingxi-starters</module>
 
-    <!-- L0 平台公共服务（同时是模块化单体的启动模块） -->
-    <module>lingxi-platform</module>
+    <!-- 元枢数智底座（L0 / L1 / 语义 / 智能体工厂 / 两个独立进程） -->
+    <module>yuanshu</module>
 
-    <!-- L1 数据底座 -->
-    <module>lingxi-data</module>
-
-    <!-- L2 业务模块（11 个业务域，承载 13 个一级菜单；线索中心 / 商机中心与客户中心同域复用） -->
-    <module>lingxi-workbench</module>
-    <module>lingxi-customer</module>
-    <module>lingxi-product</module>
-    <module>lingxi-order</module>
-    <module>lingxi-service</module>
-    <module>lingxi-marketing</module>
-    <module>lingxi-intel</module>
-    <module>lingxi-analytics</module>
-    <module>lingxi-agent</module>
-    <module>lingxi-knowledge</module>
-    <module>lingxi-configcenter</module>
-
-    <!-- 独立部署进程（不计入单体模块口径） -->
-    <module>lingxi-agent-runtime</module>
-    <module>lingxi-data-jobs</module>
+    <!-- 灵犀营销服智能体集群（11 个业务域）；开物一期不建聚合，见根注释 -->
+    <module>lingxi</module>
   </modules>
 
   <!-- ============================================================ 版本统一入口 -->

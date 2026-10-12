@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.lingxi</groupId>
+    <artifactId>lingxi-server</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+    <relativePath>../..</relativePath>
+  </parent>
+
+  <artifactId>lingxi-agent-runtime</artifactId>
+  <packaging>jar</packaging>
+  <name>lingxi-agent-runtime</name>
+  <description>灵犀系统 L3 智能体运行时（LangChain4j 编排 + MCP 工具调用 + 任务状态持久化），独立部署进程</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>lingxi-starter-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>lingxi-starter-observability</artifactId>
+    </dependency>
+    <!-- 任务与检查点落库（可接管、可恢复，§4.6.6） -->
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>lingxi-starter-mybatis</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>lingxi-starter-llm</artifactId>
+    </dependency>
+
+    <!-- 多智能体编排：四大模式（路由 / 链式 / 并行 / 监督者）+ MCP + Guardrails -->
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-open-ai</artifactId>
+    </dependency>
+    <!-- MCP 客户端：工具调用只经工具网关（§4.6.4） -->
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-mcp</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-redis</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals><goal>repackage</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>
