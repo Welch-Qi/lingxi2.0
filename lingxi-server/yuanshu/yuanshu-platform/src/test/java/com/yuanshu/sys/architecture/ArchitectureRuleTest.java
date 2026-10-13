@@ -72,17 +72,17 @@ class ArchitectureRuleTest {
     }
 
     @Test
-    @DisplayName("跨模块依赖只允许触碰目标模块的 api 包")
-    void crossModuleMustOnlyTouchApiPackages() {
+    @DisplayName("底座 Starter 只承载技术能力，不得反向依赖业务模块")
+    void starterMustNotDependOnBusiness() {
         ArchRule rule = classes()
-                .that().resideInAPackage("com.lingxi.starter..")
+                .that().resideInAPackage("com.yuanshu.starter..")
                 .should().onlyDependOnClassesThat().resideInAnyPackage(
-                        "com.lingxi.starter..", "java..", "javax..", "jakarta..",
+                        "com.yuanshu.starter..", "java..", "javax..", "jakarta..",
                         "org.springframework..", "com.baomidou..", "org.casbin..",
                         "org.aspectj..",
                         "org.slf4j..", "io.micrometer..", "io.opentelemetry..",
                         "com.fasterxml..", "org.apache.ibatis..", "net.sf.jsqlparser..")
-                .because("公共 Starter 只承载技术能力，不得反向依赖业务模块");
+                .because("元枢底座 Starter（Q2 拆分后）只承载技术能力，不得反向依赖业务模块");
         rule.check(classes);
     }
 
@@ -103,11 +103,16 @@ class ArchitectureRuleTest {
                 .that().resideInAPackage("com.lingxi..")
                 .and().resideOutsideOfPackage("com.lingxi.starter..")
                 .should().dependOnClassesThat(new DescribedPredicate<JavaClass>(
-                        "属于元枢实现层（非 api 包）") {
+                        "属于元枢实现层（非 api 包、非底座 Starter）") {
                     @Override
                     public boolean test(JavaClass javaClass) {
                         String pkg = javaClass.getPackageName();
-                        return pkg.startsWith("com.yuanshu.") && !pkg.contains(".api");
+                        // 豁免 com.yuanshu.starter..：底座 Starter 是进程内技术件（响应体 / 租户 / 权限 /
+                        // 可观测 / 模型网关），集群直接依赖它不构成「自建第二套底座能力」；
+                        // 业务契约仍必须走各模块 api 包。
+                        return pkg.startsWith("com.yuanshu.")
+                                && !pkg.contains(".api")
+                                && !pkg.startsWith("com.yuanshu.starter.");
                     }
                 })
                 .because("集群（灵犀/未来开物）调用元枢一律经各模块 api 包；直连实现层会造成底座改动击穿集群")

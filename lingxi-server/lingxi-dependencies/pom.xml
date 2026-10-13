@@ -213,27 +213,27 @@
       <!-- ========== 7. 内部模块（业务模块引用 Starter 时不写版本） ========== -->
       <dependency>
         <groupId>com.lingxi</groupId>
-        <artifactId>lingxi-starter-core</artifactId>
+        <artifactId>yuanshu-starter-core</artifactId>
         <version>${lingxi.version}</version>
       </dependency>
       <dependency>
         <groupId>com.lingxi</groupId>
-        <artifactId>lingxi-starter-security</artifactId>
+        <artifactId>yuanshu-starter-security</artifactId>
         <version>${lingxi.version}</version>
       </dependency>
       <dependency>
         <groupId>com.lingxi</groupId>
-        <artifactId>lingxi-starter-mybatis</artifactId>
+        <artifactId>yuanshu-starter-mybatis</artifactId>
         <version>${lingxi.version}</version>
       </dependency>
       <dependency>
         <groupId>com.lingxi</groupId>
-        <artifactId>lingxi-starter-llm</artifactId>
+        <artifactId>yuanshu-starter-llm</artifactId>
         <version>${lingxi.version}</version>
       </dependency>
       <dependency>
         <groupId>com.lingxi</groupId>
-        <artifactId>lingxi-starter-observability</artifactId>
+        <artifactId>yuanshu-starter-observability</artifactId>
         <version>${lingxi.version}</version>
       </dependency>
 

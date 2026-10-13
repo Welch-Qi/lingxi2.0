@@ -19,20 +19,20 @@
   <dependencies>
     <dependency>
       <groupId>com.lingxi</groupId>
-      <artifactId>lingxi-starter-core</artifactId>
+      <artifactId>yuanshu-starter-core</artifactId>
     </dependency>
     <dependency>
       <groupId>com.lingxi</groupId>
-      <artifactId>lingxi-starter-observability</artifactId>
+      <artifactId>yuanshu-starter-observability</artifactId>
     </dependency>
     <!-- 任务与检查点落库（可接管、可恢复，§4.6.6） -->
     <dependency>
       <groupId>com.lingxi</groupId>
-      <artifactId>lingxi-starter-mybatis</artifactId>
+      <artifactId>yuanshu-starter-mybatis</artifactId>
     </dependency>
     <dependency>
       <groupId>com.lingxi</groupId>
-      <artifactId>lingxi-starter-llm</artifactId>
+      <artifactId>yuanshu-starter-llm</artifactId>
     </dependency>
 
     <!-- 多智能体编排：四大模式（路由 / 链式 / 并行 / 监督者）+ MCP + Guardrails -->

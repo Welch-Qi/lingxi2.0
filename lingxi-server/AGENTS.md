@@ -15,7 +15,7 @@ mvn -q verify                         # 全量门禁：测试 + 覆盖率 + Spot
 
 1. **版本号只写在 `lingxi-dependencies/pom.xml`**。子模块 `pom.xml` 出现 `<version>` 即驳回。
 2. **模块计数口径（三产品）**：单体 15 = **元枢 4**（`yuanshu-platform`/`yuanshu-data`/`yuanshu-semantic`/`yuanshu-agent-factory`）+ **灵犀 11**；另 BOM `lingxi-dependencies`。
-   `lingxi-starters`（5 个 starter）为公共组件组；`yuanshu-agent-runtime` / `yuanshu-data-jobs` 为独立进程，均**不计入**。
+   `yuanshu-starters`（5 个底座 starter）与 `lingxi-starters`（灵犀业务域通用件，一期空缺）为公共组件组；`yuanshu-agent-runtime` / `yuanshu-data-jobs` 为独立进程，均**不计入**。
    目录：`lingxi-server/yuanshu/**`（元枢）与 `lingxi-server/lingxi/**`（灵犀）。**groupId 统一 `com.lingxi`**，底座四模块 Java 包为 `com.yuanshu.*`。
    【跨产品硬约束】`com.yuanshu..` 禁依赖 `com.lingxi.{业务域}..`；灵犀各域禁依赖元枢非 `api` 包——ArchUnit 强制。
 3. **五层分层不可越界**：`api` / `app` / `domain` / `infra` / `starter`。

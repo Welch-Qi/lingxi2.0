@@ -148,7 +148,7 @@ bash lingxi-ops/scripts/verify-skeleton.sh
 
 | 红线 | 触发模式 | 为什么 |
 |---|---|---|
-| ① 认证与会话 | `yuanshu-platform/auth/**` · `*SecurityConfig*` · `*TokenService*` · `*LoginController*` | 漏一个校验点即可绕过登录 |
+| ① 认证与会话 | `yuanshu-starters/yuanshu-starter-security/**` · `yuanshu-platform/auth/**` · `*SecurityConfig*` · `*TokenService*` · `*LoginController*` | 漏一个校验点即可绕过登录 |
 | ② 租户隔离与权限 | `*TenantInterceptor*` · `*DataScope*` · `*PermissionEvaluator*` · `*Casbin*` · rls-*.sql | 漏一个 `where tenant_id` 即跨租户泄露（P0） |
 | ③ 计费 / 配额 / 支付 | `billing/**` · `quota/**` · `payment/**` · `*CreditsService*` | 错一次即资损，不可逆 |
 

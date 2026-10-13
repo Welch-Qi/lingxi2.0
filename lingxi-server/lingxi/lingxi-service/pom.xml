@@ -20,19 +20,19 @@
     <!-- L0 公共能力（禁止自行实现，技术规约2.0 §4.8.1） -->
     <dependency>
       <groupId>com.lingxi</groupId>
-      <artifactId>lingxi-starter-core</artifactId>
+      <artifactId>yuanshu-starter-core</artifactId>
     </dependency>
     <dependency>
       <groupId>com.lingxi</groupId>
-      <artifactId>lingxi-starter-observability</artifactId>
+      <artifactId>yuanshu-starter-observability</artifactId>
     </dependency>
     <dependency>
       <groupId>com.lingxi</groupId>
-      <artifactId>lingxi-starter-mybatis</artifactId>
+      <artifactId>yuanshu-starter-mybatis</artifactId>
     </dependency>
     <dependency>
       <groupId>com.lingxi</groupId>
-      <artifactId>lingxi-starter-security</artifactId>
+      <artifactId>yuanshu-starter-security</artifactId>
     </dependency>
 
     <!-- Web 与校验 -->

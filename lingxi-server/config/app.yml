@@ -3,7 +3,7 @@
 #
 # 禁止放入：口令 / API Key / 云端 IP / 模型名（技术规约2.0 §3.5 F1）
 ################
-lingxi:
+yuanshu:
   app:
     # 环境标识：dev / test / staging / prod
     env: ${LX_ENV:dev}

@@ -14,7 +14,8 @@
         kaiwu/      —— 开物工业智能体集群：一期不建目录（归口表 §6.4），二期需求确认后新增同级聚合
     模块计数口径（技术规约2.0 §2.2 + 三产品归口）：
         15 个单体模块 = 元枢 4（platform / data / semantic / agent-factory）+ 灵犀 11
-        lingxi-starters（5 个 Starter）为公共组件组，yuanshu-agent-runtime / yuanshu-data-jobs
+        yuanshu-starters（5 个底座 Starter）与 lingxi-starters（灵犀业务域通用件，一期空缺）
+        为公共组件组，yuanshu-agent-runtime / yuanshu-data-jobs
         为独立部署进程（归元枢），均不计入。
 
     环境基线：JDK 25 LTS + Spring Boot 4.1.x（3.5 已于 2026-06-30 OSS EOL，禁止使用）
@@ -48,8 +49,8 @@
     <!-- 版本定义（BOM）：必须第一个，保证后续模块可解析；三产品共用版本源 -->
     <module>lingxi-dependencies</module>
 
-    <!-- 公共 Starter 组（5 个）：core / security / mybatis / llm / observability -->
-    <module>lingxi-starters</module>
+    <!-- 元枢底座 Starter 组（5 个）：core / mybatis / security / llm / observability -->
+    <module>yuanshu-starters</module>
 
     <!-- 元枢数智底座（L0 / L1 / 语义 / 智能体工厂 / 两个独立进程） -->
     <module>yuanshu</module>
@@ -74,7 +75,7 @@
   <!--
     全模块共用依赖（仅限测试与构建期）。
     说明：业务运行期依赖（starter-core / starter-mybatis 等）由各模块显式声明，
-         不放父 POM——否则 lingxi-starter-* 模块会自引用形成循环依赖。
+         不放父 POM——否则 yuanshu-starter-* 模块会自引用形成循环依赖。
   -->
   <dependencies>
     <dependency>

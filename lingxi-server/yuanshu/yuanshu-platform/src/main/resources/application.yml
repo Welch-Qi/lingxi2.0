@@ -41,7 +41,7 @@ server:
     connection-timeout: 3s
 
 # 统一响应体与错误码由 starter-core 提供，此处仅声明 i18n 兜底语言
-lingxi:
+yuanshu:
   tenant:
     enabled: true
     tenant-column: tenant_id

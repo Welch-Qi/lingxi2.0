@@ -69,8 +69,8 @@ if [ "${BIZ_COUNT}" -ne 11 ]; then bad "灵犀业务模块数量口径不符（�
 # 开物一期不建任何目录（归口表 §6.4）；出现 kaiwu 目录即为越界
 if [ -d "${ROOT_DIR}/lingxi-server/kaiwu" ]; then bad '禁止项：lingxi-server/kaiwu 目录已提前创建（开物一期只登记契约不建目录）'; else ok '开物目录基线：0（一期不建目录，符合归口表 §6.4）'; fi
 
-title '[2b/9] 公共 Starter 组（5 个）与元枢独立进程（2 个）'
-for s in core security mybatis llm observability; do need_dir "lingxi-server/lingxi-starters/lingxi-starter-${s}"; done
+title '[2b/9] 元枢底座 Starter 组（5 个）与元枢独立进程（2 个）'
+for s in core security mybatis llm observability; do need_dir "lingxi-server/yuanshu-starters/yuanshu-starter-${s}"; done
 need_dir 'lingxi-server/yuanshu/yuanshu-agent-runtime'
 need_dir 'lingxi-server/yuanshu/yuanshu-data-jobs'
 
