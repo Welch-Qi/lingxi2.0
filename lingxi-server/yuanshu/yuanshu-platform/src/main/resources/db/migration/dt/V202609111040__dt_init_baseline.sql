@@ -6,6 +6,12 @@
 --       企业实体中心是「数据壁垒枢纽」：三类数据以统一实体 ID 挂接，形成一企一档。
 -- ============================================================================
 
+-- ---------------------------------------------------------------- 扩展（技术基线 §1.4：PostgreSQL 17 含 pgvector / pg_trgm）
+-- 必须先于本脚本任何建表/索引创建：下方 gin_trgm_ops 与 vector_cosine_ops 依赖这两个扩展，
+-- 缺失将直接报 "operator class ... does not exist" / "type vector does not exist"。
+CREATE EXTENSION IF NOT EXISTS pg_trgm;      -- 实体名归一化模糊匹配（idx_dt_entity_name_trgm）
+CREATE EXTENSION IF NOT EXISTS vector;       -- 知识向量（dt_knowledge_embedding.embedding）
+
 -- ---------------------------------------------------------------- 数据源接入（DT-01）
 CREATE TABLE dt_data_source (
     id                  BIGINT       NOT NULL,

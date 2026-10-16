@@ -44,7 +44,7 @@ SCRIPT_NAME="init-db"
 require_env LX_DB_USER LX_DB_PASSWORD
 
 DB_LOCAL_PORT="${LX_DB_TUNNEL_PORT:-13306}"
-DB_NAME="${LX_DB_NAME:-lingxi}"
+DB_NAME="${LX_DB_NAME:-lingxi2}"
 BACKUP_DIR="${RUNTIME_DIR}/db-backup"
 mkdir -p "${BACKUP_DIR}"
 

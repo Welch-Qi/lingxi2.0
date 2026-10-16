@@ -9,7 +9,7 @@
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://127.0.0.1:${LX_DB_TUNNEL_PORT:13306}/${LX_DB_NAME:lingxi}?ApplicationName=lingxi-server&reWriteBatchedInserts=true
+    url: jdbc:postgresql://127.0.0.1:${LX_DB_TUNNEL_PORT:13306}/${LX_DB_NAME:lingxi2}?ApplicationName=lingxi-server&reWriteBatchedInserts=true
     username: ${LX_DB_USER}
     password: ${LX_DB_PASSWORD}
     hikari:
