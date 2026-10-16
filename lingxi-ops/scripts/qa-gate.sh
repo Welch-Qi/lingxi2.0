@@ -34,9 +34,21 @@ mark_pass() { log "  OK: $1"; }
 
 # ============================================================ 1. 后端构建与单测
 log "---- 1/6 后端编译、单测与覆盖率 ----"
-if ( cd "${SERVER_DIR}" && mvn -q -B clean verify -DskipITs       -Djacoco.skip=false > "${ARTIFACT_DIR}/${TASK_ID}/maven-verify.log" 2>&1 ); then
-  mark_pass "后端 verify（含覆盖率门禁 ≥70%）"
-  COVERAGE="$(grep -ho 'Total[^%]*%' "${SERVER_DIR}"/**/target/site/jacoco/index.html 2>/dev/null | head -1 || echo 'unknown')"
+# 不用 -q：失败时需保留完整输出用于定位（历史缺陷：-q 使 maven-verify.log 仅剩 1 行）
+if ( cd "${SERVER_DIR}" && mvn -B -ntp clean verify -DskipITs       -Djacoco.skip=false > "${ARTIFACT_DIR}/${TASK_ID}/maven-verify.log" 2>&1 ); then
+  # 覆盖率：优先读 jacoco 汇总 CSV，缺失则如实标记 no-data（不假装达标）
+  COVERAGE="no-data"
+  COVERAGE_CSV="$(find "${SERVER_DIR}" -path "*target/site/jacoco/jacoco.csv" 2>/dev/null | head -1)"
+  if [[ -n "${COVERAGE_CSV}" ]]; then
+    COVERAGE="$(awk -F, 'NR>1 {im+=$4; ic+=$5; bm+=$6; bc+=$7} END {if (bm+bc>0) printf "%.1f%%", 100*bc/(bm+bc); else print "no-data"}' "${COVERAGE_CSV}")"
+    COVERAGE="${COVERAGE}（行覆盖，来自 $(basename "$(dirname "${COVERAGE_CSV}")")）"
+  fi
+  if [[ "${COVERAGE}" == "no-data" ]]; then
+    mark_pass "后端 verify（编译/单测/打包通过）"
+    warn "覆盖率门禁无数据：未生成 jacoco.csv —— 全仓缺少测试代码时 check 目标为空集会静默通过；本次不视为覆盖率达标"
+  else
+    mark_pass "后端 verify（含覆盖率 ${COVERAGE}）"
+  fi
 else
   mark_fail "后端 verify 失败（编译/单测/覆盖率未达标）；日志：artifacts/${TASK_ID}/maven-verify.log"
   COVERAGE="failed"
@@ -45,10 +57,19 @@ fi
 # ============================================================ 2. 架构边界（ArchUnit）
 log "---- 2/6 架构边界校验（ArchUnit：五层分层 + 跨模块只依赖 api 包 + 跨产品方向规则）----"
 ARCH_TEST_REPORT="${SERVER_DIR}/yuanshu/yuanshu-platform/target/surefire-reports"
-if ls "${ARCH_TEST_REPORT}"/com.yuanshu.sys.architecture.ArchitectureRuleTest.txt >/dev/null 2>&1; then
-  mark_pass "ArchUnit 规则全部通过"
+ARCH_TXT="${ARCH_TEST_REPORT}/com.yuanshu.sys.architecture.ArchitectureRuleTest.txt"
+if [[ -f "${ARCH_TXT}" ]]; then
+  # 必须解析测试结果，不能只判文件存在（历史缺陷：文件存在但 0 测试/有失败仍会误判 OK）
+  ARCH_RUN="$(grep -oE 'Tests run:[[:space:]]*[0-9]+' "${ARCH_TXT}" | head -1 | grep -oE '[0-9]+' || echo 0)"
+  ARCH_FAIL="$(grep -oE 'Failures:[[:space:]]*[0-9]+' "${ARCH_TXT}" | head -1 | grep -oE '[0-9]+' || echo 0)"
+  ARCH_ERR="$(grep -oE 'Errors:[[:space:]]*[0-9]+' "${ARCH_TXT}" | head -1 | grep -oE '[0-9]+' || echo 0)"
+  if [[ "${ARCH_RUN}" -gt 0 && "${ARCH_FAIL}" -eq 0 && "${ARCH_ERR}" -eq 0 ]]; then
+    mark_pass "ArchUnit 规则全部通过（${ARCH_RUN} 条）"
+  else
+    mark_fail "ArchUnit 未通过（run=${ARCH_RUN} failures=${ARCH_FAIL} errors=${ARCH_ERR}）；技术规约2.0 §2.2 为强制项"
+  fi
 else
-  mark_fail "ArchUnit 未执行或未通过（技术规约2.0 §2.2 为强制项）"
+  mark_fail "ArchUnit 未执行或无测试报告（缺 ${ARCH_TXT##*/}）；技术规约2.0 §2.2 为强制项"
 fi
 
 # ============================================================ 3. 前端检查
@@ -167,20 +188,37 @@ fi
 VERDICT="PASS"
 (( V_FAIL > 0 )) && VERDICT="FAIL"
 
-cat > "${RESULT_FILE}" <<JSON
-{
-  "taskId": "${TASK_ID}",
-  "verdict": "${VERDICT}",
-  "checkedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "coverage": "${COVERAGE:-unknown}",
-  "failedItems": $(printf '%s
-' "${FAILED_ITEMS[@]:-}" | grep -v '^$' | awk '{printf ""%s",", $0}' | sed 's/,$//' | sed 's/^/[/;s/$/]/' | sed 's/^\[\]$/[]/'),
-  "evidenceDir": "artifacts/${TASK_ID}",
-  "note": "本结果由独立门禁脚本产出，未采信开发方自报（技术规约2.0 §1.3 A5）"
+# 用 python 生成 JSON：保证转义正确且空数组合法
+#（历史缺陷：纯 bash 拼串时 FAILED_ITEMS 为空会产出 "failedItems": , 非法 JSON）
+FENV_VERDICT="${VERDICT}" \
+FENV_TASK="${TASK_ID}" \
+FENV_COVERAGE="${COVERAGE:-unknown}" \
+FENV_FAILED="$(printf '%s\n' "${FAILED_ITEMS[@]:-}" | grep -v '^$' || true)" \
+FENV_EVIDENCE="artifacts/${TASK_ID}" \
+FENV_RESULT="${RESULT_FILE}" \
+python - <<'PY'
+import json, os, datetime
+failed = [l for l in os.environ.get("FENV_FAILED", "").split("\n") if l.strip()]
+result = {
+    "taskId":     os.environ["FENV_TASK"],
+    "verdict":    os.environ["FENV_VERDICT"],
+    "checkedAt":  datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "coverage":   os.environ["FENV_COVERAGE"],
+    "failedItems": failed,
+    "evidenceDir": os.environ["FENV_EVIDENCE"],
+    "note":       "本结果由独立门禁脚本产出，未采信开发方自报（技术规约2.0 §1.3 A5）",
 }
-JSON
+with open(os.environ["FENV_RESULT"], "w", encoding="utf-8") as f:
+    json.dump(result, f, ensure_ascii=False, indent=2)
+    f.write("\n")
+PY
 
 log "验收结果已写入：${RESULT_FILE}"
+# 自检：确保产物是合法 JSON（CI 会消费本文件）
+if command -v python >/dev/null 2>&1; then
+  python -c "import json,sys; json.load(open(sys.argv[1],encoding='utf-8'))" "${RESULT_FILE}" \
+    || { warn "产物 JSON 非法，门禁结果不可信"; exit 2; }
+fi
 if (( V_FAIL > 0 )); then
   warn "验收失败（${V_FAIL} 项）：应自动生成 FIX 任务并回链原任务（§3.8 W4）"
   exit 1
