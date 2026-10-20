@@ -176,6 +176,30 @@ fi
 # ------------------------------------------------------------ 6. 验收核对
 log "验收核对（直连 DB）"
 
+# ---- 准备隔离测试账号（非 owner、非 superuser）----
+# PostgreSQL 规则：superuser 与表 owner 默认绕过 RLS。
+# 要真正验证隔离，必须用一个「非 owner、非 superuser」的账号连接。
+ISO_USER="${LX_TEST_DB_USER:-lx_rls_test}"
+ISO_PASS="${LX_TEST_DB_PASSWORD:-lx_rls_test_pwd}"
+log "准备隔离测试账号 ${ISO_USER}（非 owner、非 superuser）"
+if psql_admin -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='${ISO_USER}'" | grep -q 1; then
+  psql_admin -d postgres -tAc "ALTER ROLE ${ISO_USER} LOGIN PASSWORD '${ISO_PASS}' NOSUPERUSER NOBYPASSRLS" >/dev/null 2>&1
+else
+  psql_admin -d postgres -tAc "CREATE ROLE ${ISO_USER} LOGIN PASSWORD '${ISO_PASS}' NOSUPERUSER NOBYPASSRLS" >/dev/null 2>&1
+fi
+psql_db -tAc "GRANT USAGE ON SCHEMA public TO ${ISO_USER}" >/dev/null 2>&1
+psql_db -tAc "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${ISO_USER}" >/dev/null 2>&1
+# 注意：PostgreSQL 布尔::text 产出的是 'false'/'true'（不是 'f'/'t'），
+# 故统一转成 0/1 再比较，避免字符串形态误判。
+ISO_SUPER="$(psql_admin -d postgres -tAc "SELECT CASE WHEN rolsuper THEN 1 ELSE 0 END FROM pg_roles WHERE rolname='${ISO_USER}'" 2>/dev/null | tr -d ' \r')"
+ISO_OWNER_CNT="$(psql_db -tAc "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relowner=(SELECT oid FROM pg_roles WHERE rolname='${ISO_USER}')" 2>/dev/null | tr -d ' \r')"
+if [[ "${ISO_SUPER}" == "0" && "${ISO_OWNER_CNT}" == "0" ]]; then
+  ok "隔离测试账号就绪（非 superuser · 拥有表=0）"
+else
+  fail "隔离测试账号不合格（superuser=${ISO_SUPER} · 拥有表=${ISO_OWNER_CNT}）—— 会绕过 RLS，测出的隔离是假象"
+  exit 1
+fi
+
 APPLIED="$(psql_db -tAc "SELECT COUNT(*) FROM flyway_schema_history WHERE success")"
 TOTAL_SQL="$(find "${SERVER_DIR}" -path "*/db/migration/*" -name "V*.sql" -not -path "*/target/*" | wc -l)"
 [[ "${APPLIED}" == "${TOTAL_SQL}" ]] && ok "已应用脚本 ${APPLIED}/${TOTAL_SQL}" || fail "已应用 ${APPLIED}/${TOTAL_SQL}，不一致"
@@ -193,10 +217,12 @@ RLS_ON="$(psql_db -tAc "SELECT COUNT(*) FROM pg_class c JOIN pg_namespace n ON n
 ok "已开启 RLS 的表数：${RLS_ON}"
 
 # ------------------------------------------------------------ 7. 隔离实测（不止"策略存在"，要验证确实隔离）
-log "验证跨租户隔离实际生效（造数据 → 策略谓词求值 → 必须互不可见）"
-# 关键：RLS 策略对 **superuser 与表 owner 默认不生效**（PG 规则，需 FORCE ROW LEVEL SECURITY 才强制）。
-# 本演练以 postgres（superuser + owner）连接，直查表会被绕过 → 那是假象，不是策略缺陷。
-# 故此处直接对**策略谓词**求值，验证的是策略逻辑本身（真实应用账号走的就是这条谓词）。
+log "验证跨租户隔离实际生效（造数据 → 非 owner 账号直查 → 必须互不可见）"
+# 关键：RLS 对 **superuser 与表 owner 默认不生效**（PG 规则，需 FORCE ROW LEVEL SECURITY 才强制）。
+# 故此处的直查必须用**非 owner、非 superuser 的测试账号**（ISO_USER），
+# 否则测到的是"绕过 RLS"的结果 —— 那是假象，不是策略缺陷。
+psql_iso() { PGPASSWORD="${ISO_PASS}" psql -h "${DB_HOST}" -p "${DB_PORT}" -U "${ISO_USER}" -d "${DB_NAME}" "$@" 2>/dev/null; }
+
 SEED_SQL="
 SET app.tenant_id = '1001';
 INSERT INTO dt_entity_company (id, tenant_id, biz_code, name, name_normalized, confidence)
@@ -207,14 +233,16 @@ VALUES (2, 2002, 'T2002', 'Tenant Two Co', 'tenant two', 1.0) ON CONFLICT (id) D
 "
 if psql_db -q -c "${SEED_SQL}" >/dev/null 2>&1; then
   ok "已造 2 条测试数据（租户 1001 / 2002 各 1 条）"
-  # 按策略谓词求值：tenant_id = sys_current_tenant()
-  R1="$(psql_db -tAc "SET app.tenant_id='1001'; SELECT count(*) FROM dt_entity_company WHERE tenant_id = sys_current_tenant()" 2>/dev/null | tr -d ' \r' | tail -1)"
-  R2="$(psql_db -tAc "SET app.tenant_id='2002'; SELECT count(*) FROM dt_entity_company WHERE tenant_id = sys_current_tenant()" 2>/dev/null | tr -d ' \r' | tail -1)"
-  R0="$(psql_db -tAc "SELECT count(*) FROM dt_entity_company WHERE tenant_id = sys_current_tenant()" 2>/dev/null | tr -d ' \r' | tail -1)"
-  if [[ "${R1}" == "1" && "${R2}" == "1" && "${R0}" == "0" ]]; then
-    ok "隔离生效：租户1001 见 ${R1} 行 · 租户2002 见 ${R2} 行 · 未设租户上下文 见 ${R0} 行（fail-closed）"
+  # 以非 owner 账号直查：RLS 真实生效
+  A_ALL="$(psql_iso -tAc "SET app.tenant_id='1001'; SELECT count(*) FROM dt_entity_company" 2>/dev/null | tr -d ' \r' | tail -1)"
+  A_IDS="$(psql_iso -tAc "SET app.tenant_id='1001'; SELECT COALESCE(string_agg(id::text,','),'NONE') FROM dt_entity_company" 2>/dev/null | tr -d ' \r' | tail -1)"
+  B_IDS="$(psql_iso -tAc "SET app.tenant_id='2002'; SELECT COALESCE(string_agg(id::text,','),'NONE') FROM dt_entity_company" 2>/dev/null | tr -d ' \r' | tail -1)"
+  NO_CTX="$(psql_iso -tAc "SELECT COALESCE(string_agg(id::text,','),'NONE') FROM dt_entity_company" 2>/dev/null | tr -d ' \r' | tail -1)"
+  # 断言：租户 A 只见 id=1；租户 B 只见 id=2；无租户上下文 0 行（fail-closed）
+  if [[ "${A_IDS}" == "1" && "${B_IDS}" == "2" && "${NO_CTX}" == "NONE" ]]; then
+    ok "隔离生效（非 owner 账号直查）：租户1001 见 [${A_IDS}] · 租户2002 见 [${B_IDS}] · 无租户上下文 见 [${NO_CTX}]（fail-closed）"
   else
-    fail "隔离异常：1001→${R1} 2002→${R2} unset→${R0}（期望 1 / 1 / 0）"
+    fail "隔离失效：1001→[${A_IDS}] 2002→[${B_IDS}] 无上下文→[${NO_CTX}]（期望 1 / 2 / NONE）"
   fi
   psql_db -q -c "SET app.tenant_id='1001'; DELETE FROM dt_entity_company WHERE id=1; SET app.tenant_id='2002'; DELETE FROM dt_entity_company WHERE id=2;" >/dev/null 2>&1
   ok "测试数据已清理"

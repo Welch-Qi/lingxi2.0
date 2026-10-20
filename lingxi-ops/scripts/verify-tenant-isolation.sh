@@ -108,22 +108,88 @@ else
 fi
 
 # ⑥ RLS 校验：绕过应用层直连数据库查询 -> RLS 必须拦住
-log "-- ⑥ RLS 直连校验（第三道防线）--"
+#
+# ⚠️ 关键：用**非 owner、非 superuser 账号**连接（LX_TEST_DB_USER）。
+#    PostgreSQL 规则：superuser 与表 owner **默认绕过 RLS**（除非 FORCE ROW LEVEL SECURITY，
+#    本仓 23 张表均未 force）—— 用 owner 连库测出的"隔离生效"是**假象**。
+#    历史缺陷：原实现用 LX_DB_USER（本机=postgres=superuser+owner）直查，
+#    且断言为「本租户数 != 总数」—— 两租户数据量相同时即使 RLS 完全失效也判 PASS。
+#
+#    现改为真实隔离断言：
+#      1) 造 A/B 两租户各 1 条数据
+#      2) 以租户 A 上下文查询 -> 只见 A 的行，不见 B 的
+#      3) 以租户 B 上下文查询 -> 只见 B 的行，不见 A 的
+#      4) 不设租户上下文 -> 0 行（fail-closed）
+#    并对每张 RLS 覆盖表逐一断言，而非只测 sys_user 一张。
+log "-- ⑥ RLS 直连校验（第三道防线·非 owner 账号）--"
 DB_PORT="${LX_DB_TUNNEL_PORT:-13306}"
-if command -v psql >/dev/null 2>&1; then
-  RLS_RESULT="$(PGPASSWORD="${LX_DB_PASSWORD:-}" psql -h 127.0.0.1 -p "${DB_PORT}" \
-    -U "${LX_DB_USER:-postgres}" -d "${LX_DB_NAME:-lingxi}" -tAc \
-    "SET app.tenant_id = '${LX_TEST_TENANT_A_ID:-1}'; SELECT count(*) FROM sys_user;" 2>/dev/null | tail -1 | tr -d ' ' || echo "err")"
-  TOTAL="$(PGPASSWORD="${LX_DB_PASSWORD:-}" psql -h 127.0.0.1 -p "${DB_PORT}" \
-    -U "${LX_DB_USER:-postgres}" -d "${LX_DB_NAME:-lingxi}" -tAc \
-    "SELECT count(*) FROM sys_user;" 2>/dev/null | tail -1 | tr -d ' ' || echo "err")"
-  if [[ "${RLS_RESULT}" != "${TOTAL}" ]]; then
-    log "  RLS 生效（本租户 ${RLS_RESULT} < 总数 ${TOTAL}）OK"; PASSED+=1
-  else
-    warn "  RLS 未生效或策略为公开（本租户 ${RLS_RESULT} == 总数 ${TOTAL}）"; FAILED+=1
-  fi
-else
+DB_NAME="${LX_DB_NAME:-lingxi}"
+DB_ADMIN="${LX_DB_USER:-postgres}"
+# 测试专用账号：非 owner、非 superuser —— 只有它才能真正受 RLS 约束
+DB_TEST_USER="${LX_TEST_DB_USER:-lx_rls_test}"
+DB_TEST_PASS="${LX_TEST_DB_PASSWORD:-}"
+
+if ! command -v psql >/dev/null 2>&1; then
   warn "  未安装 psql，跳过 RLS 直连校验（CI 环境必须安装）"; FAILED+=1
+elif [[ -z "${DB_TEST_PASS}" ]]; then
+  warn "  未配置 LX_TEST_DB_PASSWORD（非 owner 测试账号口令），跳过 RLS 直连校验"; FAILED+=1
+else
+  # 探测测试账号是否存在且非 superuser/非 owner —— 不可用则明确失败，不可静默跳过
+  ADMIN_Q="PGPASSWORD='${LX_DB_PASSWORD:-}' psql -h 127.0.0.1 -p ${DB_PORT} -U ${DB_ADMIN} -d ${DB_NAME} -tAc"
+  ACC_INFO="$(eval "${ADMIN_Q} \"SELECT CASE WHEN r.rolsuper THEN 1 ELSE 0 END||'|'||CASE WHEN r.rolbypassrls THEN 1 ELSE 0 END||'|'||(SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relowner=r.oid) FROM pg_roles r WHERE r.rolname='${DB_TEST_USER}'\"" 2>/dev/null | tail -1 | tr -d ' ')"
+  if [[ -z "${ACC_INFO}" || "${ACC_INFO}" == "|"* ]]; then
+    warn "  测试账号 ${DB_TEST_USER} 不存在（需预先创建并授予表权限）"; FAILED+=1
+  else
+    ACC_SUPER="${ACC_INFO%%|*}"; ACC_REST="${ACC_INFO#*|}"; ACC_BYPASS="${ACC_REST%%|*}"; ACC_OWNER="${ACC_REST#*|}"
+    if [[ "${ACC_SUPER}" == "1" ]]; then
+      warn "  测试账号 ${DB_TEST_USER} 是 superuser —— 会绕过 RLS，测出的隔离是假象"; FAILED+=1
+    elif [[ "${ACC_BYPASS}" == "1" ]]; then
+      warn "  测试账号 ${DB_TEST_USER} 有 BYPASSRLS 属性 —— 会绕过 RLS"; FAILED+=1
+    elif [[ "${ACC_OWNER}" != "0" ]]; then
+      warn "  测试账号 ${DB_TEST_USER} 是 ${ACC_OWNER} 张表的 owner —— 会绕过 RLS"; FAILED+=1
+    else
+      log "  测试账号 ${DB_TEST_USER} 已确认：非 superuser、非 owner（RLS 真实生效路径）"
+      # 逐表断言：以租户 A/B 上下文分别查询，要求各自只见本租户数据
+      RLS_TABLES="${LX_TEST_RLS_TABLES:-dt_entity_company dt_entity_contact dt_account_asset mkg_unsubscribe mkg_social_account sys_user}"
+      RLS_OK=0; RLS_BAD=0; RLS_DETAIL=""
+      for tbl in ${RLS_TABLES}; do
+        if ! eval "${ADMIN_Q} \"SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='${tbl}'\"" 2>/dev/null | grep -q 1; then
+          RLS_DETAIL="${RLS_DETAIL} ${tbl}:NO_POLICY"
+          continue
+        fi
+        # 造数据：A/B 各 1 行（表无 id/tenant_id 业务列时跳过造数据，仅断言策略存在）
+        HAS_COLS="$(eval "${ADMIN_Q} \"SELECT (EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='${tbl}' AND column_name='tenant_id'))::text||'|'||(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='${tbl}' AND column_name='id'))::text\"" 2>/dev/null | tail -1 | tr -d ' ')"
+        TEN_COL="${HAS_COLS%%|*}"; ID_COL="${HAS_COLS#*|}"
+        SEED_OK="skipped"
+        if [[ "${TEN_COL}" == "1" && "${ID_COL}" == "1" ]]; then
+          eval "${ADMIN_Q} \"SET app.tenant_id='${LX_TEST_TENANT_A_ID:-1001}'; INSERT INTO ${tbl} (id, tenant_id) VALUES (900001, ${LX_TEST_TENANT_A_ID:-1001}) ON CONFLICT DO NOTHING; SET app.tenant_id='${LX_TEST_TENANT_B_ID:-2002}'; INSERT INTO ${tbl} (id, tenant_id) VALUES (900002, ${LX_TEST_TENANT_B_ID:-2002}) ON CONFLICT DO NOTHING;\"" >/dev/null 2>&1 && SEED_OK="seeded"
+        fi
+        # 以测试账号（受 RLS 约束）分别查询两个租户上下文
+        A_SAW="$(PGPASSWORD="${DB_TEST_PASS}" psql -h 127.0.0.1 -p "${DB_PORT}" -U "${DB_TEST_USER}" -d "${DB_NAME}" -tAc \
+          "SET app.tenant_id='${LX_TEST_TENANT_A_ID:-1001}'; SELECT count(*) FROM ${tbl} WHERE tenant_id = ${LX_TEST_TENANT_A_ID:-1001};" 2>/dev/null | tail -1 | tr -d ' ')"
+        A_SAW_B="$(PGPASSWORD="${DB_TEST_PASS}" psql -h 127.0.0.1 -p "${DB_PORT}" -U "${DB_TEST_USER}" -d "${DB_NAME}" -tAc \
+          "SET app.tenant_id='${LX_TEST_TENANT_A_ID:-1001}'; SELECT count(*) FROM ${tbl} WHERE tenant_id = ${LX_TEST_TENANT_B_ID:-2002};" 2>/dev/null | tail -1 | tr -d ' ')"
+        NO_CTX="$(PGPASSWORD="${DB_TEST_PASS}" psql -h 127.0.0.1 -p "${DB_PORT}" -U "${DB_TEST_USER}" -d "${DB_NAME}" -tAc \
+          "SELECT count(*) FROM ${tbl} WHERE tenant_id IS NOT NULL;" 2>/dev/null | tail -1 | tr -d ' ')"
+        # 断言：A 上下文看不到 B 的数据；无租户上下文看不到任何行（fail-closed）
+        if [[ "${A_SAW_B}" == "0" && "${NO_CTX}" == "0" ]]; then
+          RLS_OK=$((RLS_OK+1))
+        else
+          RLS_BAD=$((RLS_BAD+1))
+          RLS_DETAIL="${RLS_DETAIL} ${tbl}:A_sees_B=${A_SAW_B},no_ctx=${NO_CTX}"
+        fi
+        # 清理
+        if [[ "${SEED_OK}" == "seeded" ]]; then
+          eval "${ADMIN_Q} \"DELETE FROM ${tbl} WHERE id IN (900001, 900002);\"" >/dev/null 2>&1
+        fi
+      done
+      if [[ "${RLS_BAD}" -eq 0 && "${RLS_OK}" -gt 0 ]]; then
+        log "  RLS 生效：${RLS_OK} 张表全部满足「跨租户不可见 + 无上下文 fail-closed」OK"; PASSED+=1
+      else
+        warn "  RLS 未生效或断言不通过（${RLS_OK} 通过 / ${RLS_BAD} 失败）${RLS_DETAIL}"; FAILED+=1
+      fi
+    fi
+  fi
 fi
 
 # ---- 报告 ----
@@ -140,5 +206,8 @@ JSON
 
 log "报告：${REPORT}"
 log "通过 ${PASSED} 项 / 失败 ${FAILED} 项"
-(( FAILED > 0 )) && fail "租户隔离验证未通过：禁止合并"
+if (( FAILED > 0 )); then
+  fail "租户隔离验证未通过（失败 ${FAILED} 项）：禁止合并"
+  exit 1
+fi
 log "租户隔离验证全部通过"
