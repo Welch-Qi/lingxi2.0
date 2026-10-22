@@ -43,6 +43,15 @@
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-database-postgresql</artifactId>
     </dependency>
+    <!--
+      Spring Boot 4.1 的 Flyway 自动配置在独立模块 spring-boot-flyway 中，
+      不引则 FlywayAutoConfiguration 不在 classpath → 应用启动不执行迁移，数据库不会被初始化。
+      版本由 spring-boot-starter-parent 统一管理（§3.5 F1：业务模块禁止写版本号）。
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-flyway</artifactId>
+    </dependency>
     <!-- PostgreSQL 17：唯一 OLTP 权威源（§3.3 D1） -->
     <dependency>
       <groupId>org.postgresql</groupId>

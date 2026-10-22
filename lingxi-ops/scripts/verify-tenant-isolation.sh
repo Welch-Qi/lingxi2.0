@@ -136,6 +136,11 @@ elif [[ -z "${DB_TEST_PASS}" ]]; then
 else
   # 探测测试账号是否存在且非 superuser/非 owner —— 不可用则明确失败，不可静默跳过
   ADMIN_Q="PGPASSWORD='${LX_DB_PASSWORD:-}' psql -h 127.0.0.1 -p ${DB_PORT} -U ${DB_ADMIN} -d ${DB_NAME} -tAc"
+  # 补授权：库被重建后（--reset / 首次部署）GRANT 会丢失，
+  # 表现为 "permission denied for table ..."，且 A_sees_B 取到的是错误信息而非数字。
+  eval "${ADMIN_Q} \"GRANT USAGE ON SCHEMA public TO ${DB_TEST_USER}\"" >/dev/null 2>&1
+  eval "${ADMIN_Q} \"GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${DB_TEST_USER}\"" >/dev/null 2>&1
+  eval "${ADMIN_Q} \"GRANT USAGE ON SCHEMA public TO ${DB_TEST_USER}\"" >/dev/null 2>&1
   ACC_INFO="$(eval "${ADMIN_Q} \"SELECT CASE WHEN r.rolsuper THEN 1 ELSE 0 END||'|'||CASE WHEN r.rolbypassrls THEN 1 ELSE 0 END||'|'||(SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relowner=r.oid) FROM pg_roles r WHERE r.rolname='${DB_TEST_USER}'\"" 2>/dev/null | tail -1 | tr -d ' ')"
   if [[ -z "${ACC_INFO}" || "${ACC_INFO}" == "|"* ]]; then
     warn "  测试账号 ${DB_TEST_USER} 不存在（需预先创建并授予表权限）"; FAILED+=1
@@ -165,12 +170,16 @@ else
           eval "${ADMIN_Q} \"SET app.tenant_id='${LX_TEST_TENANT_A_ID:-1001}'; INSERT INTO ${tbl} (id, tenant_id) VALUES (900001, ${LX_TEST_TENANT_A_ID:-1001}) ON CONFLICT DO NOTHING; SET app.tenant_id='${LX_TEST_TENANT_B_ID:-2002}'; INSERT INTO ${tbl} (id, tenant_id) VALUES (900002, ${LX_TEST_TENANT_B_ID:-2002}) ON CONFLICT DO NOTHING;\"" >/dev/null 2>&1 && SEED_OK="seeded"
         fi
         # 以测试账号（受 RLS 约束）分别查询两个租户上下文
+        # 注意：psql -c 传多语句时，"SET ..." 会额外输出一行 "SET"，
+        # 故取值须过滤出纯数字行（grep -E '^[0-9]+$'），不能直接 tail -1
+        # （否则取到 "SET"，断言恒失败）。
+        num_only() { grep -E '^[0-9]+$' | tail -1; }
         A_SAW="$(PGPASSWORD="${DB_TEST_PASS}" psql -h 127.0.0.1 -p "${DB_PORT}" -U "${DB_TEST_USER}" -d "${DB_NAME}" -tAc \
-          "SET app.tenant_id='${LX_TEST_TENANT_A_ID:-1001}'; SELECT count(*) FROM ${tbl} WHERE tenant_id = ${LX_TEST_TENANT_A_ID:-1001};" 2>/dev/null | tail -1 | tr -d ' ')"
+          "SET app.tenant_id='${LX_TEST_TENANT_A_ID:-1001}'; SELECT count(*) FROM ${tbl} WHERE tenant_id = ${LX_TEST_TENANT_A_ID:-1001};" 2>/dev/null | num_only)"
         A_SAW_B="$(PGPASSWORD="${DB_TEST_PASS}" psql -h 127.0.0.1 -p "${DB_PORT}" -U "${DB_TEST_USER}" -d "${DB_NAME}" -tAc \
-          "SET app.tenant_id='${LX_TEST_TENANT_A_ID:-1001}'; SELECT count(*) FROM ${tbl} WHERE tenant_id = ${LX_TEST_TENANT_B_ID:-2002};" 2>/dev/null | tail -1 | tr -d ' ')"
+          "SET app.tenant_id='${LX_TEST_TENANT_A_ID:-1001}'; SELECT count(*) FROM ${tbl} WHERE tenant_id = ${LX_TEST_TENANT_B_ID:-2002};" 2>/dev/null | num_only)"
         NO_CTX="$(PGPASSWORD="${DB_TEST_PASS}" psql -h 127.0.0.1 -p "${DB_PORT}" -U "${DB_TEST_USER}" -d "${DB_NAME}" -tAc \
-          "SELECT count(*) FROM ${tbl} WHERE tenant_id IS NOT NULL;" 2>/dev/null | tail -1 | tr -d ' ')"
+          "SELECT count(*) FROM ${tbl} WHERE tenant_id IS NOT NULL;" 2>/dev/null | num_only)"
         # 断言：A 上下文看不到 B 的数据；无租户上下文看不到任何行（fail-closed）
         if [[ "${A_SAW_B}" == "0" && "${NO_CTX}" == "0" ]]; then
           RLS_OK=$((RLS_OK+1))

@@ -21,11 +21,13 @@ import org.springframework.context.annotation.Bean;
 @EnableConfigurationProperties(TenantTableWhiteList.class)
 public class YuanshuMybatisAutoConfiguration {
 
-    @Bean
-    @ConditionalOnMissingBean
-    public TenantTableWhiteList tenantTableWhiteList() {
-        return new TenantTableWhiteList();
-    }
+    // 注意：TenantTableWhiteList 已由 @EnableConfigurationProperties 注册为 Bean
+    // （名为 yuanshu.tenant-<FQCN>），此处**不得**再声明 @Bean 方法，
+    // 否则同名两个 Bean 导致启动失败：
+    //   "Parameter 0 of method mybatisPlusInterceptor ... required a single bean, but 2 were found"
+    // @ConditionalOnMissingBean 也挡不住 —— @EnableConfigurationProperties 注册的 Bean
+    // 在更早的 ConfigurationPropertiesBindingPostProcessor 阶段完成注册。
+    // 该类必须保留 @ConfigurationProperties 注解（需从 yuanshu.tenant.* 绑定白名单配置）。
 
     @Bean
     @ConditionalOnMissingBean

@@ -144,6 +144,17 @@
         <artifactId>flyway-database-postgresql</artifactId>
         <version>${flyway.version}</version>
       </dependency>
+      <!--
+        Spring Boot 4.1 把 Flyway 支持从 spring-boot-autoconfigure 拆到独立模块。
+        只引 flyway-core 不会触发自动迁移 —— 应用启动时 FlywayAutoConfiguration
+        根本不在 classpath，数据库永远不会被初始化（表现为「表不存在」）。
+        故必须显式引 spring-boot-flyway，版本由 spring-boot-starter-parent 统一管理。
+      -->
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-flyway</artifactId>
+        <version>${spring-boot.version}</version>
+      </dependency>
       <dependency>
         <groupId>com.pgvector</groupId>
         <artifactId>pgvector</artifactId>
