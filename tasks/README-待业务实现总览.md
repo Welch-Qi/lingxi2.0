@@ -83,10 +83,12 @@
 
 ---
 
-## 五、每份简报都含「待决策」段落（共 14 条待裁决项）
+## 五、待决策已全部裁决（2026-10-23）
 
-**规约要求**：AI 不得自行定规矩（AGENTS.md §七「需求有歧义 → 停下来提问」）。
-以下需人工裁决的要点汇总：
+> ✅ 用户裁决：**按各简报的推荐执行**。
+> **权威依据：[`tasks/裁决记录-2026-10-23.md`](./裁决记录-2026-10-23.md)** —— 共 19 条逐条落定，
+> 并已落地 4 条新增 Casbin 策略（`lingxi_policy.csv` 24 → 29 条 p）。
+> 下列表格保留为决策历史，**执行时以裁决记录为准**。
 
 | 简报 | 待决策要点 |
 |---|---|
@@ -102,6 +104,24 @@
 - M1100-001 待决策 ③ —— `object_type` 取值清单缺失会阻塞实现
 
 ---
+
+### 已落地的变更（裁决的代码侧副作用）
+
+`lingxi-server/yuanshu/yuanshu-platform/src/main/resources/casbin/lingxi_policy.csv` 新增 4 条策略：
+
+| 策略 | 用途 |
+|---|---|
+| `p, SUB_AGENT_CUS, cus:customer:query, access, DEPT` | 隔离④ 的 `cus.customer.query` 工具（原不存在） |
+| `p, ROLE_SALES_REP, cus:customer:export, access, SELF` | 客户导出（SELF，与既有 `cus:customer:view` 同 scope） |
+| `p, ROLE_SALES_DIRECTOR, cus:customer:export, access, DEPT_AND_SUB` | 同上，scope 与该角色其余 `cus` 权限一致 |
+| `p, ROLE_CONTENT_DIRECTOR, kc:knowledge:view, access, ALL` | 知识检索（与既有 `kc:template:*` 同组） |
+
+> ⚠️ 新增权限码属**租户隔离权限**红线（AGENTS.md 铁律 10）→ 合并前须模块 Owner 评审。
+
+### `object_type` 取值清单（裁决 14）
+
+见裁决记录 §三，8 个取值：`entity_company` / `entity_contact` / `document` / `template` /
+`script` / `qa` / `raw_customs` / `raw_company`；非法取值报 `010004`。
 
 ## 六、顺带发现的两个文档口径漂移（已在简报中指派）
 
