@@ -1,6 +1,7 @@
 package com.yuanshu.starter.mybatis;
 
 import com.baomidou.mybatisplus.annotation.DbType;
+import com.baomidou.mybatisplus.autoconfigure.SqlSessionFactoryBeanCustomizer;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
@@ -44,5 +45,40 @@ public class YuanshuMybatisAutoConfiguration {
         // ④ 阻断全表更新与删除
         interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
         return interceptor;
+    }
+
+    /**
+     * 租户隔离第三道防线：写入 PostgreSQL 会话变量 {@code app.tenant_id}，
+     * 使 RLS 策略（{@code tenant_id = sys_current_tenant()}）在应用连接下真正生效。
+     *
+     * <p>与上面 ① 的 {@code TenantLineInnerInterceptor} 是<b>互补</b>关系，不是重复：
+     * ① 在 SQL 文本上追加 {@code tenant_id = ?}（第一道防线）；
+     * 本组件在连接上设置会话变量，让数据库侧的 RLS 兜底（第三道防线）能读到租户。
+     * 缺本组件时 RLS 恒读到 NULL → 所有查询 0 行可见（fail-closed）。
+     *
+     * <p>注册为独立 MyBatis 拦截器（非 InnerInterceptor）：InnerInterceptor 作用于
+     * SQL 改写阶段，拿不到 Connection；本组件需在 StatementHandler.prepare 阶段
+     * 拿到同一连接执行 {@code set_config}，故走 {@code Interceptor} 插件通道。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public YuanshuRlsSessionInterceptor yuanshuRlsSessionInterceptor() {
+        return new YuanshuRlsSessionInterceptor();
+    }
+
+    /**
+     * 把 RLS 会话变量拦截器挂进 MyBatis 插件链。
+     *
+     * <p>MyBatis-Plus 的 {@code MybatisPlusAutoConfiguration} 只收集
+     * {@code MybatisPlusInterceptor}（InnerInterceptor 通道），<b>不注入</b>
+     * {@code Interceptor[]} —— 独立 {@code Interceptor} 必须经
+     * {@link SqlSessionFactoryBeanCustomizer} 显式 {@code setPlugins}，
+     * 否则 Bean 存在但不生效（易误判为「拦截器没跑」）。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SqlSessionFactoryBeanCustomizer yuanshuSqlSessionFactoryBeanCustomizer(
+            YuanshuRlsSessionInterceptor rlsInterceptor) {
+        return factoryBean -> factoryBean.setPlugins(rlsInterceptor);
     }
 }

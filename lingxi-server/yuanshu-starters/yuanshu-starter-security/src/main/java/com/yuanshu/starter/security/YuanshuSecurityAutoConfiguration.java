@@ -5,6 +5,7 @@ import org.casbin.jcasbin.model.Model;
 import org.casbin.jcasbin.persist.file_adapter.FileAdapter;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.ClassPathResource;
 
@@ -20,7 +21,21 @@ import java.nio.charset.StandardCharsets;
  * 认证服务端的 issuer-uri 与 realm（Realm 对应租户）全部来自配置，禁止硬编码（§3.5 F1）。
  */
 @AutoConfiguration
+@EnableConfigurationProperties(TenantContextProperties.class)
 public class YuanshuSecurityAutoConfiguration {
+
+    /**
+     * 租户上下文入口过滤器：从 JWT claim（可信）与请求头（网关注入）解析租户，
+     * 写入 {@link com.yuanshu.starter.core.tenant.TenantContext}。
+     *
+     * <p>缺失租户上下文一律拒绝（fail-closed），绝不回退到「全网可见」。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public TenantContextFilter tenantContextFilter(TenantContextProperties properties) {
+        return new TenantContextFilter(
+                properties.isRejectMissingContext(), properties.getHeaderName());
+    }
 
     /** Casbin 模型：三层（功能 / 行级 / 字段）。 */
     private static final String MODEL_RESOURCE = "casbin/lingxi_model.conf";

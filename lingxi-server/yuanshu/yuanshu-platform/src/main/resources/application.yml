@@ -15,11 +15,20 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   config:
     # 五个配置文件由 config/ 目录提供；缺失时不阻断启动（DevOps 侧由 env 变量兜底）
+    #
+    # ⚠️ 配置单一来源（2026-10-23 收敛）：
+    #   此前 lingxi-server/config/ 与 lingxi-ops/config/ 各存一份完全相同的副本，
+    #   改一份另一份不生效 —— 已造成多次排查耗时（模型配置缺失排查）。
+    #   现以 **lingxi-ops/config/ 为唯一权威来源**（verify-skeleton.sh 校验它，
+    #   且 start-dev.sh / deploy.sh 均从它部署）。
+    #   LX_CONFIG_DIR 由启动脚本注入（指向 lingxi-ops/config 的绝对路径）；
+    #   未注入时回退到 ./config（兼容直接从 lingxi-server 目录启动的本地调试）。
     import:
-      - optional:file:./config/app.yml
-      - optional:file:./config/db.yml
-      - optional:file:./config/cache.yml
-      - optional:file:./config/model.yml
+      - optional:file:${LX_CONFIG_DIR:./config}/app.yml
+      - optional:file:${LX_CONFIG_DIR:./config}/db.yml
+      - optional:file:${LX_CONFIG_DIR:./config}/cache.yml
+      - optional:file:${LX_CONFIG_DIR:./config}/model.yml
+      - optional:file:${LX_CONFIG_DIR:./config}/tunnel.yml
   threads:
     virtual:
       # I/O 密集型调用（外部 API、LLM）用虚拟线程（§4.1.5）；
