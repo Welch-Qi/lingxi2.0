@@ -525,11 +525,14 @@ jobs:
           #   （表现为「扫描失败」且报告文件缺失，反而掩盖真实结论）。
           # stderr 单独捕获 —— trivy 若在写报告前失败（如依赖解析报错），
           # 报告文件不存在，只看报告等于什么都看不到。分开捕获才能拿到真实错误。
+          # ⚠️ 目标只能给**一个** —— trivy 0.76 报 "multiple targets cannot be specified"
+          #   （给多个路径会 FATAL 退出，且发生在写报告之前 → 报告文件都不存在）。
+          #   故扫仓库根目录，用 --skip-dirs 排除无关目录。
           trivy fs --severity HIGH,CRITICAL --exit-code 1 \
             --format table --output /tmp/trivy-report.txt \
             --scanners vuln \
-            --skip-dirs node_modules,target,dist,.git \
-            lingxi-server lingxi-web 2>/tmp/trivy-error.txt || {
+            --skip-dirs node_modules,target,dist,.git,lingxi-web/node_modules \
+            . 2>/tmp/trivy-error.txt || {
               echo "::error title=Trivy 扫描未通过::详见本 job 的 trivy-report.txt / trivy-error.txt 制品"
               echo "--- stderr ---"; cat /tmp/trivy-error.txt || true
               echo "--- report ---"; cat /tmp/trivy-report.txt 2>/dev/null || true
