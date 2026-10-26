@@ -519,7 +519,11 @@ jobs:
           echo "阶段清单：编译(前后端) · ArchUnit · 单测 · 契约测试 · 覆盖率 · 隔离套件 · 静态扫描 · 依赖与密钥扫描"
           echo "（规约 §4.12 强制流水线顺序：编译 → ArchUnit → 单测 → 契约测试 → 覆盖率 → 隔离套件 → 静态扫描 → 依赖与密钥扫描）"
           # 逐个检查上游结论，任一为 failure/skipped 即整体失败
-          RESULT="${{ needs.build:backend.result }}-${{ needs.build:frontend.result }}-${{ needs.arch-check.result }}-${{ needs.test:backend.result }}-${{ needs.test:frontend.result }}-${{ needs.coverage.result }}-${{ needs.isolation.result }}-${{ needs.security:sast.result }}-${{ needs.security:dependency.result }}-${{ needs.security:secrets.result }}-${{ needs.security:hardcode.result }}"
+          # 注意：job 名含冒号（build:backend / security:sast 等），
+          # 在表达式里访问 needs.<job>.result 必须用**方括号**语法 ——
+          # 点号语法会在冒号处解析失败（GitHub 报 "Unexpected symbol: 'build:backend'"），
+          # 且该错误发生在 workflow 解析阶段 → 整个 run 秒级失败且不创建任何 job。
+          RESULT="${{ needs['build:backend'].result }}-${{ needs['build:frontend'].result }}-${{ needs['arch-check'].result }}-${{ needs['test:backend'].result }}-${{ needs['test:frontend'].result }}-${{ needs['coverage'].result }}-${{ needs['isolation'].result }}-${{ needs['security:sast'].result }}-${{ needs['security:dependency'].result }}-${{ needs['security:secrets'].result }}-${{ needs['security:hardcode'].result }}"
           echo "各阶段结论：${RESULT}"
           if echo "${RESULT}" | grep -qE 'failure|cancelled'; then
             echo "::error title=CI 门禁未通过::存在失败或取消的阶段，禁止合并"
