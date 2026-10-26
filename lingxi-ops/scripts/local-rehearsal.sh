@@ -51,15 +51,26 @@ if ! command -v psql >/dev/null 2>&1; then
 fi
 ok "psql 可用：$(psql --version | head -1)"
 
+# 连接前置检查：
+#   · 有口令 → 校验口令能否连上
+#   · 无口令 → **允许免密认证**（CI 的 PostgreSQL service 用 trust 模式，
+#     此时 PGPASSWORD 为空也能连上）。原实现硬性要求口令非空 →
+#     CI 环境下必然报「LX_DB_PASSWORD 未配置」而失败。
+#     改为：先试连，连不上才报错 —— 判定依据是**实际连通性**而非配置有无。
 if [[ -z "${DB_PASS}" ]]; then
-  fail "LX_DB_PASSWORD 未配置（见 lingxi-ops/.env），无法非交互连接"
-  exit 1
+  if psql_admin -d postgres -tAc "SELECT 1" >/dev/null 2>&1; then
+    ok "数据库连接成功（免密认证模式，LX_DB_PASSWORD 未配置）"
+  else
+    fail "无法以 ${DB_USER} 连接 ${DB_HOST}:${DB_PORT}（LX_DB_PASSWORD 未配置且免密连接失败）—— 见 lingxi-ops/.env"
+    exit 1
+  fi
+else
+  if ! psql_admin -d postgres -tAc "SELECT 1" >/dev/null 2>&1; then
+    fail "无法以 ${DB_USER} 连接 ${DB_HOST}:${DB_PORT} —— 请检查用户名/密码/服务状态"
+    exit 1
+  fi
+  ok "数据库连接成功"
 fi
-if ! psql_admin -d postgres -tAc "SELECT 1" >/dev/null 2>&1; then
-  fail "无法以 ${DB_USER} 连接 ${DB_HOST}:${DB_PORT} —— 请检查用户名/密码/服务状态"
-  exit 1
-fi
-ok "数据库连接成功"
 
 # ------------------------------------------------------------ 1. 建库
 if [[ "${RESET}" == "1" ]]; then

@@ -166,10 +166,13 @@ DB_ADMIN="${LX_DB_USER:-postgres}"
 DB_TEST_USER="${LX_TEST_DB_USER:-lx_rls_test}"
 DB_TEST_PASS="${LX_TEST_DB_PASSWORD:-}"
 
+# 测试账号口令：CI 的 PostgreSQL service 用 trust 认证时**不需要口令**，
+# 但原实现硬性要求 LX_TEST_DB_PASSWORD 非空 → CI 下必然跳过 ⑥（且判为 FAIL）。
+# 改为：口令为空时先试连 —— 连得上就用（免密），连不上才判失败。
 if ! command -v psql >/dev/null 2>&1; then
   warn "  未安装 psql，跳过 RLS 直连校验（CI 环境必须安装）"; FAILED+=1
-elif [[ -z "${DB_TEST_PASS}" ]]; then
-  warn "  未配置 LX_TEST_DB_PASSWORD（非 owner 测试账号口令），跳过 RLS 直连校验"; FAILED+=1
+elif [[ -z "${DB_TEST_PASS}" ]] && ! PGPASSWORD="" psql -h 127.0.0.1 -p "${DB_PORT}" -U "${DB_TEST_USER}" -d "${DB_NAME}" -tAc "SELECT 1" >/dev/null 2>&1; then
+  warn "  未配置 LX_TEST_DB_PASSWORD（非 owner 测试账号口令）且免密连接失败，跳过 RLS 直连校验"; FAILED+=1
 else
   # 探测测试账号是否存在且非 superuser/非 owner —— 不可用则明确失败，不可静默跳过
   ADMIN_Q="PGPASSWORD='${LX_DB_PASSWORD:-}' psql -h 127.0.0.1 -p ${DB_PORT} -U ${DB_ADMIN} -d ${DB_NAME} -tAc"
