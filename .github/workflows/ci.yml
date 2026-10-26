@@ -347,13 +347,45 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client
 
-      - name: 预热本地 Maven 仓库（迁移执行器依赖其中的 flyway / pg 驱动 jar）
+      - name: 准备迁移执行器所需的 jar（flyway / pg 驱动）
         # local-rehearsal.sh 用独立 Java 执行器跑 Flyway，classpath 指向
         # ~/.m2/repository 下的 flyway-core / flyway-database-postgresql / postgresql jar。
-        # 本 job 此前只装了 JDK 与 psql，**从未跑过 mvn** → ~/.m2 为空 →
-        # 脚本报「classpath 缺失」直接退出。故须先预热依赖。
+        # 本 job 只装了 JDK 与 psql，**从未跑过 mvn** → ~/.m2 为空 →
+        # 脚本报「classpath 缺失」直接退出。
+        #
+        # 版本号全部**从本仓 pom 推导**，不硬编码：
+        #   · flyway.version → lingxi-dependencies/pom.xml 的属性
+        #   · postgresql     → 由 starter-mybatis 实际解析出的版本
+        #     （BOM 未显式声明，继承自 spring-boot-starter-parent）
         working-directory: lingxi-server
-        run: mvn $MAVEN_CLI_OPTS -B dependency:go-offline -DexcludeArtifactIds=none || mvn $MAVEN_CLI_OPTS -B -DskipTests package
+        run: |
+          FLYWAY_VER="$(grep -oE '<flyway.version>[^<]+' lingxi-dependencies/pom.xml | head -1 | sed 's/.*>//')"
+          echo "flyway.version=${FLYWAY_VER}"
+          mvn $MAVEN_CLI_OPTS -B dependency:get -Dartifact="org.flywaydb:flyway-core:${FLYWAY_VER}"
+          mvn $MAVEN_CLI_OPTS -B dependency:get -Dartifact="org.flywaydb:flyway-database-postgresql:${FLYWAY_VER}"
+          # PG 驱动：版本由 spring-boot-starter-parent 决定（BOM 未显式声明）。
+          # 用 copy-dependencies 把 starter-mybatis 的运行时依赖树（含 PG 驱动，
+          # 版本由 maven 解析）落到本地仓库 —— 不硬编码版本，也不依赖 tree 插件的输出格式。
+          mvn $MAVEN_CLI_OPTS -B -pl :yuanshu-starter-mybatis \
+            dependency:copy-dependencies -DincludeScope=runtime \
+            -Dmdep.useRepositoryLayout=true -DincludeScope=runtime
+          # PG 驱动落地兜底：若 copy 未覆盖（理论上会覆盖），显式拉最新
+          if ! find "${HOME}/.m2/repository/org/postgresql/postgresql" -name 'postgresql-*.jar' 2>/dev/null | grep -q .; then
+            mvn $MAVEN_CLI_OPTS -B dependency:get -Dartifact=org.postgresql:postgresql:LATEST
+          fi
+          # 落地校验：flyway 两个 jar 必须在位（版本精确匹配），否则演练脚本会退出
+          for a in "org/flywaydb/flyway-core/${FLYWAY_VER}" \
+                   "org/flywaydb/flyway-database-postgresql/${FLYWAY_VER}"; do
+            if ! find "${HOME}/.m2/repository/${a}" -maxdepth 1 -name '*.jar' 2>/dev/null | grep -q .; then
+              echo "::error title=迁移执行器依赖缺失::${a} 下未找到 jar"
+              exit 1
+            fi
+          done
+          if ! find "${HOME}/.m2/repository/org/postgresql/postgresql" -name 'postgresql-*.jar' 2>/dev/null | grep -q .; then
+            echo "::error title=PostgreSQL 驱动缺失::本地仓库中未找到 postgresql-*.jar"
+            exit 1
+          fi
+          echo "迁移执行器依赖就绪"
 
       - name: 迁移演练 + 隔离实测（真库）
         env:
@@ -431,7 +463,7 @@ jobs:
   security-dependency:
     name: security:dependency
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -444,6 +476,11 @@ jobs:
             "https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${TRIVY_VERSION#v}_Linux-64bit.tar.gz"
           tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
           trivy --version
+
+      - name: 预热 Trivy 漏洞数据库
+        # 首次运行需下载漏洞库（约 200MB），不预热则扫描步骤会因下载超时而失败，
+        # 且失败表现为「扫描超时」而非「检出漏洞」—— 掩盖真实结论。
+        run: trivy image --download-db-only
 
       - name: Trivy 文件系统扫描（不出镜像）
         # 禁容器化：全链路禁容器编排，故以 fs 模式扫描，不构建镜像

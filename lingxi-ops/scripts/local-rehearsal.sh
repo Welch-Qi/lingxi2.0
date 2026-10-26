@@ -126,22 +126,86 @@ MVN_LOG="${ARTIFACT_DIR}/flyway-migrate.log"
 #   flyway 13.x 把数据库驱动拆成独立模块，CLI 以 default-cli 方式调用时不会加载
 #   pom 里声明的插件依赖，报 "No Flyway database plugin found to handle ********"。
 #   改用直调 Flyway Java API，classpath 显式带齐 core + database-postgresql + JDBC 驱动。
+# classpath 解析：**动态**用 mvn dependency:build-classpath 取，
+# 不再硬编码 ~/.m2 路径与版本号 ——
+#   历史缺陷：硬编码 ${HOME}/.m2/repository + 固定 flyway 版本，
+#   在 CI（全新 runner，m2 为空）与任何版本变动后即失效，
+#   表现为「classpath 缺失: .../flyway-core-13.6.0.jar」而原因被掩盖。
+#   动态解析后：mvn 负责确定版本与下载路径，脚本只取结果。
 FLYWAY_VER="$(grep -oE '<flyway.version>[^<]+' "${SERVER_DIR}/lingxi-dependencies/pom.xml" | head -1 | sed 's/.*>//')"
 [[ -z "${FLYWAY_VER}" ]] && FLYWAY_VER="13.6.0"
 M2_REPO="${HOME}/.m2/repository"
-CP="${M2_REPO}/org/flywaydb/flyway-core/${FLYWAY_VER}/flyway-core-${FLYWAY_VER}.jar"
-CP="${CP}:${M2_REPO}/org/flywaydb/flyway-database-postgresql/${FLYWAY_VER}/flyway-database-postgresql-${FLYWAY_VER}.jar"
-PG_JDBC="$(find "${M2_REPO}/org/postgresql/postgresql" -name "postgresql-*.jar" 2>/dev/null | sort | tail -1)"
-CP="${CP}:${PG_JDBC}"
-# Windows 下 Java 不认 Unix 风格路径分隔符与盘符，需转换
+
+resolve_cp() {
+  # 输出 classpath（分隔符随平台）；解析不到则输出空。
+  #
+  # 为何不用 mvn dependency:build-classpath：
+  #   在聚合根 pom 上执行时，它解析的是 **BOM 自身**的依赖（dependencyManagement
+  #   不含实际依赖），得到的是本地仓库里的**旧残留版本**（实测 12.4.0）
+  #   而非本仓声明的 flyway.version（13.6.0）—— 而 12.4.0 没有
+  #   flyway-database-postgresql 模块（13.x 才拆分出来），运行必然失败。
+  #
+  # 改为：按**版本号精确匹配**在本地仓库定位 jar —— 版本号来自本仓 BOM，
+  # 路径由本地仓库决定，两者都与环境无关。
+  local cp_file="${ARTIFACT_DIR}/flyway-cp.txt"
+  mkdir -p "${ARTIFACT_DIR}"
+  rm -f "${cp_file}"
+  ( cd "${SERVER_DIR}" && mvn -B -ntp -q dependency:build-classpath \
+      -Dmdep.outputFile="${cp_file}" \
+      -Dmdep.includeScope=runtime \
+      -DincludeGroupIds=org.flywaydb,org.postgresql ) >/dev/null 2>&1 || true
+  if [[ -s "${cp_file}" ]]; then
+    tr -d '\r\n' < "${cp_file}"
+  fi
+}
+
+# 按精确版本号定位 jar（避开本地仓库里的旧残留版本）
+find_jar() {
+  # $1 = groupPath, $2 = artifactId, $3 = version
+  local g="$1" a="$2" v="$3"
+  find "${M2_REPO}/${g}/${a}/${v}" -maxdepth 1 -name "${a}-${v}.jar" 2>/dev/null | head -1
+}
+
+FLYWAY_CORE_JAR="$(find_jar org/flywaydb flyway-core "${FLYWAY_VER}")"
+FLYWAY_PG_JAR="$(find_jar org/flywaydb flyway-database-postgresql "${FLYWAY_VER}")"
+# PostgreSQL 驱动版本由 spring-boot-starter-parent 决定（BOM 无显式属性）→ 取仓库中已有版本
+PG_JDBC="$(find "${M2_REPO}/org/postgresql/postgresql" -maxdepth 2 -name 'postgresql-*.jar' 2>/dev/null | sort -V | tail -1)"
+
+JARS=()
+if [[ -n "${FLYWAY_CORE_JAR}" && -n "${FLYWAY_PG_JAR}" && -n "${PG_JDBC}" ]]; then
+  JARS=("${FLYWAY_CORE_JAR}" "${FLYWAY_PG_JAR}" "${PG_JDBC}")
+else
+  # 兜底：动态解析（版本不符时可能拿到旧残留，仅作最后手段）
+  RAW_CP="$(resolve_cp)"
+  if [[ -n "${RAW_CP}" ]]; then
+    IFS=';' read -r -a JARS <<< "${RAW_CP}"
+  else
+    JARS=("${M2_REPO}/org/flywaydb/flyway-core/${FLYWAY_VER}/flyway-core-${FLYWAY_VER}.jar"
+          "${M2_REPO}/org/flywaydb/flyway-database-postgresql/${FLYWAY_VER}/flyway-database-postgresql-${FLYWAY_VER}.jar"
+          "${PG_JDBC}")
+  fi
+fi
+
+# Windows 下 Java 不认 Unix 风格路径分隔符与盘符 —— 必须**逐个路径**转换：
+#   历史缺陷：对整串做 sed 's|:|;|g' 会把盘符的冒号（C:）也成分号 → classpath 被截断成 "C"
+#   （表现为「classpath 缺失: C」）。
 if [[ "${OSTYPE:-}" == msys* || "${OS:-}" == Windows_NT ]]; then
-  CP_WIN="$(cygpath -w "${M2_REPO}" 2>/dev/null || echo "${M2_REPO}")"
-  CP="${CP_WIN}\\org\\flywaydb\\flyway-core\\${FLYWAY_VER}\\flyway-core-${FLYWAY_VER}.jar"
-  CP="${CP};${CP_WIN}\\org\\flywaydb\\flyway-database-postgresql\\${FLYWAY_VER}\\flyway-database-postgresql-${FLYWAY_VER}.jar"
-  CP="${CP};$(cygpath -w "${PG_JDBC}" 2>/dev/null || echo "${PG_JDBC}")"
   SEP=";"
+  CP=""
+  for j in "${JARS[@]}"; do
+    [[ -z "${j}" ]] && continue
+    jw="$(cygpath -w "${j}" 2>/dev/null || echo "${j}")"
+    CP="${CP}${SEP}${jw}"
+  done
+  CP="${CP#${SEP}}"
 else
   SEP=":"
+  CP=""
+  for j in "${JARS[@]}"; do
+    [[ -z "${j}" ]] && continue
+    CP="${CP}${SEP}${j}"
+  done
+  CP="${CP#${SEP}}"
 fi
 for j in $(echo "${CP}" | tr "${SEP}" '\n'); do
   [[ -f "${j}" ]] || { fail "classpath 缺失: ${j}"; exit 1; }
