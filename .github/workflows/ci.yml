@@ -523,22 +523,28 @@ jobs:
           #   密钥泄露由 security:secrets（gitleaks）负责，职责不重叠 ——
           #   且 secret 扫描器在 fs 模式对锁文件可能报错，使命令在写报告前就退出
           #   （表现为「扫描失败」且报告文件缺失，反而掩盖真实结论）。
+          # stderr 单独捕获 —— trivy 若在写报告前失败（如依赖解析报错），
+          # 报告文件不存在，只看报告等于什么都看不到。分开捕获才能拿到真实错误。
           trivy fs --severity HIGH,CRITICAL --exit-code 1 \
             --format table --output /tmp/trivy-report.txt \
             --scanners vuln \
             --skip-dirs node_modules,target,dist,.git \
-            lingxi-server lingxi-web || {
-              echo "::error title=Trivy 检出高危::详见本 job 的 trivy-report.txt 制品"
-              cat /tmp/trivy-report.txt || true
+            lingxi-server lingxi-web 2>/tmp/trivy-error.txt || {
+              echo "::error title=Trivy 扫描未通过::详见本 job 的 trivy-report.txt / trivy-error.txt 制品"
+              echo "--- stderr ---"; cat /tmp/trivy-error.txt || true
+              echo "--- report ---"; cat /tmp/trivy-report.txt 2>/dev/null || true
               exit 1
             }
+          # 扫描成功时把 stderr 也带出来（trivy 的告警信息常在此，如依赖解析失败）
 
       - name: 上传 Trivy 报告
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: trivy-report
-          path: /tmp/trivy-report.txt
+          path: |
+            /tmp/trivy-report.txt
+            /tmp/trivy-error.txt
           retention-days: 7
           if-no-files-found: warn
 
