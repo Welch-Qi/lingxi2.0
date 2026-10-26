@@ -365,9 +365,41 @@ jobs:
           # （全新 runner 上 copy-dependencies 会因模块未构建而失败）。
           # 版本号从本仓 pom 推导；PG 驱动版本由 spring-boot-starter-parent 决定
           # （BOM 未显式声明）→ 用 LATEST 兜底，取到哪个版本都能用。
-          mvn $MAVEN_CLI_OPTS -B dependency:get -Dartifact="org.flywaydb:flyway-core:${FLYWAY_VER}"
-          mvn $MAVEN_CLI_OPTS -B dependency:get -Dartifact="org.flywaydb:flyway-database-postgresql:${FLYWAY_VER}"
-          mvn $MAVEN_CLI_OPTS -B dependency:get -Dartifact=org.postgresql:postgresql:LATEST
+          # 直下 jar 到本地仓库的标准布局（脚本按此路径查找）。
+          # 为何不用 mvn dependency:get：在**聚合根 pom** 下执行会解析整个 reactor
+          # （全新 runner 上失败，且失败原因被 reactor 噪声淹没）；直下最可控。
+          M2="${HOME}/.m2/repository"
+          fetch_jar() {
+            # $1=groupPath $2=artifactId $3=version
+            local g="$1" a="$2" v="$3" dir="${M2}/$1/$2/$3"
+            mkdir -p "$dir"
+            curl -sSfL --retry 3 --retry-delay 3 --max-time 180 \
+              -o "$dir/$2-$3.jar" \
+              "https://repo1.maven.org/maven2/$1/$2/$3/$2-$3.jar" \
+              || { echo "::error title=jar 下载失败::$1:$2:$3"; return 1; }
+            echo "  ✅ $1:$2:$3 → $dir/$2-$3.jar"
+          }
+          fetch_jar org/flywaydb flyway-core "${FLYWAY_VER}"
+          fetch_jar org/flywaydb flyway-database-postgresql "${FLYWAY_VER}"
+          # PG 驱动版本：取 Maven Central 的最新发布版（与本仓 BOM 无冲突 —— PG 驱动版本
+          # 由 spring-boot-starter-parent 决定，此处只需一个可用的驱动 jar）
+          PG_VER="$(curl -sSfL --max-time 60 \
+            https://repo1.maven.org/maven2/org/postgresql/postgresql/maven-metadata.xml \
+            | grep -oE '<release>[^<]+' | head -1 | sed 's/<release>//')"
+          echo "  postgresql=${PG_VER}"
+          fetch_jar org/postgresql postgresql "${PG_VER}"
+          # 落地校验：三个 jar 必须在位，否则演练脚本会以「classpath 缺失」退出。
+          # 注意 find 的深度：jar 在「groupPath/artifactId/version/」下（version 是子目录），
+          # 故用 -maxdepth 2（版本目录一层 + jar 文件一层），用 -maxdepth 1 会漏判。
+          for a in "org/flywaydb/flyway-core/${FLYWAY_VER}" \
+                   "org/flywaydb/flyway-database-postgresql/${FLYWAY_VER}" \
+                   "org/postgresql/postgresql/${PG_VER}"; do
+            if ! find "${M2}/${a}" -maxdepth 1 -name '*.jar' 2>/dev/null | grep -q .; then
+              echo "::error title=迁移执行器依赖缺失::${a} 下未找到 jar"
+              exit 1
+            fi
+          done
+          echo "迁移执行器依赖就绪"
           # 落地校验：flyway 两个 jar 必须在位（版本精确匹配），否则演练脚本会退出
           for a in "org/flywaydb/flyway-core/${FLYWAY_VER}" \
                    "org/flywaydb/flyway-database-postgresql/${FLYWAY_VER}"; do
@@ -473,9 +505,10 @@ jobs:
           trivy --version
 
       - name: 预热 Trivy 漏洞数据库
-        # 首次运行需下载漏洞库（约 200MB），不预热则扫描步骤会因下载超时而失败，
-        # 且失败表现为「扫描超时」而非「检出漏洞」—— 掩盖真实结论。
-        run: trivy image --download-db-only
+        # 首次运行需下载漏洞库（约 200MB）。此处**不因下载失败而中断** ——
+        # 预热只是加速手段，扫描步骤自身也会下载（且会重试）。
+        # 之前把它当成硬前置 → 下载一失败整个 job 就红，且掩盖了扫描本身的结论。
+        run: trivy image --download-db-only || echo "::warning title=漏洞库预热未完成::将由扫描步骤自行下载（可能较慢）"
 
       - name: Trivy 文件系统扫描（不出镜像）
         # 禁容器化：全链路禁容器编排，故以 fs 模式扫描，不构建镜像
