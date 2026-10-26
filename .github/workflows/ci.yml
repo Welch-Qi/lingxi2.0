@@ -151,7 +151,14 @@ jobs:
         working-directory: lingxi-server
         # 规则：domain 不依赖框架 / api 不依赖实现 / infra 不依赖 app /
       #       Starter 不反向依赖业务 + 元枢不依赖灵犀业务包 / 灵犀只依赖元枢 api 包
-        run: mvn $MAVEN_CLI_OPTS -pl :yuanshu-platform -am test -Dtest=ArchitectureRuleTest
+        #
+        # -am 会连带构建上游模块（如 yuanshu-starter-core），它们**没有**该测试类 →
+        # surefire 报 "No tests matching pattern ArchitectureRuleTest were executed" 并失败。
+        # 故须加 -Dsurefire.failIfNoSpecifiedTests=false（只让目标模块真正跑该测试）。
+        run: >-
+          mvn $MAVEN_CLI_OPTS -pl :yuanshu-platform -am test
+          -Dtest=ArchitectureRuleTest
+          -Dsurefire.failIfNoSpecifiedTests=false
 
       - name: 上传 ArchUnit 报告
         if: always()
@@ -249,7 +256,10 @@ jobs:
       - name: 执行 Pact 契约测试
         if: steps.probe.outputs.ready == 'true'
         working-directory: lingxi-server
-        run: mvn $MAVEN_CLI_OPTS -pl :yuanshu-platform -am verify -Pcontract-test
+        # 同 arch-check：-am 带上的上游模块无契约测试，须放宽 failIfNoSpecifiedTests
+        run: >-
+          mvn $MAVEN_CLI_OPTS -pl :yuanshu-platform -am verify -Pcontract-test
+          -Dsurefire.failIfNoSpecifiedTests=false
 
   # ============================================================ 5. 覆盖率门禁
   coverage:
@@ -337,6 +347,14 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client
 
+      - name: 预热本地 Maven 仓库（迁移执行器依赖其中的 flyway / pg 驱动 jar）
+        # local-rehearsal.sh 用独立 Java 执行器跑 Flyway，classpath 指向
+        # ~/.m2/repository 下的 flyway-core / flyway-database-postgresql / postgresql jar。
+        # 本 job 此前只装了 JDK 与 psql，**从未跑过 mvn** → ~/.m2 为空 →
+        # 脚本报「classpath 缺失」直接退出。故须先预热依赖。
+        working-directory: lingxi-server
+        run: mvn $MAVEN_CLI_OPTS -B dependency:go-offline -DexcludeArtifactIds=none || mvn $MAVEN_CLI_OPTS -B -DskipTests package
+
       - name: 迁移演练 + 隔离实测（真库）
         env:
           LX_DB_HOST: 127.0.0.1
@@ -377,8 +395,15 @@ jobs:
             cat "$LATEST" >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
+          # ⑤ 演练日志落摘要（失败时定位的第一手材料）
+          if [ -f lingxi-ops/artifacts/local-rehearsal/rehearsal.log ]; then
+            echo '### 迁移演练日志（末尾 60 行）' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            tail -60 lingxi-ops/artifacts/local-rehearsal/rehearsal.log >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
 
-      - name: 上传隔离报告
+      - name: 上传隔离报告与演练日志
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -411,14 +436,43 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: 安装 Trivy
+        # 版本固定，保证可复现（上游 install.sh 会拉最新版，行为可能漂移）
+        env:
+          TRIVY_VERSION: v0.76.1
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-            | sh -s -- -b /usr/local/bin
+          curl -sSfL -o /tmp/trivy.tar.gz \
+            "https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${TRIVY_VERSION#v}_Linux-64bit.tar.gz"
+          tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
           trivy --version
 
       - name: Trivy 文件系统扫描（不出镜像）
         # 禁容器化：全链路禁容器编排，故以 fs 模式扫描，不构建镜像
-        run: trivy fs --severity HIGH,CRITICAL --exit-code 1 lingxi-server lingxi-web
+        #
+        # 扫描范围说明：
+        #   · lingxi-server —— 扫 target/ 里的 jar（含传递依赖）
+        #   · lingxi-web    —— 扫 pnpm-lock.yaml 锁定的依赖版本（含传递依赖）
+        # 排除项：
+        #   · node_modules —— 未安装（不跑 pnpm install），且传递依赖已由 lockfile 覆盖
+        #   · 报告落 artifact —— 便于评审时核对「哪一项被检出」，
+        #     否则失败只留一行退出码、无法定位（本次 CI 首跑即踩到此坑）
+        run: |
+          trivy fs --severity HIGH,CRITICAL --exit-code 1 \
+            --format table --output /tmp/trivy-report.txt \
+            --scanners vuln,secret \
+            lingxi-server lingxi-web || {
+              echo "::error title=Trivy 检出高危::详见本 job 的 trivy-report.txt 制品"
+              cat /tmp/trivy-report.txt || true
+              exit 1
+            }
+
+      - name: 上传 Trivy 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: /tmp/trivy-report.txt
+          retention-days: 7
+          if-no-files-found: warn
 
   security-secrets:
     name: security:secrets
@@ -430,13 +484,35 @@ jobs:
           fetch-depth: 0
 
       - name: 安装 gitleaks
+        # 注意：gitleaks v8.24+ 已移除 install.sh（改用 release 资产直下），
+        # 用旧方式会因「脚本 404」而失败 —— 且失败发生在安装步骤，会掩盖真正的扫描结论。
+        # 版本固定，保证可复现（不随上游最新版变动而行为漂移）。
+        env:
+          GITLEAKS_VERSION: v8.30.1
         run: |
-          curl -sfL https://raw.githubusercontent.com/gitleaks/gitleaks/main/install.sh \
-            | sh -s -- -b /usr/local/bin
+          curl -sSfL -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION#v}_linux_x64.tar.gz"
+          tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
           gitleaks version
 
       - name: gitleaks（0 密钥泄露）
-        run: gitleaks detect --no-banner --redact -s .
+        # 报告落 artifact：否则失败时只有一行退出码，无法定位是哪一处命中
+        run: |
+          gitleaks detect --no-banner --redact -s . \
+            --report-path /tmp/gitleaks-report.json --report-format json || {
+              echo "::error title=gitleaks 检出密钥::详见本 job 的 gitleaks-report.json 制品"
+              cat /tmp/gitleaks-report.json || true
+              exit 1
+            }
+
+      - name: 上传 gitleaks 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: /tmp/gitleaks-report.json
+          retention-days: 7
+          if-no-files-found: warn
 
   security-hardcode:
     name: security:hardcode
@@ -551,8 +627,8 @@ jobs:
         working-directory: lingxi-server
         run: |
           mvn $MAVEN_CLI_OPTS -DskipTests package
-          mkdir -p ../dist
-          cp yuanshu/yuanshu-platform/target/*.jar ../dist/
+          mkdir -p dist
+          cp yuanshu/yuanshu-platform/target/*.jar dist/
 
       - name: 上传发布制品
         uses: actions/upload-artifact@v4
