@@ -497,8 +497,11 @@ jobs:
 
       - name: gitleaks（0 密钥泄露）
         # 报告落 artifact：否则失败时只有一行退出码，无法定位是哪一处命中
+        # --config .gitleaks.toml：仅加 allowlist 排除「i18n 语言包键名赋值」这一
+        # 确定无害的形态（35 处误报），**未覆写任何检测规则** → 真实密钥检测能力不变
         run: |
           gitleaks detect --no-banner --redact -s . \
+            --config .gitleaks.toml \
             --report-path /tmp/gitleaks-report.json --report-format json || {
               echo "::error title=gitleaks 检出密钥::详见本 job 的 gitleaks-report.json 制品"
               cat /tmp/gitleaks-report.json || true
