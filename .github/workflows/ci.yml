@@ -504,6 +504,19 @@ jobs:
           tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
           trivy --version
 
+      - name: 填充本地 Maven 缓存（供 Trivy 离线解析依赖树）
+        # Trivy 扫 pom.xml 时要解析**完整依赖树**（含 BOM import 的传递依赖），
+        # 为此需从 Maven Central 下载每个依赖的 pom —— 而 GitHub 共享 runner 的 IP
+        # 会被限流（429 Too Many Requests，且 Retry-After 达 1800s），
+        # 表现为 trivy FATAL 退出。
+        #
+        # Trivy 官方解法（错误信息里明确给出）：先填充本地 Maven 缓存，再离线扫描。
+        # 故此处先 resolve 依赖（顺带把 pom 缓存进 ~/.m2），trivy 侧用 --offline-scan。
+        working-directory: lingxi-server
+        run: |
+          mvn $MAVEN_CLI_OPTS -B dependency:resolve -DincludeScope=runtime || \
+            echo "::warning title=Maven 依赖预热未完成::Trivy 将以离线模式扫描，缺失的依赖会被跳过"
+
       - name: 预热 Trivy 漏洞数据库
         # 首次运行需下载漏洞库（约 200MB）。此处**不因下载失败而中断** ——
         # 预热只是加速手段，扫描步骤自身也会下载（且会重试）。
@@ -528,7 +541,11 @@ jobs:
           # ⚠️ 目标只能给**一个** —— trivy 0.76 报 "multiple targets cannot be specified"
           #   （给多个路径会 FATAL 退出，且发生在写报告之前 → 报告文件都不存在）。
           #   故扫仓库根目录，用 --skip-dirs 排除无关目录。
+          # --offline-scan：只用本地 ~/.m2 缓存解析依赖树，**不访问 Maven Central**。
+          #   共享 runner 的 IP 会被 Central 限流（429），远端解析必然失败；
+          #   离线模式下缓存里缺的依赖只会 WARN 跳过，不会 FATAL 退出。
           trivy fs --severity HIGH,CRITICAL --exit-code 1 \
+            --offline-scan \
             --format table --output /tmp/trivy-report.txt \
             --scanners vuln \
             --skip-dirs node_modules,target,dist,.git,lingxi-web/node_modules \
