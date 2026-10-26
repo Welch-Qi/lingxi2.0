@@ -15,20 +15,27 @@
 任一环节失败阻断合并
 ```
 
-| # | Job | 规约依据 | 关键动作 |
-|---|---|---|---|
-| 1 | `build:backend` | §3.2 L3 | JDK 25 + Maven 3.9，`clean package` |
-| 2 | `build:frontend` | §4.2 | Node 22 + pnpm 11.13，`typecheck` + `build` |
-| 3 | `arch-check` | §2.2 强制 | ArchUnit：五层分层 + 跨产品方向 |
-| 4 | `test:backend` / `test:frontend` | §4.12 | JUnit 5 + Vitest |
-| 5 | `contract-test` | §4.12 强制 | Pact 双向校验（profile 未就绪时告警不阻断） |
-| 6 | `coverage` | §3.8 W7 | JaCoCo，总体 ≥70% |
-| 7 | `isolation` | §4.9.4 强制 | 真库 6 项隔离套件 |
-| 8 | `security:sast` | §4.9.6 | Semgrep（OWASP Top 10 + Java） |
-| 9 | `security:dependency` | §4.9.6 | Trivy `fs` 模式（不出镜像） |
-| 10 | `security:secrets` | §4.9.6 | gitleaks |
-| 11 | `security:hardcode` | 附录 D 18 条 | `qa-gate.sh` 扫描专用模式 |
-| 12 | `qa-gate` | 汇总 | 汇聚上游结论，任一失败即整体失败 |
+| # | Job ID（GitHub） | 显示名 | 规约依据 | 关键动作 |
+|---|---|---|---|---|
+| 1 | `build-backend` | build:backend | §3.2 L3 | JDK 25 + Maven 3.9，`clean package` |
+| 2 | `build-frontend` | build:frontend | §4.2 | Node 22 + pnpm 11.13，`typecheck` + `build` |
+| 3 | `arch-check` | arch-check | §2.2 强制 | ArchUnit：五层分层 + 跨产品方向 |
+| 4 | `test-backend` / `test-frontend` | test:backend / test:frontend | §4.12 | JUnit 5 + Vitest |
+| 5 | `contract-test` | contract-test | §4.12 强制 | Pact 双向校验（profile 未就绪时告警不阻断） |
+| 6 | `coverage` | coverage | §3.8 W7 | JaCoCo，总体 ≥70% |
+| 7 | `isolation` | isolation | §4.9.4 强制 | 真库 6 项隔离套件 |
+| 8 | `security-sast` | security:sast | §4.9.6 | Semgrep（OWASP Top 10 + Java） |
+| 9 | `security-dependency` | security:dependency | §4.9.6 | Trivy `fs` 模式（不出镜像） |
+| 10 | `security-secrets` | security:secrets | §4.9.6 | gitleaks |
+| 11 | `security-hardcode` | security:hardcode | 附录 D 18 条 | `qa-gate.sh` 扫描专用模式 |
+| 12 | `qa-gate` | qa-gate | 汇总 | 汇聚上游结论，任一失败即整体失败 |
+
+> ⚠️ **Job ID 不能含冒号**：GitHub 要求 job ID 只含 `[A-Za-z0-9_-]`
+> （GitLab CI 允许 `security-sast` 这种写法，GitHub 不允许）。
+> 故 **Job ID 用连字符、显示名保留冒号**（UI 上仍显示 `security-sast`，
+> 与 `05-security` 第六节的命名约定一致）。
+> 同样地，表达式里访问这些 job 必须用**方括号**：`needs['security-sast'].result`，
+> 点号语法会在冒号处解析失败。
 
 ---
 
@@ -88,17 +95,17 @@ CI 的 `contract-test` job 会探测 profile 是否存在：
 
 | CI job | 本地等价命令 |
 |---|---|
-| `build:backend` | `cd lingxi-server && mvn -B -ntp -DskipTests clean package` |
-| `build:frontend` | `cd lingxi-web && pnpm install --frozen-lockfile && pnpm -s run typecheck && pnpm -s run build` |
+| `build-backend` | `cd lingxi-server && mvn -B -ntp -DskipTests clean package` |
+| `build-frontend` | `cd lingxi-web && pnpm install --frozen-lockfile && pnpm -s run typecheck && pnpm -s run build` |
 | `arch-check` | `cd lingxi-server && mvn -B -ntp -pl :yuanshu-platform -am test -Dtest=ArchitectureRuleTest` |
-| `test:backend` | `cd lingxi-server && mvn -B -ntp test` |
-| `test:frontend` | `cd lingxi-web && pnpm -s run test:unit -- --run` |
+| `test-backend` | `cd lingxi-server && mvn -B -ntp test` |
+| `test-frontend` | `cd lingxi-web && pnpm -s run test:unit -- --run` |
 | `coverage` | `cd lingxi-server && mvn -B -ntp verify -Djacoco.skip=false` |
 | `isolation` | `bash lingxi-ops/scripts/local-rehearsal.sh --reset` + `LX_ISOLATION_SCOPE=db bash lingxi-ops/scripts/verify-tenant-isolation.sh <A> <B>` |
-| `security:sast` | `semgrep --error --config=p/owasp-top-ten --config=p/java lingxi-server` |
-| `security:dependency` | `trivy fs --severity HIGH,CRITICAL --exit-code 1 lingxi-server lingxi-web` |
-| `security:secrets` | `gitleaks detect --no-banner --redact -s .` |
-| `security:hardcode` | `QA_GATE_SCAN_ONLY=1 bash lingxi-ops/scripts/qa-gate.sh local-scan` |
+| `security-sast` | `semgrep --error --config=p/owasp-top-ten --config=p/java lingxi-server` |
+| `security-dependency` | `trivy fs --severity HIGH,CRITICAL --exit-code 1 lingxi-server lingxi-web` |
+| `security-secrets` | `gitleaks detect --no-banner --redact -s .` |
+| `security-hardcode` | `QA_GATE_SCAN_ONLY=1 bash lingxi-ops/scripts/qa-gate.sh local-scan` |
 | **全量门禁** | `bash lingxi-ops/scripts/qa-gate.sh`（6 段全跑，约 4~5 分钟） |
 
 > `qa-gate.sh` 的 `QA_GATE_SCAN_ONLY=1` 是**扫描专用模式**：只跑附录 D 18 条扫描 + ESLint

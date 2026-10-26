@@ -62,7 +62,7 @@ env:
 
 jobs:
   # ================================================================ 1. 编译
-  build:backend:
+  build-backend:
     name: build:backend
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -90,7 +90,7 @@ jobs:
           retention-days: 3
           if-no-files-found: error
 
-  build:frontend:
+  build-frontend:
     name: build:frontend
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -134,7 +134,7 @@ jobs:
     name: arch-check
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    needs: [build:backend]
+    needs: [build-backend]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -163,11 +163,11 @@ jobs:
           if-no-files-found: warn
 
   # ================================================================ 3. 单测
-  test:backend:
+  test-backend:
     name: test:backend
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    needs: [build:backend]
+    needs: [build-backend]
     steps:
       - uses: actions/checkout@v4
 
@@ -191,7 +191,7 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-  test:frontend:
+  test-frontend:
     name: test:frontend
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -223,7 +223,7 @@ jobs:
     name: contract-test
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    needs: [build:backend]
+    needs: [build-backend]
     steps:
       - uses: actions/checkout@v4
 
@@ -256,7 +256,7 @@ jobs:
     name: coverage
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    needs: [test:backend]
+    needs: [test-backend]
     steps:
       - uses: actions/checkout@v4
 
@@ -299,7 +299,7 @@ jobs:
     name: isolation
     runs-on: ubuntu-latest
     timeout-minutes: 35
-    needs: [build:backend]
+    needs: [build-backend]
     services:
       # 集成测试用真实 PostgreSQL 17 + pgvector（规约 §4.12 集成测试要求）。
       # 用官方 Actions services 机制，不在本仓库引入任何容器化清单。
@@ -388,7 +388,7 @@ jobs:
           if-no-files-found: warn
 
   # ============================================================ 7. 安全门禁
-  security:sast:
+  security-sast:
     name: security:sast
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -403,7 +403,7 @@ jobs:
       - name: Semgrep（OWASP Top 10 + Java 规则）
         run: semgrep --error --config=p/owasp-top-ten --config=p/java lingxi-server
 
-  security:dependency:
+  security-dependency:
     name: security:dependency
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -420,7 +420,7 @@ jobs:
         # 禁容器化：全链路禁容器编排，故以 fs 模式扫描，不构建镜像
         run: trivy fs --severity HIGH,CRITICAL --exit-code 1 lingxi-server lingxi-web
 
-  security:secrets:
+  security-secrets:
     name: security:secrets
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -438,7 +438,7 @@ jobs:
       - name: gitleaks（0 密钥泄露）
         run: gitleaks detect --no-banner --redact -s .
 
-  security:hardcode:
+  security-hardcode:
     name: security:hardcode
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -500,17 +500,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs:
-      - build:backend
-      - build:frontend
+      - build-backend
+      - build-frontend
       - arch-check
-      - test:backend
-      - test:frontend
+      - test-backend
+      - test-frontend
       - coverage
       - isolation
-      - security:sast
-      - security:dependency
-      - security:secrets
-      - security:hardcode
+      - security-sast
+      - security-dependency
+      - security-secrets
+      - security-hardcode
     if: always()
     steps:
       - name: 汇总各阶段结论（任一失败即整体失败）
@@ -523,7 +523,7 @@ jobs:
           # 在表达式里访问 needs.<job>.result 必须用**方括号**语法 ——
           # 点号语法会在冒号处解析失败（GitHub 报 "Unexpected symbol: 'build:backend'"），
           # 且该错误发生在 workflow 解析阶段 → 整个 run 秒级失败且不创建任何 job。
-          RESULT="${{ needs['build:backend'].result }}-${{ needs['build:frontend'].result }}-${{ needs['arch-check'].result }}-${{ needs['test:backend'].result }}-${{ needs['test:frontend'].result }}-${{ needs['coverage'].result }}-${{ needs['isolation'].result }}-${{ needs['security:sast'].result }}-${{ needs['security:dependency'].result }}-${{ needs['security:secrets'].result }}-${{ needs['security:hardcode'].result }}"
+          RESULT="${{ needs['build-backend'].result }}-${{ needs['build-frontend'].result }}-${{ needs['arch-check'].result }}-${{ needs['test-backend'].result }}-${{ needs['test-frontend'].result }}-${{ needs['coverage'].result }}-${{ needs['isolation'].result }}-${{ needs['security-sast'].result }}-${{ needs['security-dependency'].result }}-${{ needs['security-secrets'].result }}-${{ needs['security-hardcode'].result }}"
           echo "各阶段结论：${RESULT}"
           if echo "${RESULT}" | grep -qE 'failure|cancelled'; then
             echo "::error title=CI 门禁未通过::存在失败或取消的阶段，禁止合并"
@@ -536,7 +536,7 @@ jobs:
     name: package
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    needs: [build:backend]
+    needs: [build-backend]
     steps:
       - uses: actions/checkout@v4
 
