@@ -137,6 +137,22 @@ api 包只放 DTO / 接口 / 事件，禁止放实现
 | 同一 Bug 修复超 5 轮 | 升级人工 |
 | 需要改契约（DTO / 事件 / 表结构） | 先更新 `lingxi-docs/03-api/` 契约（AI **可写**，见 §二例外），再改代码；**契约须经 PR 评审确认**才可合并。破坏性变更（删字段 / 改语义 / 改路径）属 T4，**人工确认后**才能继续 |
 | 发现规约缺失或矛盾 | 记入任务简报的「待决策」段落，不要自行定规矩 |
+| 提交前必跑的门禁 | `bash lingxi-ops/scripts/qa-gate.sh`（全量 6 段）—— 这是与 CI 同源的独立验收，**不接受开发方自报**（铁律 9）。仅改前端文案时至少跑 `pnpm lint` + `python scripts/check-i18n.py` |
+
+---
+
+## 七之二、CI 门禁（GitHub Actions）
+
+- **权威 workflow**：`.github/workflows/ci.yml`（阶段与 job 详见 `lingxi-ops/ci/README-github-actions.md`）
+- **阶段顺序固定**（规约 §4.12 强制）：编译 → ArchUnit → 单测 → 契约测试 → 覆盖率 → 隔离套件 → 静态扫描 → 依赖与密钥扫描
+- **CI 与本地同源**：CI 调用的都是 `lingxi-ops/scripts/*.sh`，本地跑同一批脚本即等价。
+  禁止为「让 CI 过」而绕过脚本另写一套判定 —— 两套实现必然漂移。
+- **附录 D 规则 10/12 由 ESLint 承载**（AST 级判定，自动豁免注释与语言包）。
+  `qa-gate.sh` 不再用正则重复判定这两条。
+- **两处已知未就绪**（CI 里**明确告警**，不静默跳过）：
+  契约测试待 `contract-test` profile 就绪；隔离套件 ①~⑤ 待业务接口实现
+  （当前 `LX_ISOLATION_SCOPE=db` 只跑 ⑥，跳过项记入报告 `skippedItems`）。
+  待其落地后**必须改回全量**，不得长期以「跳过」充数。
 
 ---
 

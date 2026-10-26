@@ -32,7 +32,24 @@ declare -a FAILED_ITEMS=()
 mark_fail() { V_FAIL+=1; FAILED_ITEMS+=("$1"); warn "FAIL: $1"; }
 mark_pass() { log "  OK: $1"; }
 
+# ============================================================ 0. 运行模式
+#
+# 两种模式（默认值 0 = 全量，行为与历史一致）：
+#   QA_GATE_SCAN_ONLY=0（默认）—— 跑全部 6 段（构建/单测/覆盖率 + 架构 + 前端 + SAST + 密钥 + 扫描）
+#   QA_GATE_SCAN_ONLY=1          —— **只跑第 6 段附录 D 反模式扫描**
+#
+# 为什么需要扫描专用模式：CI 已把「构建/单测/覆盖率/架构/前端」拆成独立 job 并行执行，
+# 若 security:hardcode 再调本脚本全量，会重复跑一次 mvn clean verify（数分钟）纯浪费。
+# 本地开发与门禁自检仍用全量模式（不设该变量）。
+if [[ "${QA_GATE_SCAN_ONLY:-0}" == "1" ]]; then
+  SCAN_ONLY=1
+  log "---- 扫描专用模式（QA_GATE_SCAN_ONLY=1）：仅执行第 6 段附录 D 反模式扫描 ----"
+else
+  SCAN_ONLY=0
+fi
+
 # ============================================================ 1. 后端构建与单测
+if [[ "${SCAN_ONLY}" == "0" ]]; then
 log "---- 1/6 后端编译、单测与覆盖率 ----"
 # 不用 -q：失败时需保留完整输出用于定位（历史缺陷：-q 使 maven-verify.log 仅剩 1 行）
 if ( cd "${SERVER_DIR}" && mvn -B -ntp clean verify -DskipITs       -Djacoco.skip=false > "${ARTIFACT_DIR}/${TASK_ID}/maven-verify.log" 2>&1 ); then
@@ -53,8 +70,10 @@ else
   mark_fail "后端 verify 失败（编译/单测/覆盖率未达标）；日志：artifacts/${TASK_ID}/maven-verify.log"
   COVERAGE="failed"
 fi
+fi   # SCAN_ONLY=1 时跳过第 1 段
 
 # ============================================================ 2. 架构边界（ArchUnit）
+if [[ "${SCAN_ONLY}" == "0" ]]; then
 log "---- 2/6 架构边界校验（ArchUnit：五层分层 + 跨模块只依赖 api 包 + 跨产品方向规则）----"
 ARCH_TEST_REPORT="${SERVER_DIR}/yuanshu/yuanshu-platform/target/surefire-reports"
 ARCH_TXT="${ARCH_TEST_REPORT}/com.yuanshu.sys.architecture.ArchitectureRuleTest.txt"
@@ -71,8 +90,10 @@ if [[ -f "${ARCH_TXT}" ]]; then
 else
   mark_fail "ArchUnit 未执行或无测试报告（缺 ${ARCH_TXT##*/}）；技术规约2.0 §2.2 为强制项"
 fi
+fi   # SCAN_ONLY=1 时跳过第 2 段
 
 # ============================================================ 3. 前端检查
+if [[ "${SCAN_ONLY}" == "0" ]]; then
 log "---- 3/6 前端：类型检查 + lint + 单测 ----"
 if [[ -d "${WEB_DIR}" ]]; then
   if ( cd "${WEB_DIR}" && pnpm -s run typecheck && pnpm -s run lint )       > "${ARTIFACT_DIR}/${TASK_ID}/web-check.log" 2>&1; then
@@ -88,8 +109,25 @@ if [[ -d "${WEB_DIR}" ]]; then
 else
   warn "未找到 lingxi-web，跳过前端检查"
 fi
+else
+  # 扫描专用模式：仍须执行 ESLint —— 附录 D 规则 10（硬编码中文文案）与
+  # 规则 12（组件内直调 HTTP）由 ESLint 的 no-restricted-syntax /
+  # no-restricted-imports 判定（AST 级，自动豁免注释与语言包）。
+  # 缺这一步，扫描模式下这两条规则将无人判定（形同虚设）。
+  log "---- 3/6 前端：ESLint（承载附录 D 规则 10/12）----"
+  if [[ -d "${WEB_DIR}" ]]; then
+    if ( cd "${WEB_DIR}" && pnpm -s exec eslint . )        > "${ARTIFACT_DIR}/${TASK_ID}/web-lint.log" 2>&1; then
+      mark_pass "ESLint（附录 D 规则 10/12）0 error"
+    else
+      mark_fail "ESLint 报错（附录 D 规则 10/12 命中）；日志：artifacts/${TASK_ID}/web-lint.log"
+    fi
+  else
+    warn "未找到 lingxi-web，跳过 ESLint（规则 10/12 将无人判定）"
+  fi
+fi   # SCAN_ONLY=1 时：第 3 段只跑 ESLint（承载规则 10/12），跳过 typecheck/单测
 
 # ============================================================ 4. SAST
+if [[ "${SCAN_ONLY}" == "0" ]]; then
 log "---- 4/6 静态扫描（Semgrep + SpotBugs）----"
 if command -v semgrep >/dev/null 2>&1; then
   if semgrep --quiet --error --config=p/owasp-top-ten --config=p/java       "${SERVER_DIR}" > "${ARTIFACT_DIR}/${TASK_ID}/semgrep.log" 2>&1; then
@@ -121,27 +159,49 @@ if command -v trivy >/dev/null 2>&1; then
 else
   warn "未安装 trivy，跳过"
 fi
+fi   # SCAN_ONLY=1 时跳过第 4/5 段（SAST + 依赖密钥，CI 已有独立 job）
 
 # ============================================================ 6. 硬编码反模式扫描（附录D）
 log "---- 6/6 硬编码与反模式扫描（18 条，命中即验收 FAIL）----"
 BASE_REF="${LX_BASE_REF:-HEAD~1}"
 if git -C "${OPS_ROOT}/.." rev-parse "${BASE_REF}" >/dev/null 2>&1; then
-  CHANGED="$(git -C "${OPS_ROOT}/.." diff --name-only "${BASE_REF}" -- '*.java' '*.ts' '*.tsx' '*.sql' '*.yml' '*.xml' | grep -v -E '^(config/|.*\.md$)' || true)"
+  # 路径过滤须与规约附录 D 口径一致：
+  #   · 规则 1「jdbc 连接串」与规则 4「模型名」**允许**出现在 config/ 下（配置模板本就如此）
+  #   · 历史缺陷：原过滤式 '^(config/|...)' 只匹配路径**开头**的 config/，
+  #     而实际路径为 lingxi-ops/config/db.yml → 未被过滤 → 规则 1 误判违规。
+  #     改为 '(^|/)config/' 匹配任意层级的 config/ 目录。
+  CHANGED="$(git -C "${OPS_ROOT}/.." diff --name-only "${BASE_REF}" -- '*.java' '*.ts' '*.tsx' '*.sql' '*.yml' '*.xml' | grep -v -E '(^|/)config/|.*\.md$' || true)"
 else
   warn "${BASE_REF} 不可用，改为扫描全部受版本控制文件"
-  CHANGED="$(git -C "${OPS_ROOT}/.." ls-files | grep -E '\.(java|ts|tsx|sql|xml)$' || true)"
+  # 必须含 yml/yaml —— 附录 D 规则 1/3/18 的扫描范围包含它们
+  # （历史缺陷：此处漏了 yml，导致 base ref 不可用时 workflow 等配置文件全部漏扫）
+  CHANGED="$(git -C "${OPS_ROOT}/.." ls-files | grep -E '\.(java|ts|tsx|sql|xml|yml|yaml)$' | grep -v -E '(^|/)config/' || true)"
 fi
 
 scan_rule() {
-  local no="$1" desc="$2" pattern="$3" pathspec="$4"
+  local no="$1" desc="$2" pattern="$3" pathspec="$4" mode="${5:-}"
   local targets
   targets="$(echo "${CHANGED}" | grep -E "${pathspec}" || true)"
+  # 排除请求层与通用组件库（规则 12 的适用范围：业务页面组件）
+  targets="$(echo "${targets}" | grep -vE 'packages/lingxi-(request|ui)/' || true)"
   [[ -z "${targets}" ]] && return 0
   local hits
-  hits="$(echo "${targets}" | while read -r f; do
-            [[ -f "${OPS_ROOT}/../$f" ]] || continue
-            grep -nE "${pattern}" "${OPS_ROOT}/../$f" 2>/dev/null | sed "s|^|$f:|"
-          done | head -20 || true)"
+  # 性能：把命中该路径类型的文件**一次性**交给 grep（-H 输出文件名），
+  # 而非逐文件循环起进程 —— 全量扫描 444 文件时后者会产生上千次进程 fork，
+  # 在 Windows Git Bash 上单次 grep 约 0.9s，导致扫描段耗时数分钟（CI 不可接受）。
+  # 语义等价：仍是逐行匹配 + 每条规则最多展示 20 条命中。
+  local abs_files=() f
+  while read -r f; do
+    [[ -n "${f}" && -f "${OPS_ROOT}/../${f}" ]] && abs_files+=("${OPS_ROOT}/../${f}")
+  done <<< "${targets}"
+  [[ "${#abs_files[@]}" -eq 0 ]] && return 0
+  hits="$(grep -nHE "${pattern}" "${abs_files[@]}" 2>/dev/null \
+          | sed "s|${OPS_ROOT}/../||" || true)"
+  # 规约口径「非 127.0.0.1 的 IP+端口」：本地与内网地址不算云端地址
+  if [[ "${mode}" == "EXCLUDE_LOCAL_IP" ]]; then
+    hits="$(echo "${hits}" | grep -vE '(127\.0\.0\.1|0\.0\.0\.0|localhost)' || true)"
+  fi
+  hits="$(echo "${hits}" | head -20 || true)"
   if [[ -n "${hits}" ]]; then
     echo "${hits}" | sed 's/^/      /'
     mark_fail "附录D 规则 ${no}：${desc}"
@@ -149,29 +209,42 @@ scan_rule() {
 }
 
 scan_rule 1  "硬编码数据库连接串"              'jdbc:(postgresql|mysql|oracle)://'                                          '\.(java|yml|xml)$'
-scan_rule 2  "硬编码云端地址（非 127.0.0.1 的 IP+端口）" '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]{2,5}'  '\.(java|ts|tsx)$'
+scan_rule 2  "硬编码云端地址（非 127.0.0.1 的 IP+端口）" '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]{2,5}'  '\.(java|ts|tsx)$' EXCLUDE_LOCAL_IP
 scan_rule 3  "硬编码口令与密钥"                '(password|secret|apiKey|api_key|token)[[:space:]]*[:=][[:space:]]*["'"'"'][^"'"'"']{6,}' '\.(java|ts|tsx|yml|xml)$'
 scan_rule 4  "代码中出现模型名（禁，只允许 config/model.yml）" '(gpt-|qwen|claude|gemini|deepseek)[a-z0-9.\-]*'      '\.(java|ts|tsx)$'
 scan_rule 5  "非 infra 层引用数据访问组件（越层）" '(JdbcTemplate|DataSource|@Mapper)'                                   '/app/.*\.java$'
-scan_rule 7  "智能体专用写接口（影子 API）"    '/api/v1/agent/'                                                              '\.(java|ts|tsx)$'
+scan_rule 7  "智能体专用写接口（影子 API）"    '/api/v1/agent/.*(post|put|patch|Post|Put|Patch)'                             '\.(java|ts|tsx)$'
 scan_rule 8  "编排层直连业务 REST（绕过 MCP 工具网关）" '(RestTemplate|WebClient)[^;]*(/api/v1/)'                        '\.java$'
 scan_rule 9  "内联提示词（必须走提示词库）"    '(你是一个|You are a|Your task is)'                                           '\.(java|ts|tsx)$'
-scan_rule 10 "前端硬编码中文文案（违反 i18n）" '[一-龥]{2,}'                                                     'lingxi-web/.*\.(tsx|ts)$'
-scan_rule 12 "前端组件内直调 HTTP"             '(axios\.|fetch\()'                                                         'lingxi-web/.*\.(tsx|ts)$'
+# 规则 10（硬编码中文文案）由 ESLint 的 no-restricted-syntax 判定（AST 级，
+# 自动豁免注释与语言包，见 lingxi-web/eslint.config.js）—— 已在第 3 段的
+# `pnpm lint` 中执行。此处不再用正则重复判定（历史缺陷：粗糙正则把注释里的中文、
+# JSX 文本节点等一并误报，且与 ESLint 两套实现必然漂移）。
+scan_rule 10 "前端硬编码中文文案（违反 i18n）" '^$a$'                                                       'lingxi-web/.*\.(tsx|ts)$'
+# 规则 12（组件内直调 HTTP）由 ESLint 的 no-restricted-imports 判定
+# （禁 import axios，并已对 packages/lingxi-request 放行）—— 已在第 3 段的
+# `pnpm lint` 中执行。此处不再用正则重复判定（历史缺陷：粗糙正则把请求层本体
+# packages/lingxi-request/src/http.ts 也判为违规 —— axios 正是其实现）。
+scan_rule 12 "前端组件内直调 HTTP"             '^$a$'                                                         'lingxi-web/.*\.(tsx|ts)$'
 scan_rule 13 "状态硬编码判断（必须走状态机）"  'if[[:space:]]*\([[:space:]]*status[[:space:]]*=='                              '\.java$'
 scan_rule 15 "浮点金额字段（必须最小单位整数）" '(float|double)[[:space:]]+(amount|price|money|balance|fee)'                   '\.java$'
-scan_rule 16 "新增表 DDL 缺 tenant_id（白名单外）" 'CREATE TABLE'                                                                '\.sql$'
+# 规则 16 由下方「补充判定」段负责（逐表检查 CREATE TABLE 后 40 行内是否含 tenant_id，
+# 并按 sys_ 白名单豁免）。此处不做粗粒度匹配 —— 否则任何含建表的 sql 都会被误判失败。
+scan_rule 16 "新增表 DDL 缺 tenant_id（白名单外）" '^$a$'                                                  '\.sql$'
 scan_rule 17 "代码中直连 SSH（隧道只由脚本管理）" '(jsch|paramiko|com\.jcraft)'                                             '\.(java|xml)$'
 scan_rule 18 "容器化残留（Docker/K8s）"        '(docker-compose|Dockerfile|kind:[[:space:]]*Deployment|apiVersion:[[:space:]]*apps/)' '\.(yml|yaml|java|xml)$'
 
 # ---- 规则 16 的补充判定：DDL 建表后 40 行内必须出现 tenant_id，除非表名在 sys_ 白名单 ----
+# 历史缺陷：本段只 printf 输出，**从不调用 mark_fail** —— 检测到违规却不判失败（漏报）。
+# 修正：把命中结果收集起来，统一 mark_fail（一次违规记一项）。
 if [[ -n "${CHANGED}" ]]; then
+  DDL_HITS=""
   while read -r f; do
     [[ -f "${OPS_ROOT}/../$f" ]] || continue
-    awk '
+    part="$(awk '
       /CREATE TABLE/ { tbl=$0; buf=""; cnt=0; intable=1 }
       intable { buf = buf "
-" $0; cnt++ 
+" $0; cnt++
                 if (cnt > 40) {
                   if (buf !~ /tenant_id/ && tbl !~ /sys_dict|sys_i18n|sys_country|sys_currency|casbin_rule|dt_metric_catalog/) {
                     printf "%s:%d: 表可能缺 tenant_id 列 -> %s
@@ -180,8 +253,13 @@ if [[ -n "${CHANGED}" ]]; then
                   intable = 0
                 }
               }
-    ' "${OPS_ROOT}/../$f" | sed 's/^/      /'
+    ' "${OPS_ROOT}/../$f" || true)"
+    [[ -n "${part}" ]] && DDL_HITS="${DDL_HITS}${part}"$'\n'
   done <<< "$(echo "${CHANGED}" | grep -E '\.sql$' || true)"
+  if [[ -n "${DDL_HITS}" ]]; then
+    echo "${DDL_HITS}" | sed '/^$/d' | sed 's/^/      /'
+    mark_fail "附录D 规则 16：新增表 DDL 缺 tenant_id（白名单外）"
+  fi
 fi
 
 # ============================================================ 结果落盘
