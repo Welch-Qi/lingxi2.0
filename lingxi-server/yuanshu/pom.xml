@@ -17,7 +17,7 @@
     <version>2.0.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>yuanshu</artifactId>
+  <artifactId>yuanshu-parent</artifactId>
   <packaging>pom</packaging>
   <name>yuanshu</name>
   <description>元枢数智底座 —— L0 平台 / L1 数据 / 语义管理 / 智能体工厂 / 运行时与数据进程</description>

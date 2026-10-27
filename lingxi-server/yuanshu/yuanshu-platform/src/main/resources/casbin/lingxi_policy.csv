@@ -9,6 +9,7 @@ p, ROLE_PLATFORM_ADMIN, /*, .*, ALL
 p, ROLE_TENANT_ADMIN, /*, .*, ALL
 # 客户销售服务总监：客户与销售域
 p, ROLE_SALES_DIRECTOR, cus:*, .*, DEPT_AND_SUB
+p, ROLE_SALES_DIRECTOR, cus:customer:export, access, DEPT_AND_SUB
 p, ROLE_SALES_DIRECTOR, ord:*, .*, DEPT_AND_SUB
 p, ROLE_SALES_DIRECTOR, svc:*, .*, DEPT_AND_SUB
 p, ROLE_SALES_DIRECTOR, ana:metric:view, access, DEPT_AND_SUB
@@ -20,6 +21,7 @@ p, ROLE_CHANNEL_DIRECTOR, intel:*, .*, ALL
 p, ROLE_CONTENT_DIRECTOR, mkg:content:*, .*, ALL
 p, ROLE_CONTENT_DIRECTOR, kc:template:*, .*, ALL
 p, ROLE_CONTENT_DIRECTOR, kc:prompt:*, .*, ALL
+p, ROLE_CONTENT_DIRECTOR, kc:knowledge:view, access, ALL
 # 产品开发总监
 p, ROLE_PRODUCT_DIRECTOR, prd:*, .*, ALL
 p, ROLE_PRODUCT_DIRECTOR, intel:opportunity:*, .*, ALL
@@ -31,12 +33,14 @@ p, ROLE_CEO, rw:workbench:configure, access, ALL
 # 销售专员：仅本人数据
 p, ROLE_SALES_REP, cus:lead:*, .*, SELF
 p, ROLE_SALES_REP, cus:customer:view, access, SELF
+p, ROLE_SALES_REP, cus:customer:export, access, SELF
 p, ROLE_SALES_REP, cus:opportunity:*, .*, SELF
 p, ROLE_SALES_REP, ord:order:view, access, SELF
 # 智能体（独立 client + 严格 scope）：只读 + 受限写入，禁止管理员动作（§3.6 G1）
 p, SUB_AGENT_CUS, cus:lead:create, access, DEPT
 p, SUB_AGENT_CUS, dt:entity:search, access, ALL
 p, SUB_AGENT_CUS, mkg:email:draft, access, ALL
+p, SUB_AGENT_CUS, cus:customer:query, access, DEPT
 
 # 角色继承
 g, ROLE_SALES_DIRECTOR, ROLE_SALES_REP

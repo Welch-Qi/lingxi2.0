@@ -30,6 +30,17 @@ log()  { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] [${SCRIPT_NAME}] $*"; }
 fail() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] [${SCRIPT_NAME}] [FAIL] $*" >&2; exit 1; }
 warn() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] [${SCRIPT_NAME}] [WARN] $*" >&2; }
 
+# ---- 配置单一来源（2026-10-23 收敛）----
+# 权威配置目录 = lingxi-ops/config（verify-skeleton.sh 校验它）。
+# 应用侧 application.yml 的 spring.config.import 用 ${LX_CONFIG_DIR:./config} 解析，
+# 此处注入绝对路径 -> 后端无论从哪个工作目录启动都读同一份配置。
+# 此前 lingxi-server/config/ 存着一份完全相同的副本，改一份不生效另一份（已造成多次排查耗时）。
+export LX_CONFIG_DIR="${CONFIG_DIR}"
+log "配置来源（单一来源）：${LX_CONFIG_DIR}"
+for cfg in app db cache model tunnel; do
+  [[ -f "${LX_CONFIG_DIR}/${cfg}.yml" ]] || fail "权威配置缺失：${LX_CONFIG_DIR}/${cfg}.yml（先补齐再启动）"
+done
+
 require_env() {
   local missing=()
   for key in "$@"; do

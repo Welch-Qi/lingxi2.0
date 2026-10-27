@@ -19,19 +19,19 @@
   <dependencies>
     <dependency>
       <groupId>com.lingxi</groupId>
-      <artifactId>lingxi-starter-core</artifactId>
+      <artifactId>yuanshu-starter-core</artifactId>
     </dependency>
     <dependency>
       <groupId>com.lingxi</groupId>
-      <artifactId>lingxi-starter-observability</artifactId>
+      <artifactId>yuanshu-starter-observability</artifactId>
     </dependency>
     <dependency>
       <groupId>com.lingxi</groupId>
-      <artifactId>lingxi-starter-mybatis</artifactId>
+      <artifactId>yuanshu-starter-mybatis</artifactId>
     </dependency>
     <dependency>
       <groupId>com.lingxi</groupId>
-      <artifactId>lingxi-starter-llm</artifactId>
+      <artifactId>yuanshu-starter-llm</artifactId>
     </dependency>
 
     <!--

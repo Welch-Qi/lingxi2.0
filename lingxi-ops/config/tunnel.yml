@@ -6,7 +6,7 @@
 #   - 隧道建立 / 监测 / 重连只由 scripts/tunnel-up.sh 与 check-tunnel.sh 负责
 #   - 应用代码禁止出现任何 ssh / jsch / paramiko 客户端
 ################
-lingxi:
+yuanshu:
   tunnel:
     host: ${LX_SSH_HOST}                 # 跳板机 / 云主机地址
     port: ${LX_SSH_PORT:22}

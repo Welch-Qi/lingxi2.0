@@ -17,7 +17,7 @@
     <version>2.0.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>lingxi-app</artifactId>
+  <artifactId>lingxi-parent</artifactId>
   <packaging>pom</packaging>
   <name>lingxi-app</name>
   <description>灵犀营销服智能体集群 —— 11 个业务域模块</description>

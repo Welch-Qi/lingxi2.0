@@ -69,8 +69,8 @@ if [ "${BIZ_COUNT}" -ne 11 ]; then bad "灵犀业务模块数量口径不符（�
 # 开物一期不建任何目录（归口表 §6.4）；出现 kaiwu 目录即为越界
 if [ -d "${ROOT_DIR}/lingxi-server/kaiwu" ]; then bad '禁止项：lingxi-server/kaiwu 目录已提前创建（开物一期只登记契约不建目录）'; else ok '开物目录基线：0（一期不建目录，符合归口表 §6.4）'; fi
 
-title '[2b/9] 公共 Starter 组（5 个）与元枢独立进程（2 个）'
-for s in core security mybatis llm observability; do need_dir "lingxi-server/lingxi-starters/lingxi-starter-${s}"; done
+title '[2b/9] 元枢底座 Starter 组（5 个）与元枢独立进程（2 个）'
+for s in core security mybatis llm observability; do need_dir "lingxi-server/yuanshu-starters/yuanshu-starter-${s}"; done
 need_dir 'lingxi-server/yuanshu/yuanshu-agent-runtime'
 need_dir 'lingxi-server/yuanshu/yuanshu-data-jobs'
 
@@ -206,6 +206,26 @@ if grep -q 'Dockerfile\|docker-compose' "${ROOT_DIR}/lingxi-ops/config/app.yml" 
   bad '配置中出现容器化残留'
 else
   ok '配置中无容器化残留'
+fi
+# 配置单一来源（2026-10-23 收敛）：
+#   权威 = lingxi-ops/config（start-dev.sh / deploy.sh 均从此部署，application.yml 经
+#   ${LX_CONFIG_DIR:./config} 指向它）。lingxi-server/config/ 只保留 checkstyle/（pom 引用）。
+#   若副本目录再次长出 yml，说明又漂移了 —— 立即拦截，避免「改一份不生效另一份」。
+DRIFT_DIR="${ROOT_DIR}/lingxi-server/config"
+DRIFT_FOUND=""
+for f in app db cache model tunnel; do
+  [ -f "${DRIFT_DIR}/${f}.yml" ] && DRIFT_FOUND="${DRIFT_FOUND} ${f}.yml"
+done
+if [ -n "${DRIFT_FOUND}" ]; then
+  bad "检测到配置副本漂移：lingxi-server/config/${DRIFT_FOUND} —— 单一来源应为 lingxi-ops/config，请删除副本"
+else
+  ok '配置单一来源：无 lingxi-server/config 副本（checkstyle/ 为构建配置，保留）'
+fi
+# 权威配置必须被应用实际加载：application.yml 的 import 须走 ${LX_CONFIG_DIR} 占位符
+if grep -q 'LX_CONFIG_DIR' "${ROOT_DIR}/lingxi-server/yuanshu/yuanshu-platform/src/main/resources/application.yml" 2>/dev/null; then
+  ok 'application.yml 经 ${LX_CONFIG_DIR} 解析配置目录（单一来源生效）'
+else
+  bad 'application.yml 未使用 ${LX_CONFIG_DIR} —— 配置仍会从 ./config 读副本'
 fi
 
 # ---------------------------------------------------------------- 7. 运维脚本
