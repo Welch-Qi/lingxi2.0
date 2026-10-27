@@ -120,11 +120,21 @@ CI 的 `contract-test` job 会探测 profile 是否存在：
 
 | 规则 | 值 |
 |---|---|
-| 需审批人数 | ≥1 名 |
+| 需审批人数 | **0 名**（单账号仓库，见下方说明） |
+| required_status_checks | 10 项（`qa-gate` / `arch-check` / `test:backend` / `test:frontend` / `coverage` / `isolation` / `security:sast` / `security:dependency` / `security:secrets` / `security:hardcode`） |
+| strict | ✅ 要求分支与 base 同步后才可合并 |
 | 自动合并 | 禁用 |
 | 强制推送 / 删分支 | 禁用 |
 | 线性历史 | 要求（堆叠链需保持线性） |
 | 必须解决对话 | 是 |
 
-**待补**：CI 首次在远端跑通后，应把 `required_status_checks` 指向本 workflow 的
-`qa-gate`（或各 job）—— 这样「CI 全绿才能合并」（规约 §3.8 W2）才从约定变成机制。
+**为何审批人数是 0**：GitHub 不允许 PR 作者批准自己的 PR。当前仓库仅有
+`Welch-Qi` 一个账号（既是 PR 作者又是唯一 admin），若把 `required_approving_review_count`
+设为 1，所有 PR 都会永久阻塞在「需他人审批」——这是结构性自锁，不是配置疏漏。
+因此单账号阶段把审批数设为 0，**把关全部交给 10 项 required status checks**，
+CI 不绿就合不进去。
+
+**待有第二个模块 Owner 账号后**，把 `main` 的 `required_approving_review_count` 改为 1
+（API：`PATCH /repos/{owner}/{repo}/branches/main/protection/required_pull_request_reviews`，
+body `{"required_approving_review_count":1}`），恢复「CI 全绿 + 人工审批」双条件。
+
