@@ -123,6 +123,11 @@ api 包只放 DTO / 接口 / 事件，禁止放实现
 - Commit：`{类型}({域}): {描述} #{任务号}`，类型 `feat / fix / refactor / test / docs / chore`
 - **禁止** `--no-verify` 绕过 hooks；**禁止** force push 主干
 - 合并需 ≥1 名模块 Owner 评审 + CI 全绿
+  - **机制现状**：仓库当前仅 `Welch-Qi` 一个账号，GitHub 不允许 PR 作者批准自己的 PR，
+    故分支保护的 `required_approving_review_count` 设为 **0**（否则所有 PR 永久阻塞），
+    **把关由 10 项 required status checks 承担**——CI 不绿合不进去。
+    「≥1 名 Owner 评审」目前仍是**人工约定**，由提交人自行在 PR 上留评审意见。
+    待第二个模块 Owner 账号到位后，把 `main` 的审批数改回 1 恢复双条件门禁。
 
 示例：`feat(cus): 客户线索批量导入与去重校验 #M0203`
 
@@ -153,6 +158,9 @@ api 包只放 DTO / 接口 / 事件，禁止放实现
   契约测试待 `contract-test` profile 就绪；隔离套件 ①~⑤ 待业务接口实现
   （当前 `LX_ISOLATION_SCOPE=db` 只跑 ⑥，跳过项记入报告 `skippedItems`）。
   待其落地后**必须改回全量**，不得长期以「跳过」充数。
+- **分支保护已落地**（5 个分支）：10 项 required status checks + strict + 禁自动合并 /
+  强推 / 删分支 + 线性历史 + 必须解决对话。**审批人数为 0**（单账号自锁，见 §六）。
+
 
 ---
 

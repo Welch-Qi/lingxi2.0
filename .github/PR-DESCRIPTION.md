@@ -261,7 +261,7 @@ main
 |---|---|
 | required_status_checks | **10 项**（qa-gate · arch-check · test:backend · test:frontend · coverage · isolation · security:sast · security:dependency · security:secrets · security:hardcode） |
 | strict | ✅ 要求分支与 base 同步后才可合并 |
-| 需审批人数 | **≥1 名**（含管理员，enforce_admins 已开） |
+| 需审批人数 | **0 名**（单账号仓库：GitHub 禁止作者批准自己的 PR，设 1 会永久阻塞；把关交给 10 项 required status checks） |
 | 自动合并 | **禁用** |
 | 强制推送 / 删分支 | **禁用** |
 | 线性历史 / 必须解决对话 | **要求** |
