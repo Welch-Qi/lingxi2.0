@@ -17,3 +17,24 @@ minimumReleaseAgeExclude:
 publicHoistPattern:
   - '*eslint*'
   - '*prettier*'
+
+# 传递依赖安全升级（规约 §4.9.6 门禁阈值「依赖漏洞 0 高危」）
+#
+# 背景：CI 的 Trivy 扫描检出 pnpm-lock.yaml 中 6 个高危漏洞，均为**传递依赖**，
+# 无法通过升级直接依赖解决，故用 overrides 强制传递依赖版本到修复版本：
+#   brace-expansion  CVE-2026-102276 → >=1.1.19 / >=2.1.5 / >=5.0.10
+#   follow-redirects CVE-2026-111755/111756 → >=1.16.1
+#   path-to-regexp   CVE-2026-4926 → >=8.4.0
+#   zod              CVE-2023-54404 → >=4.6.6
+#
+# ⚠️ pnpm 11 起，settings（含 overrides）只在 **pnpm-workspace.yaml** 读取，
+#    package.json 的 `pnpm` 字段已被忽略（实测有 WARN 提示）。
+overrides:
+  brace-expansion@<1.1.19: '>=1.1.19'
+  brace-expansion@<2.1.5: '>=2.1.5'
+  brace-expansion@<5.0.10: '>=5.0.10'
+  follow-redirects@<1.16.1: '>=1.16.1'
+  # 限定在 8.x 内（不跨主版本）：@ant-design/pro-layout 声明的是 ^8.x，
+  # 强升到 9.x 有兼容风险；8.4.0 已含修复（CVE-2026-4926）。
+  path-to-regexp@<8.4.0: '>=8.4.0 <9.0.0'
+  zod@<4.6.6: '>=4.6.6'

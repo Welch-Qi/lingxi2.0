@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.lingxi</groupId>
+    <artifactId>lingxi-server</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+    <relativePath>../..</relativePath>
+  </parent>
+
+  <artifactId>yuanshu-data-jobs</artifactId>
+  <packaging>jar</packaging>
+  <name>yuanshu-data-jobs</name>
+  <description>元枢数据任务进程（外部数据源拉取 / 清洗 / 实体归并批处理 / 指标刷新），独立部署进程、单实例运行</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>yuanshu-starter-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>yuanshu-starter-observability</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>yuanshu-starter-mybatis</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>yuanshu-starter-llm</artifactId>
+    </dependency>
+
+    <!--
+      L1 数据底座契约（DataSourceAdapter / 实体消歧规则 / 指标定义）。
+      仅允许 import com.yuanshu.dt.api.*，禁止依赖 yuanshu-data 的 app / domain / infra 包。
+      边界由 ArchUnit 校验（yuanshu-platform 的 ArchitectureRuleTest）。
+    -->
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>yuanshu-data</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>net.javacrumbs.shedlock</groupId>
+      <artifactId>shedlock-spring</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals><goal>repackage</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

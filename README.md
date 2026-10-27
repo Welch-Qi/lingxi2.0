@@ -1,7 +1,8 @@
 # 灵犀系统（Synapse X）· 代码仓
 
 > 面向中小制造企业出海经营的 AI-Native 数智化平台。
-> 本仓库为**单仓库（monorepo）**，托管于 GitHub [`Welch-Qi/lingxi2.0`](https://github.com/Welch-Qi/lingxi2.0)。
+> 本仓库为**单仓库（monorepo）**，承载**三产品**：灵犀（营销服智能体集群）、元枢（数智底座）已就位；开物（工业智能体集群）一期只登记契约不建目录（见《三产品功能归口对照表》）。
+> 托管于 GitHub [`Welch-Qi/lingxi2.0`](https://github.com/Welch-Qi/lingxi2.0)。
 > 2026-09-17 由「仓库组根 + 5 个独立子仓库」合并而来，各子系统提交历史完整保留；
 > 原子仓库的 `.git` 已归档至 `D:/work/_lingxi-subrepo-backup-20260917/`（可回滚）。
 
@@ -11,13 +12,28 @@
 
 | 目录 | 内容 | 技术栈 | 状态 |
 |---|---|---|---|
-| [`lingxi-server/`](lingxi-server/) | 后端 Monorepo（14 个 Maven 模块） | JDK 25 LTS · Spring Boot 4.1.1 · MyBatis-Plus · PostgreSQL 17 | 骨架就绪 |
-| [`lingxi-web/`](lingxi-web/) | 前端 Monorepo（pnpm workspace） | React 19 · Vite 7 · TypeScript 5.9 · Ant Design 5 | 骨架就绪 |
-| [`lingxi-data-worker/`](lingxi-data-worker/) | 数据采集与算法任务 | Python 3.13（独立 CI 流水线） | 一期空缺，仅占位 |
+| [`lingxi-server/`](lingxi-server/) | 后端 Monorepo（三产品：元枢 4 单体 + 灵犀 11 单体 + BOM + 2 独立进程） | JDK 25 LTS · Spring Boot 4.1.1 · MyBatis-Plus · PostgreSQL 17 | 骨架就绪 |
+| [`lingxi-web/`](lingxi-web/) | 前端 Monorepo（pnpm workspace：灵犀工作台 `lingxi-web` + 元枢管理台 `yuanshu-console` 两独立 app） | React 19 · Vite 7 · TypeScript 5.9 · Ant Design 5 | 骨架就绪 |
+| [`yuanshu-data-worker/`](yuanshu-data-worker/) | 元枢数据执行进程（采集 / 清洗 / 算法任务） | Python 3.13（独立 CI 流水线） | 一期空缺，仅占位 |
 | [`lingxi-ops/`](lingxi-ops/) | 运维脚本 · 配置模板 · CI 流水线 | Shell · YAML | 11 脚本 + CI 就绪 |
 | [`lingxi-docs/`](lingxi-docs/) | 文档库（**唯一权威源**） | Markdown · OpenAPI 3.0 | 五件套已落位 |
 
 根级三件套：`AGENTS.md`（AI 开发约定）· `contracts.md`（模块间契约索引）· `TASKS.md`（统一任务清单）
+
+### 一底两翼（三产品结构）
+
+```
+                       元枢 YUANSHU（数智底座 · 一底）
+   ┌──────────────────────────────────────────────────────┐
+   │ 大数据 yuanshu-data · 语义 yuanshu-semantic · 智能体工厂   │
+   │ yuanshu-agent-factory · 多租户会话权限 yuanshu-platform    │
+   └───────▲───────────────────────────────▲──────────────┘
+           │ 只经四类能力出口 API 契约调用       │ AgentRegistrationApi 注册
+      灵犀 LINGXI（营销服集群 · 一翼）      开物 KAIWU（工业集群 · 另一翼）
+   workbench/customer/.../configcenter   一期只登记契约，不建目录（二期接入）
+```
+
+> **硬约束**：① 元枢不承载业务（`com.yuanshu..` 禁依赖 `com.lingxi.{业务域}..`）；② 集群不建第二套底座能力（跨产品只依赖 `api`）；③ 存量 `lx.*` 事件前向兼容不改名（元枢新增 `ys.*`、开物预留 `kw.*`）。均由 ArchUnit 机器校验。
 
 ---
 
@@ -108,13 +124,14 @@ bash lingxi-ops/scripts/verify-skeleton.sh
 | 项 | 状态 |
 |---|---|
 | Git 仓库（单仓 monorepo，main 分支，21 个提交） | ✅ 已合并（5 个子仓库历史并入，提交身份 `Welch-Qi`） |
-| 后端模块目录（20 个：13 单体 + 5 Starter + 2 独立进程） | ✅ 已建，含 `package-info.java` 声明分层职责 |
+| 后端模块目录（三产品：`lingxi-server/yuanshu/**` 6 目录 + `lingxi-server/lingxi/**` 11 目录 + BOM + 5 Starter） | ✅ 已建，含 `package-info.java` 声明分层职责 |
 | BOM 版本锁定（`lingxi-dependencies`） | ✅ 已锁，全部版本经 Maven Central 核验 |
-| 五层分层骨架与 ArchUnit 规则 | ✅ `ArchUnit` 4 条规则进 CI |
+| 五层分层骨架与 ArchUnit 规则 | ✅ 分层方向规则进 CI（详见下行跨产品规则） |
 | Flyway 基线迁移（sys / dt / ag 三组） | ✅ 含 RLS 策略与自主度 CHECK 约束 |
-| 前端 11 路由分区 + 5 内部包 | ✅ 可 `pnpm dev` 起壳 |
+| ArchUnit 跨产品方向规则（元枢不依赖业务 / 集群只依赖 api） | ✅ 既有 4 条 + 新增 2 条方向规则进 CI |
+| 前端两 app（灵犀工作台 13 分区 + 元枢管理台 5 分区）+ 5 内部包 | ✅ 各自 `pnpm build` 可成壳 |
 | 12 脚本（11 运维 + 1 骨架校验）+ GitLab CI（7 阶段） | ✅ 已生成 |
-| 骨架自检 | ✅ `bash lingxi-ops/scripts/verify-skeleton.sh` → 通过 77 / 失败 0（另有 4 项文档缺口提醒） |
+| 骨架自检 | ✅ `bash lingxi-ops/scripts/verify-skeleton.sh` → 通过 97 / 失败 0（另有 9 项文档/子仓初始化缺口提醒） |
 | 业务功能实现 | ⬜ 待按 `TASKS.md` 分批派发 |
 
 > **换行符策略**：全部文本文件强制 LF（根级 `.gitattributes` 覆盖全仓，各子目录另有同名文件按路径前缀生效）。
@@ -131,7 +148,7 @@ bash lingxi-ops/scripts/verify-skeleton.sh
 
 | 红线 | 触发模式 | 为什么 |
 |---|---|---|
-| ① 认证与会话 | `lingxi-platform/auth/**` · `*SecurityConfig*` · `*TokenService*` · `*LoginController*` | 漏一个校验点即可绕过登录 |
+| ① 认证与会话 | `yuanshu-starters/yuanshu-starter-security/**` · `yuanshu-platform/auth/**` · `*SecurityConfig*` · `*TokenService*` · `*LoginController*` | 漏一个校验点即可绕过登录 |
 | ② 租户隔离与权限 | `*TenantInterceptor*` · `*DataScope*` · `*PermissionEvaluator*` · `*Casbin*` · rls-*.sql | 漏一个 `where tenant_id` 即跨租户泄露（P0） |
 | ③ 计费 / 配额 / 支付 | `billing/**` · `quota/**` · `payment/**` · `*CreditsService*` | 错一次即资损，不可逆 |
 

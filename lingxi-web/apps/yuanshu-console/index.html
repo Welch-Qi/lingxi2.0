@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0E7C86" />
+    <!-- 站点图标：缺这一行时浏览器会自动去要 /favicon.ico 并拿到 404 → 标签页空白 + 控制台一条红字 -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>元枢管理台 · Yuanshu Console</title>
+
+    <!--
+      字体（改造指引 2.3）：Manrope = 标题与数字（tabular-nums），Noto Sans SC = 正文。
+      数字用 Manrope 是签名元素之一，字体缺失会让看板失去"数字优先"的观感。
+      TODO(上线前)：改为自托管（@fontsource/manrope + Noto Sans SC 子集化），
+      避免依赖境外 CDN —— 国内网络不可达时会静默回退到微软雅黑，
+      虽不影响功能，但字距与字宽会和设计稿产生偏差。
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap"
+    />
+
+    <!-- 设计令牌在应用挂载前注入，避免首屏闪烁 -->
+    <script type="module" src="/src/main.tsx"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

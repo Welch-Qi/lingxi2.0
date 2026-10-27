@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    元枢（Yuanshu）—— 数智底座聚合 POM
+    定位：一底两翼之"底"。通源 —— 数据之源、语义之源、智能之源。
+    归口依据：《灵犀·开物·元枢三产品功能归口对照表-20260930》§3.2 / §6.4
+    四类公共能力：① 制造行业大数据 ② 制造行业语义管理 ③ 智能体工厂 ④ 多租户管理
+    硬约束：元枢不得承载业务界面与业务逻辑（架构规划 §4 约束1）；变更须前向兼容（约束3）。
+  -->
+  <parent>
+    <groupId>com.lingxi</groupId>
+    <artifactId>lingxi-server</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>yuanshu-parent</artifactId>
+  <packaging>pom</packaging>
+  <name>yuanshu</name>
+  <description>元枢数智底座 —— L0 平台 / L1 数据 / 语义管理 / 智能体工厂 / 运行时与数据进程</description>
+
+  <modules>
+    <module>yuanshu-platform</module>     <!-- L0 平台公共：认证 / IAM / 租户 / 审计（原 lingxi-platform）；启动模块 -->
+    <module>yuanshu-data</module>        <!-- L1 大数据：DT-01~07 / GM-01~12（原 lingxi-data） -->
+    <module>yuanshu-semantic</module>    <!-- 【新】语义管理：行业本体 / 术语编码 / 指标口径 / 行业包托管 / 知识引擎框架 -->
+    <module>yuanshu-agent-factory</module> <!-- 【新】智能体工厂：AC-01~09 / AG-07~09 治理面 / 提示词资产 -->
+    <module>yuanshu-agent-runtime</module> <!-- 智能体运行时，独立进程（原 lingxi-agent-runtime） -->
+    <module>yuanshu-data-jobs</module>   <!-- 数据任务进程，独立单实例（原 lingxi-data-jobs） -->
+  </modules>
+
+</project>

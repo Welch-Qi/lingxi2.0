@@ -1,0 +1,391 @@
+/* ==========================================================================
+   全局基础样式 + 全局签名元素（Aurora Sense 极光通感）
+   布局一律走 class，禁止在组件内写内联 style 做布局（技术规约2.0 §4.2.5）
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--lx-font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--lx-text-primary);
+  background: var(--lx-color-frost);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--lx-color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   签名字段 1：数字优先 —— 所有数值/百分比/编码/日期必须加 .lx-num
+   为什么强制：不统一则表格与看板数字宽度抖动，无法纵向对齐
+   -------------------------------------------------------------------------- */
+.lx-num {
+  font-family: var(--lx-font-numeric);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  /* 数字/日期/编码是原子单位，宽度差几像素就会被折断成「2025-03- / 12」——
+     既然已经用 tabular-nums 保证等宽，就不该再允许它断行。 */
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   签名字段 2：顶部极光色带（全站固定 3px，14s 缓慢漂移）
+   放在根 layout 第一个子元素；所有 sticky 元素 top 偏移必须为 3px
+   -------------------------------------------------------------------------- */
+.lx-aurora {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--lx-aurora-height);
+  z-index: 100;
+  pointer-events: none;
+  background: var(--lx-grad-aurora);
+  background-size: 200% 100%;
+  animation: lx-aurora-drift 14s ease-in-out infinite;
+}
+
+@keyframes lx-aurora-drift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   签名字段 3：玻璃拟态
+   禁止改成实心纯白/纯深色，否则失去通透感（改造指引第 8 章禁忌 2）
+   -------------------------------------------------------------------------- */
+.lx-glass {
+  background: var(--lx-color-card);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-lg);
+  box-shadow: var(--lx-shadow-card);
+}
+
+/* 在线脉冲点（状态栏 / 租户胶囊） */
+.lx-pulse-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--lx-color-success);
+  animation: lx-pulse-ring 2s infinite;
+}
+
+@keyframes lx-pulse-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(61, 154, 110, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(61, 154, 110, 0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   统一交互反馈（改造指引 3.3）
+   -------------------------------------------------------------------------- */
+.lx-hoverable {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.lx-hoverable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--lx-shadow-pop);
+  border-color: var(--lx-color-border-strong);
+}
+
+.lx-focusable:focus-visible {
+  outline: 3px solid var(--lx-color-primary-line);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   页面容器
+   -------------------------------------------------------------------------- */
+.lx-page {
+  /* 相对定位只为承载 .lx-page__floating：浮层要压在第一行正文上且不占行高 */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-content-gap);
+}
+
+/* 压在正文上的浮层（目前承载工作台右上角的智能体入口）。
+   不占行高是关键：占行高就等于在首行内容上方留出一条空白，
+   而这条空白正是"指标卡没顶到顶"的来源。
+   z-index 取 10：低于顶栏的 20（浮层与面板滚到顶栏下就该被顶栏盖住），
+   高于正文里其余元素（正文的正常流元素默认 auto）。
+   抬高的是外层容器，面板自己的 z-index:300 只在这个容器内部生效。 */
+.lx-page__floating {
+  position: absolute;
+  top: -12px;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+}
+
+.lx-page__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--lx-space-4);
+}
+
+/* 无标题页：页头只剩右侧操作区，靠右收口（否则 space-between 会把它甩到左边） */
+.lx-page__header--bare {
+  justify-content: flex-end;
+}
+
+.lx-page__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* 视觉隐藏、保留给读屏。用于"标题不该出现在画面上、但页面不能没有 h1"的场合。
+   clip-path 与 clip 双写：前者是标准做法，后者兜住老 WebKit。 */
+.lx-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.lx-page__title {
+  margin: 0;
+  font-family: var(--lx-font-display);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--lx-color-ink);
+}
+
+.lx-page__subtitle {
+  font-size: 12.5px;
+  color: var(--lx-color-muted);
+}
+
+/* 标题右侧的操作区（导出、时间范围切换等） */
+.lx-page__extra {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-2);
+  flex: none;
+}
+
+.lx-page__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-content-gap);
+}
+
+/* 次要说明文字（表格内二级信息、状态栏旁注） */
+.lx-muted {
+  color: var(--lx-text-muted);
+  font-size: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   章节头（章节标题 + 副标题 + 右侧操作）
+   -------------------------------------------------------------------------- */
+.lx-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-2);
+}
+
+/* 与 .lx-worklist__head 同一类问题、同一套解法：标题与右侧入口 nowrap 不许折，
+   压缩只会落在副说明一段上；副说明放不下就整句下沉到第二行（下沉后撑满整行）。
+   客户360 的侧栏只有 320px，英文标题「Customer profile」原先被折成两行。 */
+.lx-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--lx-space-3);
+}
+
+.lx-section__title {
+  margin: 0;
+  font-family: var(--lx-font-display);
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--lx-color-ink);
+}
+
+.lx-section__sub {
+  flex: 1 1 200px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--lx-color-muted);
+}
+
+.lx-section__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lx-section__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: 999px;
+  background: var(--lx-color-card-solid);
+  font-size: 12.5px;
+  white-space: nowrap;
+  color: var(--lx-color-ink);
+  cursor: pointer;
+}
+
+.lx-section__action:hover {
+  border-color: var(--lx-color-primary-line);
+  color: var(--lx-color-primary);
+}
+
+.lx-section__more {
+  margin-left: auto;
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--lx-color-primary);
+}
+
+.lx-section__more:hover {
+  text-decoration: underline;
+}
+
+/* 章节头里的动作按钮（如「沟通记录」）：带图标的实心小按钮，
+   与右边的文字链 `.lx-section__more` 是两种不同性质——一个是动作、一个是下钻入口。
+   `flex-shrink:0` 不可省：标题行在窄容器里会折行，按钮被压扁就没人认得出它是什么。 */
+.lx-section__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 4px 12px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-surface);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--lx-color-ink);
+}
+
+.lx-section__action:hover {
+  border-color: var(--lx-color-primary);
+  color: var(--lx-color-primary);
+}
+
+/* --------------------------------------------------------------------------
+   加载态
+   -------------------------------------------------------------------------- */
+.lx-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-2);
+  align-items: center;
+  padding: var(--lx-space-6);
+}
+
+.lx-loading__text {
+  color: var(--lx-text-muted);
+  font-size: 13px;
+}
+
+/* --------------------------------------------------------------------------
+   响应式降级（改造指引 7.5）
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .lx-page__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* 转成竖排后对齐由 align-items 管，--bare 的靠右要在这里重新声明一次 */
+  .lx-page__header--bare {
+    align-items: flex-end;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-aurora,
+  .lx-pulse-dot {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   版式压缩（2026-09-30）：除工作台（/workbench）外，指标卡与快捷功能入口模块
+   高度收紧一点，让一屏容纳更多关键内容。
+   作用域用 <main data-route> 排除工作台：工作台经营总览 KPI/面板保持原高度。
+   -------------------------------------------------------------------------- */
+.lx-content:not([data-route='workbench']) .lx-kpi {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.lx-content:not([data-route='workbench']) .lx-actionbar {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.lx-content:not([data-route='workbench']) .lx-navgrid {
+  padding: 10px;
+}
+
+.lx-content:not([data-route='workbench']) .lx-navgrid__item {
+  padding: 10px;
+}
+
+.lx-content:not([data-route='workbench']) .lx-assetgrid .lx-asset {
+  padding: 9px;
+}

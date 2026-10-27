@@ -52,21 +52,27 @@ else
   bad '.gitignore 缺失，无法保证 .env 不入库'
 fi
 
-# ---------------------------------------------------------------- 2. 后端模块
-title '[2/9] 后端 Maven 模块（口径：14 = 11 业务 + data + platform + BOM）'
+# ---------------------------------------------------------------- 2. 后端模块（三产品：元枢底座 + 灵犀集群）
+title '[2/9] 后端 Maven 模块（口径：单体 15 = 元枢 4 + 灵犀 11；另有 BOM 与 2 独立进程）'
 BIZ_MODULES="workbench customer product order service marketing intel analytics agent knowledge configcenter"
-for m in ${BIZ_MODULES}; do need_dir "lingxi-server/lingxi-${m}"; done
-need_dir 'lingxi-server/lingxi-data'
-need_dir 'lingxi-server/lingxi-platform'
+for m in ${BIZ_MODULES}; do need_dir "lingxi-server/lingxi/lingxi-${m}"; done
+need_dir 'lingxi-server/yuanshu/yuanshu-platform'
+need_dir 'lingxi-server/yuanshu/yuanshu-data'
+need_dir 'lingxi-server/yuanshu/yuanshu-semantic'
+need_dir 'lingxi-server/yuanshu/yuanshu-agent-factory'
 need_dir 'lingxi-server/lingxi-dependencies'
+need_dir 'lingxi-server/yuanshu'          # 元枢中间聚合 POM
+need_dir 'lingxi-server/lingxi'           # 灵犀中间聚合 POM
 BIZ_COUNT=$(printf '%s\n' ${BIZ_MODULES} | wc -l | tr -d ' ')
-ok "业务模块计数 = ${BIZ_COUNT}（期望 11）"
-if [ "${BIZ_COUNT}" -ne 11 ]; then bad "业务模块数量口径不符（实际 ${BIZ_COUNT}，期望 11）"; fi
+ok "灵犀业务模块计数 = ${BIZ_COUNT}（期望 11）"
+if [ "${BIZ_COUNT}" -ne 11 ]; then bad "灵犀业务模块数量口径不符（实际 ${BIZ_COUNT}，期望 11）"; fi
+# 开物一期不建任何目录（归口表 §6.4）；出现 kaiwu 目录即为越界
+if [ -d "${ROOT_DIR}/lingxi-server/kaiwu" ]; then bad '禁止项：lingxi-server/kaiwu 目录已提前创建（开物一期只登记契约不建目录）'; else ok '开物目录基线：0（一期不建目录，符合归口表 §6.4）'; fi
 
-title '[2b/9] 公共 Starter 组（5 个）与独立进程（2 个）'
-for s in core security mybatis llm observability; do need_dir "lingxi-server/lingxi-starters/lingxi-starter-${s}"; done
-need_dir 'lingxi-server/lingxi-agent-runtime'
-need_dir 'lingxi-server/lingxi-data-jobs'
+title '[2b/9] 元枢底座 Starter 组（5 个）与元枢独立进程（2 个）'
+for s in core security mybatis llm observability; do need_dir "lingxi-server/yuanshu-starters/yuanshu-starter-${s}"; done
+need_dir 'lingxi-server/yuanshu/yuanshu-agent-runtime'
+need_dir 'lingxi-server/yuanshu/yuanshu-data-jobs'
 
 # ---------------------------------------------------------------- 3. 分层与 BOM
 title '[3/9] 模块内五层分层（api / app / domain / infra / starter）'
@@ -78,9 +84,9 @@ for pair in "workbench:wb" "customer:cus" "product:prd" "order:ord" "service:svc
   mod="${pair%%:*}"
   pkg="${pair##*:}"
   for layer in api app domain infra starter; do
-    if [ ! -d "${ROOT_DIR}/lingxi-server/lingxi-${mod}/src/main/java/com/lingxi/${pkg}/${layer}" ]; then
+    if [ ! -d "${ROOT_DIR}/lingxi-server/lingxi/lingxi-${mod}/src/main/java/com/lingxi/${pkg}/${layer}" ]; then
       LAYER_MISSING=$((LAYER_MISSING + 1))
-      warn "缺失分层目录：lingxi-${mod} → com/lingxi/${pkg}/${layer}"
+      warn "缺失分层目录：lingxi/lingxi-${mod} → com/lingxi/${pkg}/${layer}"
     fi
   done
 done
@@ -89,13 +95,22 @@ if [ "${LAYER_MISSING}" -eq 0 ]; then
 else
   bad "存在 ${LAYER_MISSING} 个缺失的分层目录（ArchUnit 与代码组织会错位）"
 fi
-# 数据底座与平台模块的各层
-for pair in "data:dt" "platform:sys"; do
+# 元枢底座模块的各层（包前缀 com.yuanshu，模块名与包名显式映射）
+for pair in "yuanshu-platform:sys" "yuanshu-data:dt" "yuanshu-semantic:sem" "yuanshu-agent-factory:ac"; do
   mod="${pair%%:*}"; pkg="${pair##*:}"
-  if [ -d "${ROOT_DIR}/lingxi-server/lingxi-${mod}/src/main/java/com/lingxi/${pkg}" ]; then
-    ok "lingxi-${mod} 分层根存在（com/lingxi/${pkg}）"
+  if [ -d "${ROOT_DIR}/lingxi-server/yuanshu/${mod}/src/main/java/com/yuanshu/${pkg}" ]; then
+    ok "${mod} 分层根存在（com/yuanshu/${pkg}）"
   else
-    bad "lingxi-${mod} 分层根缺失（com/lingxi/${pkg}）"
+    bad "${mod} 分层根缺失（com/yuanshu/${pkg}）"
+  fi
+done
+# 独立进程包根
+for pair in "yuanshu-agent-runtime:agentruntime" "yuanshu-data-jobs:datajobs"; do
+  mod="${pair%%:*}"; pkg="${pair##*:}"
+  if [ -d "${ROOT_DIR}/lingxi-server/yuanshu/${mod}/src/main/java/com/yuanshu/${pkg}" ]; then
+    ok "${mod} 包根存在（com/yuanshu/${pkg}）"
+  else
+    bad "${mod} 包根缺失（com/yuanshu/${pkg}）"
   fi
 done
 
@@ -153,6 +168,30 @@ else
   bad '路由注册表 app/router/modules.ts 缺失——新增分区将无法注册'
 fi
 
+# 元枢管理台（yuanshu-console）：与 lingxi-web 同层的独立 app，5 个管理台分区
+title '[5/9b] 元枢管理台前端（独立 app + 5 个分区）'
+CONSOLE_ROUTES="${ROOT_DIR}/lingxi-web/apps/yuanshu-console/src/routes"
+for r in overview iam governance prompts metrics; do
+  need_dir "lingxi-web/apps/yuanshu-console/src/routes/${r}"
+done
+need_file 'lingxi-web/apps/yuanshu-console/package.json'
+need_file 'lingxi-web/apps/yuanshu-console/src/app/router/modules.ts'
+if [ -d "${CONSOLE_ROUTES}" ]; then
+  CONSOLE_COUNT=$(find "${CONSOLE_ROUTES}" -mindepth 1 -maxdepth 1 -type d \
+    -not -name 'login' -not -name 'workspace-select' 2>/dev/null | wc -l | tr -d ' ')
+  if [ "${CONSOLE_COUNT}" -ne 5 ]; then
+    bad "元枢管理台分区数量 = ${CONSOLE_COUNT}（期望 5：overview/iam/governance/prompts/metrics）"
+  else
+    ok '元枢管理台分区数量 = 5（另含 login / workspace-select 中转页）'
+  fi
+fi
+# 开物前端一期不建 app（只登记预留分区名）
+if [ -d "${ROOT_DIR}/lingxi-web/apps/kaiwu-web" ] || [ -d "${ROOT_DIR}/lingxi-web/apps/kaiwu-console" ]; then
+  bad '禁止项：开物前端一期只登记预留分区，不建 app 目录'
+else
+  ok '开物前端基线：0 个 app'
+fi
+
 # ---------------------------------------------------------------- 6. 配置文件
 title '[6/9] 配置模板（5 个 yml，非敏感；密钥走 .env）'
 for f in app db cache model tunnel; do need_file "lingxi-ops/config/${f}.yml"; done
@@ -167,6 +206,26 @@ if grep -q 'Dockerfile\|docker-compose' "${ROOT_DIR}/lingxi-ops/config/app.yml" 
   bad '配置中出现容器化残留'
 else
   ok '配置中无容器化残留'
+fi
+# 配置单一来源（2026-10-23 收敛）：
+#   权威 = lingxi-ops/config（start-dev.sh / deploy.sh 均从此部署，application.yml 经
+#   ${LX_CONFIG_DIR:./config} 指向它）。lingxi-server/config/ 只保留 checkstyle/（pom 引用）。
+#   若副本目录再次长出 yml，说明又漂移了 —— 立即拦截，避免「改一份不生效另一份」。
+DRIFT_DIR="${ROOT_DIR}/lingxi-server/config"
+DRIFT_FOUND=""
+for f in app db cache model tunnel; do
+  [ -f "${DRIFT_DIR}/${f}.yml" ] && DRIFT_FOUND="${DRIFT_FOUND} ${f}.yml"
+done
+if [ -n "${DRIFT_FOUND}" ]; then
+  bad "检测到配置副本漂移：lingxi-server/config/${DRIFT_FOUND} —— 单一来源应为 lingxi-ops/config，请删除副本"
+else
+  ok '配置单一来源：无 lingxi-server/config 副本（checkstyle/ 为构建配置，保留）'
+fi
+# 权威配置必须被应用实际加载：application.yml 的 import 须走 ${LX_CONFIG_DIR} 占位符
+if grep -q 'LX_CONFIG_DIR' "${ROOT_DIR}/lingxi-server/yuanshu/yuanshu-platform/src/main/resources/application.yml" 2>/dev/null; then
+  ok 'application.yml 经 ${LX_CONFIG_DIR} 解析配置目录（单一来源生效）'
+else
+  bad 'application.yml 未使用 ${LX_CONFIG_DIR} —— 配置仍会从 ./config 读副本'
 fi
 
 # ---------------------------------------------------------------- 7. 运维脚本
@@ -201,7 +260,7 @@ for f in "lingxi-docs/02-data" "lingxi-docs/03-api" "lingxi-docs/04-tenant" "lin
   cnt=$(find "${ROOT_DIR}/${f}" -maxdepth 1 -name '*.md' -not -name '_index.md' 2>/dev/null | wc -l | tr -d ' ')
   if [ "${cnt}" -eq 0 ]; then warn "${f} 权威文档未产出（对应任务 M0000-008）"; fi
 done
-for repo in "lingxi-server" "lingxi-web" "lingxi-ops" "lingxi-data-worker" "lingxi-docs"; do
+for repo in "lingxi-server" "lingxi-web" "lingxi-ops" "yuanshu-data-worker" "lingxi-docs"; do
   if [ -d "${ROOT_DIR}/${repo}/.git" ]; then
     ok "${repo} 已初始化 Git（分支 $(cd "${ROOT_DIR}/${repo}" && git branch --show-current 2>/dev/null)）"
   else

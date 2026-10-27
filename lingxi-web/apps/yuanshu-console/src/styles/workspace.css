@@ -1,0 +1,3689 @@
+/* ==========================================================================
+   业务工作区组件样式（角色工作台化改造）
+   --------------------------------------------------------------------------
+   背景：11 个一级菜单原复用同一个「4指标 → 3智能体建议 → 3快捷操作 → 表格」
+   模板，各模块结构与内容高度一致，不符合角色定位。改造后每个模块按
+   「操作入口 → 今日工作队列 → 模块特有视图 → 主数据列表」组织，
+   智能体产出以行内标记呈现，不再单独占区块。
+   与 packages/lingxi-ui/src/Lx{ActionBar,WorkList,StageBoard,AssetGrid,AskBar}.tsx 一一对应。
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   业务操作入口条 LxActionBar（原则 3：每个业务保留自己的操作入口）
+   -------------------------------------------------------------------------- */
+.lx-actionbar {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-3);
+  padding: 12px 16px;
+}
+
+.lx-actionbar__primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 38px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-primary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #fff;
+  transition: all 0.15s ease;
+}
+
+.lx-actionbar__primary:hover {
+  background: var(--lx-color-primary-deep);
+  box-shadow: var(--lx-shadow-primary);
+}
+
+.lx-actionbar__items {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lx-space-2);
+  min-width: 0;
+}
+
+.lx-actionbar__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: var(--lx-radius);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--lx-color-slate);
+  transition: all 0.15s ease;
+}
+
+.lx-actionbar__item:hover {
+  border-color: var(--lx-color-primary-line);
+  background: var(--lx-color-card);
+  color: var(--lx-color-primary);
+}
+
+/* 成果说明：承载"智能体已经做了什么"，用成果数字替代独立的建议卡（原则 2）。
+ *
+ * 用块级文本流而非 inline-flex：note 的内容是「文本 + <b>数字</b> + 文本」的一句话，
+ * flex 会把每段文本当成独立 item 并排，中文文案短时看不出问题，
+ * 英文一长就折成多列、数字被挤到行首、与句子脱节。交给文本流排版，
+ * 换行才符合阅读顺序（数字始终嵌在句子里）。 */
+.lx-actionbar__note {
+  margin-left: auto;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: right;
+  color: var(--lx-color-muted);
+}
+
+.lx-actionbar__note b {
+  font-family: var(--lx-font-display);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--lx-color-ink);
+}
+
+@media (max-width: 768px) {
+  .lx-actionbar {
+    flex-wrap: wrap;
+  }
+
+  .lx-actionbar__note {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   工作队列 LxWorkList（原则 1：成为业务日常高频使用的工作区）
+   -------------------------------------------------------------------------- */
+.lx-worklist {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 头部最多四段（色点 / 标题 / 计数 / 副说明 / 查看全部）挤在一行。
+   窄容器里（客户中心右栏 ~410px）中文没有词间空格，被压缩时会断成「今日待跟 / 进」、
+   「查看全 / 部」这种竖排，比截断难看得多。故把压缩的承担者限定为副说明一段：
+   标题与链接 nowrap 不许折，副说明先省略号、位置真不够时整句下沉到第二行。 */
+.lx-worklist__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--lx-space-2);
+  padding: 14px 16px 10px;
+}
+
+.lx-worklist__dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.lx-worklist__dot--danger {
+  background: var(--lx-color-danger);
+}
+
+.lx-worklist__dot--accent {
+  background: var(--lx-color-accent);
+}
+
+.lx-worklist__dot--primary {
+  background: var(--lx-color-primary);
+}
+
+.lx-worklist__dot--success {
+  background: var(--lx-color-success);
+}
+
+.lx-worklist__title {
+  font-family: var(--lx-font-display);
+  font-size: 13.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--lx-color-ink);
+}
+
+.lx-worklist__count {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--lx-color-frost);
+  font-family: var(--lx-font-display);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--lx-color-slate);
+}
+
+/* 副说明是这一段里唯一可以退让的内容：能放下就正常显示，放不下先省略号。
+   注意 min-width 给到 60px —— 允许它一路缩到 0 的话，整段会变成看不见的空占位。 */
+.lx-worklist__sub {
+  flex: 1 1 auto;
+  min-width: 60px;
+  overflow: hidden;
+  font-size: 11.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--lx-color-muted);
+}
+
+.lx-worklist__more {
+  margin-left: auto;
+  flex-shrink: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--lx-color-primary);
+}
+
+.lx-worklist__more:hover {
+  text-decoration: underline;
+}
+
+.lx-worklist__items {
+  display: flex;
+  flex-direction: column;
+}
+
+.lx-worklist__row {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-3);
+  padding: 10px 16px;
+  border-top: 1px solid var(--lx-color-border);
+  transition: background 0.15s ease;
+}
+
+.lx-worklist__row:hover {
+  background: var(--lx-color-frost);
+}
+
+.lx-worklist__bar {
+  width: 3px;
+  align-self: stretch;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+
+.lx-worklist__bar--high {
+  background: var(--lx-color-danger);
+}
+
+.lx-worklist__bar--mid {
+  background: var(--lx-color-accent);
+}
+
+.lx-worklist__bar--low {
+  background: var(--lx-color-border-strong);
+}
+
+.lx-worklist__main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.lx-worklist__name {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--lx-color-ink);
+}
+
+.lx-worklist__meta2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lx-space-2);
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+/* 智能体产出标记：与人工数据同一行，尺寸刻意小于状态标签，不抢焦点（原则 2） */
+.lx-worklist__agent {
+  padding: 1px 7px;
+  border: 1px solid var(--lx-color-violet-soft);
+  border-radius: 999px;
+  background: var(--lx-color-violet-soft);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--lx-color-violet);
+}
+
+.lx-worklist__value {
+  flex-shrink: 0;
+  font-family: var(--lx-font-display);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--lx-color-slate);
+}
+
+.lx-worklist__value--danger {
+  color: var(--lx-color-danger);
+}
+
+.lx-worklist__value--accent {
+  color: var(--lx-color-amber-ink);
+}
+
+.lx-worklist__value--success {
+  color: var(--lx-color-success);
+}
+
+.lx-worklist__action {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 13px;
+  border: 1px solid var(--lx-color-primary-line);
+  border-radius: 999px;
+  background: var(--lx-color-primary-soft);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--lx-color-primary);
+  transition: all 0.15s ease;
+}
+
+.lx-worklist__action:hover {
+  background: var(--lx-color-primary);
+  color: #fff;
+}
+
+/* 需人工过一下的动作（分配 / 审核 / 建单）用实心，视觉上优先 */
+.lx-worklist__action--primary {
+  border-color: var(--lx-color-primary);
+  background: var(--lx-color-primary);
+  color: #fff;
+}
+
+.lx-worklist__action--primary:hover {
+  background: var(--lx-color-primary-deep);
+}
+
+.lx-worklist__empty {
+  margin: 0;
+  padding: 22px 16px;
+  font-size: 12.5px;
+  text-align: center;
+  color: var(--lx-color-muted);
+}
+
+@media (max-width: 768px) {
+  .lx-worklist__row {
+    flex-wrap: wrap;
+  }
+
+  .lx-worklist__value {
+    order: 3;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   阶段看板 LxStageBoard（商机阶段 / OTD 节点）
+   -------------------------------------------------------------------------- */
+.lx-stageboard {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 卡片行 + 行尾动作（商机中心 2026-09-25：高级筛选开关并入阶段行最右侧）。
+   不包这一层时开关只能另起一行 —— 那读起来像是"下面还有独立的一段筛选区"，
+   而不是"这条阶段线收尾处还有个开关"。 */
+.lx-stageboard__row {
+  display: flex;
+  align-items: flex-start;
+}
+
+/* 卡片列让宽：`min-width: 0` 是必须的，否则网格内容会把行尾开关顶出容器。 */
+.lx-stageboard__row > .lx-stageboard__flow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 顶距 14px 与 `.lx-stageboard__flow` 的内边距一致 → 开关与最左那张卡**顶对齐**；
+   不加就是垂直居中，读起来像飘在半空、与"同一行"的语义对不上。 */
+.lx-stageboard__aside {
+  display: flex;
+  flex-shrink: 0;
+  align-items: flex-start;
+  padding: 14px 14px 0 0;
+}
+
+.lx-stageboard__flow {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  /* 段间距 8 → 6px、段内左右内边距 13 → 12px（2026-09-24）：
+     商机中心加出第 10 张卡（首位「全部商机」）后每段窄了约 11px，
+     英文态三段标签被省略号截掉（「All opportunities」「Proposal & quote」）——
+     卡片是这个看板的**筛选控件**，标签被截就等于控件没名字，故把这两处各让一点。 */
+  gap: 6px;
+  padding: 14px;
+  overflow-x: auto;
+}
+
+.lx-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 104px;
+  padding: 11px;
+  border: 1px solid transparent;
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-frost);
+}
+
+.lx-stage__label {
+  overflow: hidden;
+  /* 11.5 → 11px（2026-09-24）：段标签是这个看板的**筛选控件名**，
+     英文态「All opportunities」「Proposal & quote」在 1682 视口下只差 2–4px 就被截掉，
+     降半号字即可放下；11px 也是段内 `.lx-stage__value` 已有的字号，不越出设计刻度。 */
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--lx-color-muted);
+}
+
+.lx-stage__count {
+  font-family: var(--lx-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--lx-color-ink);
+}
+
+.lx-stage__value {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--lx-color-muted);
+}
+
+.lx-stage--primary {
+  background: var(--lx-color-primary-soft);
+}
+
+.lx-stage--primary .lx-stage__count {
+  color: var(--lx-color-primary);
+}
+
+.lx-stage--secondary {
+  background: var(--lx-color-secondary-soft);
+}
+
+.lx-stage--secondary .lx-stage__count {
+  color: var(--lx-color-secondary);
+}
+
+.lx-stage--accent {
+  background: var(--lx-color-accent-soft);
+}
+
+.lx-stage--accent .lx-stage__count {
+  color: var(--lx-color-amber-ink);
+}
+
+.lx-stage--success {
+  background: var(--lx-color-success-soft);
+}
+
+.lx-stage--success .lx-stage__count {
+  color: var(--lx-color-success);
+}
+
+.lx-stage--danger {
+  background: var(--lx-color-danger-soft);
+}
+
+.lx-stage--danger .lx-stage__count {
+  color: var(--lx-color-danger);
+}
+
+/* 可点筛选的卡片（2026-09-24）：阶段分布与阶段筛选合并 —— 卡片本身就是分段控件。
+   为什么是 `<button>`：键盘可达、`aria-pressed` 都是白送的，不必自己补 tabindex/role。
+   `.lx-stage` 本来就带 1px 透明边框与内边距，换成按钮不需要重新定尺寸，
+   但要补回按钮默认的居中与字体继承（否则文字会居中、字号会掉回浏览器默认）。 */
+.lx-stage--button {
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.lx-stage--button:hover {
+  border-color: var(--lx-color-border-strong);
+}
+
+/* 选中态必须排在 tone 规则**之后**：成交侧（success 绿）/ 输单侧（danger 红）
+   的底色会盖掉选中态，那样"当前筛的是哪一段"就看不出来了。 */
+.lx-stage--button.is-active {
+  border-color: var(--lx-color-primary);
+  background: var(--lx-color-primary-soft);
+}
+
+.lx-stage--button.is-active .lx-stage__count {
+  color: var(--lx-color-primary);
+}
+
+.lx-stageboard__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-3);
+  padding: 0 14px 13px;
+}
+
+.lx-stageboard__caption {
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+@media (max-width: 768px) {
+  .lx-stageboard__flow {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* --------------------------------------------------------------------------
+   资产网格 LxAssetGrid（商品素材 / 知识资产 / 内容预览）
+   -------------------------------------------------------------------------- */
+.lx-assetgrid {
+  display: grid;
+  gap: var(--lx-space-3);
+}
+
+.lx-assetgrid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.lx-assetgrid--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.lx-assetgrid--5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .lx-assetgrid--4,
+  .lx-assetgrid--5 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .lx-assetgrid--3,
+  .lx-assetgrid--4,
+  .lx-assetgrid--5 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.lx-asset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-2);
+  padding: 11px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-lg);
+  background: var(--lx-color-card);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.lx-asset:hover {
+  transform: translateY(-2px);
+  border-color: var(--lx-color-border-strong);
+  box-shadow: var(--lx-shadow-pop);
+}
+
+.lx-asset__media {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-frost);
+}
+
+.lx-asset__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lx-asset__icon {
+  font-size: 26px;
+  color: var(--lx-color-primary);
+  opacity: 0.7;
+}
+
+.lx-asset__badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--lx-color-accent);
+  font-family: var(--lx-font-display);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
+.lx-asset__body {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--lx-space-2);
+}
+
+.lx-asset__title {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--lx-color-ink);
+}
+
+.lx-asset__sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+/* --------------------------------------------------------------------------
+   自然语言取数条 LxAskBar（经营分析 / 市场情报）
+   -------------------------------------------------------------------------- */
+.lx-askbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-2);
+  padding: 16px;
+  border: 1px solid var(--lx-color-primary-line);
+  border-radius: var(--lx-radius-lg);
+  background: linear-gradient(
+    120deg,
+    var(--lx-color-primary-soft),
+    rgba(255, 255, 255, 0.7) 62%,
+    var(--lx-color-secondary-soft)
+  );
+}
+
+.lx-askbar__label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--lx-color-primary);
+}
+
+.lx-askbar__form {
+  display: flex;
+  gap: var(--lx-space-2);
+}
+
+.lx-askbar__input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: 999px;
+  background: var(--lx-color-card-solid);
+  outline: none;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--lx-color-ink);
+  transition: all 0.15s ease;
+}
+
+.lx-askbar__input::placeholder {
+  color: var(--lx-color-muted);
+}
+
+.lx-askbar__input:focus {
+  border-color: var(--lx-color-primary-line);
+  box-shadow: 0 0 0 3px var(--lx-color-primary-soft);
+}
+
+.lx-askbar__submit {
+  flex-shrink: 0;
+  height: 40px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--lx-color-primary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #fff;
+  transition: all 0.15s ease;
+}
+
+.lx-askbar__submit:hover {
+  background: var(--lx-color-primary-deep);
+  box-shadow: var(--lx-shadow-primary);
+}
+
+.lx-askbar__examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lx-space-2);
+}
+
+.lx-askbar__example {
+  padding: 5px 12px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--lx-color-slate);
+  transition: all 0.15s ease;
+}
+
+.lx-askbar__example:hover {
+  border-color: var(--lx-color-primary-line);
+  color: var(--lx-color-primary);
+}
+
+.lx-askbar__caption {
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+/* --------------------------------------------------------------------------
+   工作区双栏：主工作区（宽）+ 侧栏（窄）
+   用于"队列为主、辅助信息在右"的模块（客户中心 / 订单交付 / 售后服务）
+   -------------------------------------------------------------------------- */
+.lx-workgrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  gap: var(--lx-space-4);
+  align-items: start;
+}
+
+.lx-workgrid--even {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.lx-workgrid__col {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--lx-space-4);
+}
+
+/*
+ * 侧栏内的指标栅格：统一降为 2×2。
+ * 原因：窄栏（约 456px）里沿用通栏的 4 列，每格仅约 102px，
+ * 指标名会折行、副文案被截断；若退回单列堆叠，4 张卡又会把侧栏撑到约 460px，
+ * 与左侧队列（约 240px）严重失衡，留下大片空白。
+ * 2×2 是这两个极端之间的唯一合理解，故由容器（而非页面）决定密度：
+ * 页面继续用 lx-grid--kpi-4 表达"这是一排指标"，栅格列数交给容器上下文。
+ */
+.lx-workgrid__col .lx-grid--kpi-4 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .lx-workgrid,
+  .lx-workgrid--even {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   分类导航（配置中心 / 知识中心：以"去哪配"而非"处理什么"组织的模块）
+   -------------------------------------------------------------------------- */
+.lx-navgrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--lx-space-2);
+  padding: 14px;
+}
+
+.lx-navgrid__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.lx-navgrid__item:hover {
+  border-color: var(--lx-color-primary-line);
+  background: var(--lx-color-frost);
+}
+
+.lx-navgrid__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-primary-soft);
+  font-size: 14px;
+  color: var(--lx-color-primary);
+}
+
+.lx-navgrid__icon--secondary {
+  background: var(--lx-color-secondary-soft);
+  color: var(--lx-color-secondary);
+}
+
+.lx-navgrid__icon--accent {
+  background: var(--lx-color-accent-soft);
+  color: var(--lx-color-amber-ink);
+}
+
+.lx-navgrid__icon--success {
+  background: var(--lx-color-success-soft);
+  color: var(--lx-color-success);
+}
+
+.lx-navgrid__icon--violet {
+  background: var(--lx-color-violet-soft);
+  color: var(--lx-color-violet);
+}
+
+.lx-navgrid__title {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-navgrid__desc {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--lx-color-muted);
+}
+
+.lx-navgrid__badge {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--lx-color-frost);
+  font-family: var(--lx-font-display);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--lx-color-slate);
+}
+
+/* --------------------------------------------------------------------------
+   数据源脚注
+   市场情报一期以免费源为主，界面必须显性标注数据源与覆盖范围，
+   避免用户把样本数据当全量结论（产品规划说明书 V2.1 §2.9 / intel module.config.ts）
+   -------------------------------------------------------------------------- */
+.lx-source-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+@media (max-width: 768px) {
+  .lx-navgrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ==========================================================================
+   复用灵犀 1.0 版式（工作台 / 市场情报 / 经营分析）
+
+   背景：这三个一级菜单的 1.0 实现（超级工作台、产品开发、经营分析）已被验证好用，
+   2.0 采取「结构照搬、数据换 2.0 口径」的方式复用。本节只放 1.0 版式里
+   2.0 样式表尚缺的部分；能直接复用的（.lx-kpi / .lx-agent / .lx-insight /
+   .lx-quick / .lx-panel / .lx-flow / .lx-agent-net）一律不重写。
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   栅格补充：经营分析首屏 7 张 KPI，以及 1.0 的几种主从分栏
+   -------------------------------------------------------------------------- */
+.lx-grid--kpi-7 {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.lx-split {
+  display: grid;
+  gap: var(--lx-space-4);
+}
+
+.lx-split--map {
+  grid-template-columns: 1.55fr minmax(0, 1fr);
+}
+
+.lx-split--rank {
+  grid-template-columns: 1.15fr minmax(0, 1fr);
+}
+
+.lx-split--panel {
+  grid-template-columns: 1.4fr minmax(0, 1fr);
+}
+
+/* 7 张 KPI 必须**排在一行**——这是 1.0 的版式，也是这一页"全链路一眼扫完"的前提。
+   原先 ≤1400px 就降成 4 列，而 1440 笔记本（侧栏 192px，内容区约 1248px）正好落在
+   这个区间 → 折成 4+3 两行。现在改成只收紧内距与字号，把"一行"一直守到 1000px
+   以下才降档：窄的是卡片，不是行数。 */
+@media (max-width: 1440px) {
+  .lx-grid--kpi-7 {
+    gap: var(--lx-space-3);
+  }
+
+  .lx-grid--kpi-7 .lx-kpi {
+    padding: 12px 12px;
+  }
+
+  .lx-grid--kpi-7 .lx-kpi__value {
+    font-size: 21px;
+  }
+
+  .lx-grid--kpi-7 .lx-kpi__label {
+    font-size: 11px;
+  }
+}
+
+/* 视口 ≤1240 时降为 4 列：再窄下去每张卡只剩 130px 上下，
+   标签要折行、涨跌胶囊会被挤掉，"一行 7 张"的收益就变成负的。
+   为什么阈值是 1240 而不是内容区自身的 1000：媒体查询量的是**视口**宽度，
+   而侧栏 192px + 内容左右 padding 各 24px = 240px 不参与 KPI 排版，
+   所以"内容区 ≥1000px" 对应的是"视口 ≥1240px"。 */
+@media (max-width: 1240px) {
+  .lx-grid--kpi-7 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .lx-split--map,
+  .lx-split--rank,
+  .lx-split--panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .lx-grid--kpi-7 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* --------------------------------------------------------------------------
+   LxWorkflowSteps 工作流步骤条（1.0《产品开发》三段视图切换）
+   -------------------------------------------------------------------------- */
+.lx-workflow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lx-space-3);
+  padding: var(--lx-space-3) var(--lx-space-4);
+}
+
+.lx-workflow__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.lx-workflow__mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-primary);
+  color: #fff;
+  font-size: 15px;
+}
+
+.lx-workflow__ident {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lx-workflow__title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-workflow__sub {
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-workflow__steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.lx-workflow__slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lx-workflow__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-frost);
+  color: var(--lx-color-slate);
+  font-family: var(--lx-font-body);
+  font-size: 11.5px;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+
+.lx-workflow__step:hover {
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+}
+
+.lx-workflow__step.is-active {
+  background: var(--lx-color-primary);
+  color: #fff;
+}
+
+.lx-workflow__arrow {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--lx-color-faint);
+}
+
+/* --------------------------------------------------------------------------
+   LxChipGroup 胶囊筛选组
+   -------------------------------------------------------------------------- */
+.lx-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.lx-chips__label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--lx-color-muted);
+}
+
+.lx-chip {
+  padding: 6px 14px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: 999px;
+  background: var(--lx-color-card-solid);
+  color: var(--lx-color-slate);
+  font-family: var(--lx-font-body);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.lx-chip:hover {
+  border-color: var(--lx-color-primary-line);
+  color: var(--lx-color-primary);
+}
+
+.lx-chip.is-active {
+  border-color: var(--lx-color-primary);
+  background: var(--lx-color-primary);
+  color: #fff;
+}
+
+/* --------------------------------------------------------------------------
+   LxFunnel 营销转化漏斗（1.0《经营分析》）
+   -------------------------------------------------------------------------- */
+.lx-funnel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 0 2px;
+}
+
+.lx-funnel__row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.lx-funnel__rate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 10.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-funnel__rate span {
+  padding: 2px 8px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: 999px;
+  background: var(--lx-color-card-solid);
+  color: var(--lx-color-slate);
+  font-variant-numeric: tabular-nums;
+}
+
+.lx-funnel__rate i {
+  width: 1px;
+  height: 12px;
+  background: var(--lx-color-border);
+}
+
+.lx-funnel__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 46px;
+  padding: 0 16px;
+  border-radius: var(--lx-radius-sm);
+  color: #fff;
+}
+
+.lx-funnel__label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lx-funnel__value {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   LxRankList 排行榜（1.0《经营分析》订单 Top10）
+   -------------------------------------------------------------------------- */
+.lx-rank {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lx-rank__row {
+  display: grid;
+  grid-template-columns: 18px minmax(88px, 1.1fr) 1.6fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.lx-rank__no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--lx-color-frost);
+  color: var(--lx-color-muted);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.lx-rank__no.is-top {
+  background: var(--lx-color-secondary);
+  color: #fff;
+}
+
+.lx-rank__label {
+  overflow: hidden;
+  font-size: 11.5px;
+  color: var(--lx-color-slate);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-rank__track {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--lx-color-frost);
+}
+
+.lx-rank__track i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.lx-rank__value {
+  min-width: 46px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+  text-align: right;
+}
+
+/* --------------------------------------------------------------------------
+   LxWorldMap 全球销量热度地图
+   -------------------------------------------------------------------------- */
+.lx-worldmap {
+  display: flex;
+  flex-direction: column;
+}
+
+.lx-worldmap__canvas {
+  width: 100%;
+}
+
+.lx-worldmap__legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 20px 2px;
+  font-size: 10.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-worldmap__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.lx-worldmap__legend-item i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+/* ECharts 浮层内部：背景/圆角/内边距由 extraCssText 提供（inline style 优先级更高） */
+.lx-worldmap__tip-name {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.lx-worldmap__tip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.lx-worldmap__tip-row i {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.lx-worldmap__tip-row b {
+  margin-left: auto;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------------
+   经营分析 ① 智能分析：输入框 + 按钮，报告就地展开在输入区下方（1.0《经营分析》）
+
+   为什么不用右下角浮层（2026-09-22 改）：浮层 400px 宽装不下一排数据卡，
+   而且它盖在热力图与漏斗上方——想看结论和图上数据是否对得上，得反复开关。
+   就地展开后，结论、数据卡、建议与页面上的图在同一屏，可以对照着读。
+   -------------------------------------------------------------------------- */
+.lx-ana__ask {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.lx-ana__askrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.lx-ana__who {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.lx-ana__avatar {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+  border-radius: var(--lx-radius-sm);
+}
+
+.lx-ana__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+.lx-ana__dot {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--lx-color-card-solid);
+  border-radius: 50%;
+  background: var(--lx-color-success);
+}
+
+.lx-ana__ident {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.lx-ana__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-ana__hint {
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-ana__form {
+  display: flex;
+  flex: 1;
+  min-width: 260px;
+  align-items: center;
+  gap: 8px;
+}
+
+.lx-ana__input {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-frost);
+  color: var(--lx-color-ink);
+  font-family: var(--lx-font-body);
+  font-size: 12.5px;
+  outline: none;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease;
+}
+
+.lx-ana__input::placeholder {
+  color: var(--lx-color-muted);
+}
+
+.lx-ana__input:focus {
+  border-color: var(--lx-color-primary-line);
+  background: var(--lx-color-card-solid);
+}
+
+.lx-ana__go {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-primary);
+  color: #fff;
+  font-family: var(--lx-font-body);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    filter 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.lx-ana__go:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.lx-ana__go:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.lx-ana__askfoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.lx-ana__cueslabel {
+  flex: none;
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-ana__cues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lx-ana__cue {
+  padding: 5px 10px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--lx-color-slate);
+  font-family: var(--lx-font-body);
+  font-size: 11px;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.lx-ana__cue:hover {
+  border-color: var(--lx-color-primary-line);
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+}
+
+.lx-ana__stamp {
+  margin-left: auto;
+  flex: none;
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+/* ---- 分析报告：就地展开在输入区下方，不弹浮层 ---- */
+.lx-ana__report {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--lx-color-border);
+  animation: lx-ana-unfold 0.26s ease;
+}
+
+@keyframes lx-ana-unfold {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lx-ana__reportbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lx-ana__reporttitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-ana__reporttitle .anticon {
+  color: var(--lx-color-accent);
+}
+
+.lx-ana__reportmeta {
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-ana__reportclose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-left: auto;
+  border: 0;
+  border-radius: var(--lx-radius-sm);
+  background: transparent;
+  color: var(--lx-color-slate);
+  cursor: pointer;
+}
+
+.lx-ana__reportclose:hover {
+  background: var(--lx-color-border);
+}
+
+.lx-ana__thinking {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--lx-color-muted);
+}
+
+.lx-ana__typing {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.lx-ana__typing i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--lx-color-muted);
+  animation: lx-ask-bounce 0.9s infinite;
+}
+
+.lx-ana__typing i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.lx-ana__typing i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes lx-ask-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+
+  50% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+.lx-ana__reportbody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 问 / 答。正文各自包在 span 里走正常文本流——铁律 10：
+   若让文本直接落在 flex 容器里，英文长句会被拆成多个匿名 item 并排折行。 */
+.lx-ana__qa {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lx-ana__qline,
+.lx-ana__aline {
+  display: flex;
+  gap: 8px;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.lx-ana__qtext,
+.lx-ana__atext {
+  flex: 1;
+  min-width: 0;
+}
+
+.lx-ana__qtext {
+  color: var(--lx-color-slate);
+}
+
+.lx-ana__atext {
+  color: var(--lx-color-ink);
+}
+
+.lx-ana__mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  border-radius: 5px;
+  font-family: var(--lx-font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.lx-ana__mark--q {
+  background: var(--lx-color-border);
+  color: var(--lx-color-slate);
+}
+
+.lx-ana__mark--a {
+  background: var(--lx-color-primary);
+  color: #fff;
+}
+
+/* 四张数据卡：顶部色带与 KPI 卡同源（五维色域内），保证色彩语义一致 */
+.lx-ana__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lx-ana__metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 11px 13px 12px;
+  border: 1px solid var(--lx-color-border);
+  border-top: 3px solid var(--lx-color-primary);
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-frost);
+}
+
+.lx-ana__metric--primary {
+  border-top-color: var(--lx-color-primary);
+}
+
+.lx-ana__metric--secondary {
+  border-top-color: var(--lx-color-secondary);
+}
+
+.lx-ana__metric--accent {
+  border-top-color: var(--lx-color-accent);
+}
+
+.lx-ana__metric--success {
+  border-top-color: var(--lx-color-success);
+}
+
+.lx-ana__metric--violet {
+  border-top-color: var(--lx-color-violet);
+}
+
+.lx-ana__metriclabel {
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-ana__metricvalue {
+  font-family: var(--lx-font-display);
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--lx-color-ink);
+}
+
+/* 单位紧跟数字，用 inline 而不是 flex，避免"3"与"单"被拆成两个 item */
+.lx-ana__metricunit {
+  margin-left: 2px;
+  font-family: var(--lx-font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--lx-color-muted);
+}
+
+.lx-ana__metricnote {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--lx-color-muted);
+}
+
+.lx-ana__detail {
+  display: grid;
+  grid-template-columns: 1.6fr minmax(0, 1fr);
+  gap: 12px;
+}
+
+.lx-ana__detailtitle {
+  margin-bottom: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-ana__findings {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: lx-finding;
+}
+
+.lx-ana__findings li {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--lx-color-slate);
+}
+
+.lx-ana__findings li::before {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border-radius: 50%;
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+  font-family: var(--lx-font-display);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  counter-increment: lx-finding;
+  content: counter(lx-finding);
+}
+
+.lx-ana__advice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 13px;
+  border: 1px solid var(--lx-color-border);
+  border-left: 3px solid var(--lx-color-accent);
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-accent-soft);
+}
+
+.lx-ana__advicetitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--lx-color-amber-ink);
+}
+
+.lx-ana__advicetext {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--lx-color-ink);
+}
+
+@media (max-width: 1100px) {
+  .lx-ana__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lx-ana__detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .lx-ana__metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   市场情报 · 机会卡（1.0《产品开发》02 产品开发）
+   -------------------------------------------------------------------------- */
+.lx-opp {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.lx-opp__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lx-opp__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-opp__meta {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-opp__score {
+  flex: none;
+  text-align: right;
+}
+
+.lx-opp__score b {
+  display: block;
+  font-family: var(--lx-font-display);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--lx-color-primary);
+}
+
+.lx-opp__score span {
+  font-size: 10px;
+  color: var(--lx-color-muted);
+}
+
+.lx-opp__section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lx-opp__section > h4 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--lx-color-slate);
+}
+
+.lx-opp__player {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.lx-opp__player > span:first-child {
+  overflow: hidden;
+  color: var(--lx-color-slate);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-opp__track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--lx-color-frost);
+}
+
+.lx-opp__track i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--lx-color-secondary);
+}
+
+.lx-opp__player b {
+  font-weight: 600;
+  color: var(--lx-color-ink);
+  text-align: right;
+}
+
+.lx-opp__note {
+  padding: 10px 12px;
+  border: 1px dashed var(--lx-color-border-strong);
+  border-radius: var(--lx-radius);
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--lx-color-slate);
+}
+
+.lx-opp__pains {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lx-opp__pain {
+  padding: 10px 12px;
+  border-radius: var(--lx-radius);
+}
+
+.lx-opp__pain--good {
+  background: var(--lx-color-success-soft);
+}
+
+.lx-opp__pain--bad {
+  background: var(--lx-color-danger-soft);
+}
+
+.lx-opp__pain h4 {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.lx-opp__pain--good h4 {
+  color: var(--lx-color-success);
+}
+
+.lx-opp__pain--bad h4 {
+  color: var(--lx-color-danger);
+}
+
+.lx-opp__pain ul {
+  margin: 0;
+  padding-left: 14px;
+  font-size: 11px;
+  line-height: 1.75;
+  color: var(--lx-color-slate);
+}
+
+.lx-opp__brief {
+  padding: 12px;
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-primary-soft);
+}
+
+.lx-opp__brief h4 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--lx-color-primary);
+}
+
+.lx-opp__brief p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.75;
+  color: var(--lx-color-slate);
+}
+
+.lx-opp__spec {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--lx-color-slate);
+}
+
+.lx-opp__spec b {
+  font-weight: 500;
+  color: var(--lx-color-muted);
+}
+
+@media (max-width: 768px) {
+  .lx-opp__pains {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* 趋势指数卡（01 市场趋势右栏）：品类名 + 环比 + 指数条 */
+.lx-trendcard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lx-trendcard__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   市场情报 · 创意卡（1.0《产品开发》03 产品创意）
+   -------------------------------------------------------------------------- */
+.lx-idea {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.lx-idea__cover {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 150px;
+  background: linear-gradient(135deg, var(--lx-color-primary-soft), var(--lx-color-secondary-soft));
+  color: var(--lx-color-primary);
+  font-size: 22px;
+}
+
+.lx-idea__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.lx-idea__badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.lx-idea__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+
+.lx-idea__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-idea__sub {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-idea__specs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  font-size: 11px;
+}
+
+.lx-idea__specs dt {
+  color: var(--lx-color-muted);
+}
+
+.lx-idea__specs dd {
+  margin: 2px 0 0;
+  font-weight: 500;
+  color: var(--lx-color-slate);
+}
+
+.lx-idea__specs dd.is-price {
+  color: var(--lx-color-primary);
+}
+
+.lx-idea__features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  /* 与上方"产品特色"标签的间距，从 JSX 的内联 style 收进样式表 */
+  margin-top: 6px;
+}
+
+/* --------------------------------------------------------------------------
+   工作台右上角智能体入口（今日要点播报）
+   -------------------------------------------------------------------------- */
+.lx-dock {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.lx-dock__fab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  /* 渐变收在深端：亮暗两态下都够深，白描边的头像才立得起来 */
+  background: linear-gradient(135deg, var(--lx-color-primary) 0%, var(--lx-color-primary-deep) 100%);
+  font-size: 19px;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(14, 124, 134, 0.3);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* 头像外留一圈白边，与渐变底一起构成"智能体徽章" */
+.lx-dock__fabimg {
+  display: block;
+  width: 34px;
+  height: 34px;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  object-fit: cover;
+  box-sizing: border-box;
+}
+
+.lx-dock__fab:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 9px 22px rgba(14, 124, 134, 0.38);
+}
+
+.lx-dock__fab.is-open {
+  box-shadow: 0 4px 12px rgba(14, 124, 134, 0.28);
+  transform: none;
+}
+
+/* 待读要点计数：描边取页面底色，做出从按钮上"挖"出来的观感 */
+.lx-dock__count {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border: 2px solid var(--lx-color-bg);
+  border-radius: 999px;
+  background: var(--lx-color-danger);
+  font-family: var(--lx-font-display);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 13px;
+  color: #fff;
+}
+
+.lx-dock__panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  width: 384px;
+  max-width: calc(100vw - 40px);
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: 16px;
+  background: var(--lx-color-card-solid);
+  box-shadow: 0 22px 50px rgba(15, 23, 42, 0.2);
+  overflow: hidden;
+}
+
+.lx-dock__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lx-space-3);
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--lx-color-border);
+}
+
+.lx-dock__headmain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.lx-dock__avatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--lx-color-frost);
+  overflow: hidden;
+}
+
+.lx-dock__avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 标题与说明竖排：并排会让英文态的两段文本黏成一句 */
+.lx-dock__ident {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lx-dock__title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-dock__sub {
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-dock__close {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 12px;
+  color: var(--lx-color-muted);
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.lx-dock__close:hover {
+  background: var(--lx-color-frost);
+  color: var(--lx-color-ink);
+}
+
+/* 播报视窗：固定高度 + 上下渐隐，让进出场不出现硬边 */
+.lx-dock__reel {
+  position: relative;
+  height: 244px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 20px,
+    #000 calc(100% - 20px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(to bottom, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+}
+
+/* 内容复制两份后上移 50%，首尾正好接续，形成无缝循环 */
+.lx-dock__track {
+  animation: lx-dock-reel 32s linear infinite;
+}
+
+/* 悬停即暂停：滚动是为了让人扫到，要读某一条时必须停得下来 */
+.lx-dock__reel:hover .lx-dock__track,
+.lx-dock__reel:focus-within .lx-dock__track {
+  animation-play-state: paused;
+}
+
+@keyframes lx-dock-reel {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+.lx-dock__grouplabel {
+  padding: 10px 14px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--lx-color-muted);
+}
+
+.lx-dock__item {
+  display: flex;
+  gap: 9px;
+  padding: 8px 14px;
+}
+
+.lx-dock__dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 50%;
+}
+
+.lx-dock__dot--trade {
+  background: var(--lx-color-secondary);
+}
+
+.lx-dock__dot--company {
+  background: var(--lx-color-primary);
+}
+
+.lx-dock__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.lx-dock__text {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--lx-color-ink);
+}
+
+.lx-dock__meta {
+  font-size: 10.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-dock__ask {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--lx-color-border);
+}
+
+.lx-dock__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: 10px;
+  background: var(--lx-color-frost);
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--lx-color-ink);
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.lx-dock__input::placeholder {
+  color: var(--lx-color-muted);
+}
+
+.lx-dock__input:focus {
+  border-color: var(--lx-color-primary);
+  background: var(--lx-color-card-solid);
+  outline: none;
+}
+
+.lx-dock__send {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--lx-color-primary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+
+.lx-dock__send:hover:not(:disabled) {
+  background: var(--lx-color-primary-deep);
+}
+
+/* 空输入时置灰：不用整体降透明度——浅青底 + 白字降透明后对比度极低，
+   "发送"两个字读不出来，看着像按钮坏了。改中性底 + 中性字，禁用态一眼可辨。 */
+.lx-dock__send:disabled {
+  background: var(--lx-color-frost);
+  color: var(--lx-color-muted);
+  cursor: not-allowed;
+}
+
+/* 回执走块级文本流：flex 行内容器会让"已转交 Sage："与被转述的原文黏成一句（英文态尤甚） */
+.lx-dock__sent {
+  display: block;
+  padding: 0 14px 12px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--lx-color-muted);
+}
+
+.lx-dock__sent b {
+  font-weight: 600;
+  color: var(--lx-color-primary);
+  word-break: break-word;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-dock__track {
+    animation: none;
+  }
+
+  /* 不滚动就得让人自己滚，否则下半截内容永远看不到 */
+  .lx-dock__reel {
+    overflow-y: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+
+
+/* ==========================================================================
+   客户中心（2026-09-23 重设计）
+   四条原则落在样式上：① 管理/跟进为主、数据仅作辅助；② 入口置顶且显眼；
+   ③ 分级分类可切换；④ 列表占主篇幅。
+   ========================================================================== */
+
+/* --- ① 顶部操作条（原则 2：新建与搜索是进页面第一件事）---
+   顺序：[新建客户][导入] 一组靠左，搜索框吃中间余量、紧跟「查询」按钮。
+   （2026-09-23 按用户要求撤下「导出」——它是列表页最低频的动作，
+   而这一行里每个按钮都在抢搜索框的宽度。）
+   允许换行是为了窄屏/英文态兜底 —— 几个元素里搜索框可压缩，
+   实在放不下时整组下沉而不是把按钮挤变形。 */
+.lx-entrybar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lx-space-3);
+}
+
+.lx-entrybar__create {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--lx-radius-md);
+  background: linear-gradient(135deg, var(--lx-color-primary) 0%, var(--lx-color-primary-deep) 100%);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: var(--lx-shadow-primary);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.lx-entrybar__create:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 7px 18px rgba(14, 124, 134, 0.34);
+}
+
+/* 搜索框吃掉中间剩余宽度：它是本页最高频的动作，不该被压成一个 280px 的胶囊 */
+.lx-entrybar__search {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-card-solid);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.lx-entrybar__search:focus-within {
+  border-color: var(--lx-color-primary);
+  box-shadow: 0 0 0 3px var(--lx-color-primary-soft);
+}
+
+.lx-entrybar__icon {
+  flex-shrink: 0;
+  font-size: 15px;
+  color: var(--lx-color-muted);
+}
+
+.lx-entrybar__search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--lx-color-ink);
+}
+
+.lx-entrybar__search input::placeholder {
+  color: var(--lx-color-faint);
+}
+
+.lx-entrybar__clear {
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  color: var(--lx-color-muted);
+  cursor: pointer;
+}
+
+.lx-entrybar__clear:hover {
+  color: var(--lx-color-slate);
+}
+
+.lx-entrybar__ghost {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  padding: 0 15px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-card-solid);
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--lx-color-slate);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.lx-entrybar__ghost:hover {
+  border-color: var(--lx-color-border-strong);
+  color: var(--lx-color-ink);
+}
+
+/* 「查询」：搜索的显式提交口。做成主色的实心小按钮而不是幽灵按钮 ——
+   它是这一行里唯一"按下去才生效"的动作，需要比导入/导出更明确的存在感。 */
+.lx-entrybar__query {
+  flex-shrink: 0;
+  height: 42px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-primary);
+  color: #fff;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.lx-entrybar__query:hover {
+  background: var(--lx-color-primary-deep);
+  box-shadow: var(--lx-shadow-primary);
+}
+
+/* --- ② 分段筛选条（原则 3 的修订版）---
+   一行放两件东西：左边是分段（客户中心是「客户类型 + 客户价值」两组），最右是高级筛选开关。
+   用连体分段而不是胶囊：胶囊之间是"并列的独立项"，分段表达的是"同一条线上的位置"，
+   连体更能传达"沿着这条线往前走"的意思。
+
+   2026-09-25：商机中心不再用这条样式 —— 它的阶段筛选做成了可点的阶段看板卡，
+   开关并入卡片行的最右侧（`.lx-stageboard__aside`），故先前那个"只剩一个开关"的
+   变体 `.lx-facetbar--end` 已无消费方，一并删掉。 */
+.lx-facetbar {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-3);
+  padding: 5px 6px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-card-solid);
+}
+
+/* --- 两个分段组同处一行（客户中心 2026-09-25：客户类型 + 客户价值）---
+   `.lx-seg` 默认 `flex: 1`：两组会各占一半，空间不够时各自的 `overflow-x: auto`
+   （滚动条被 `::-webkit-scrollbar { display: none }` 藏起来）会把尾部选项**静默吃掉** ——
+   用户看不到"还有几个选项没显示"，也没有滚动条提示。
+   故这里改成 `flex: 0 1 auto` + `overflow-x: visible`：两条分段按内容排，
+   空间真的不够时整条 facetbar 会被撑出容器，探针的 `docOverflowX` 会立刻报出来。
+   **宁可撑破被报出来，不可静默吃掉选项。** */
+.lx-facetbar--multi .lx-seg {
+  flex: 0 1 auto;
+  overflow-x: visible;
+}
+
+/* 分段组前面的组名（「客户类型」「客户价值分层」）——
+   两组都是"全部 | ……"起头，不给名字读不出在筛哪个维度。 */
+.lx-facetbar__label {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--lx-color-muted);
+}
+
+/* 开关贴右：`.lx-seg` 不再 `flex: 1`，没人把开关顶过去了。 */
+.lx-facetbar--multi .lx-facetbar__toggle {
+  margin-left: auto;
+}
+
+/* 窄容器里让分段横滚，而不是换行 —— 换行会把"一条线"打散成两行。
+   `min-width: 0` 是让它成为可收缩项，把宽度让给右侧开关（否则它会顶出去）。 */
+.lx-seg {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.lx-seg::-webkit-scrollbar {
+  display: none;
+}
+
+.lx-seg__item {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: var(--lx-radius-sm);
+  background: transparent;
+  color: var(--lx-color-slate);
+  font-family: inherit;
+  font-size: 12.5px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.lx-seg__item:hover {
+  background: var(--lx-color-frost);
+  color: var(--lx-color-ink);
+}
+
+.lx-seg__item.is-active {
+  background: var(--lx-color-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.lx-facetbar__toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-card-solid);
+  color: var(--lx-color-slate);
+  font-size: 15px;
+  cursor: pointer;
+  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+}
+
+.lx-facetbar__toggle:hover,
+.lx-facetbar__toggle.is-open {
+  border-color: var(--lx-color-primary);
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+}
+
+/* --- ③ 高级筛选面板（两行 · 下拉选择）---
+   12 栏网格铺成两行：第一行 编码名称 3 / 建档时间 4 / 客户类型 2 / 国家 3，
+   第二行 城市 / 意向 / 价值 / 动作各 3。
+
+   两个"为什么"值得记下来：
+   · 标签放在控件**上方**而不是左侧 —— 左侧标签列要固定吃掉 88px，而且
+     "字段名 | 控件"一行一项是上一版面板过高的原因：七个字段就是七行，
+     其中城市那行的胶囊组（14 个候选）还会自己再折一行，展开后直接把列表推到首屏之外
+     （用户点名的就是这条）。改版后实测面板高 **154px**（probe-layout BOX 段）。
+   · 控件用原生 <select> 而不是胶囊组 —— 胶囊组在"值多且只选一个"的场景下铺得最长
+     （国家 6 项、城市 14 项各占一整行），下拉固定占一格，且天然带键盘与移动端支持。 */
+.lx-filterpanel {
+  padding: 14px 18px 16px;
+}
+
+.lx-filterpanel__grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+
+.lx-filterpanel__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+/* 栏宽分配：客户中心 2026-09-25 精简后只剩 4 个字段 + 动作，压成**一行**（下面 `--cus` 组）；
+   线索中心的 5 个字段沿用这里的默认值（name 3 / dates 4，溢出的行自动换行）。 */
+.lx-filterpanel__cell--name {
+  grid-column: span 3;
+}
+
+.lx-filterpanel__cell--dates {
+  grid-column: span 4;
+}
+
+/* `--type` / `--intent` / `--tier` 三格随 2026-09-25 的客户中心改版撤下
+   （类型与价值提到常驻分段、意向不参与客户筛选），规则一并删除 —— 留着就是死样式。 */
+.lx-filterpanel__cell--country,
+.lx-filterpanel__cell--city {
+  grid-column: span 3;
+}
+
+/* 客户中心的筛选面板：4 个字段 + 查询/重置，2+3+2+2+3 = 12 栏，**一行排完**。
+   用容器修饰类而不是直接改上面的默认值 —— 那些默认值线索中心也在用
+   （它要排 5 个字段，本是两行的量），改默认值会连带把线索面板挤变形。 */
+.lx-filterpanel--cus .lx-filterpanel__cell--name {
+  grid-column: span 2;
+}
+
+.lx-filterpanel--cus .lx-filterpanel__cell--dates {
+  grid-column: span 3;
+}
+
+.lx-filterpanel--cus .lx-filterpanel__cell--country,
+.lx-filterpanel--cus .lx-filterpanel__cell--city {
+  grid-column: span 2;
+}
+
+.lx-filterpanel__label {
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+  white-space: nowrap;
+}
+
+.lx-filterpanel__input,
+.lx-filterpanel__select {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-card-solid);
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--lx-color-ink);
+}
+
+.lx-filterpanel__input:focus,
+.lx-filterpanel__select:focus {
+  border-color: var(--lx-color-primary);
+  outline: none;
+}
+
+/* 原生下拉去掉系统外观、自己画箭头（各平台默认外观差太多，混在极光通感里很跳）。
+   右侧预留 28px 给箭头；长选项走省略号，不把这一格撑开。 */
+.lx-filterpanel__select {
+  appearance: none;
+  padding-right: 28px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.lx-filterpanel__selectwrap {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+.lx-filterpanel__caret {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: var(--lx-color-muted);
+  pointer-events: none;
+}
+
+.lx-filterpanel__dates {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 两个日期输入各占一半（建档时间这一格是 4 栏宽，放得下两个 YYYY-MM-DD + 各一个日历按钮），
+   不跟单行输入框那样吃满整行 —— 拉太宽反而看不清起止是一对。 */
+.lx-filterpanel__dates .lx-filterpanel__input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.lx-filterpanel__dash {
+  color: var(--lx-color-muted);
+}
+
+/* 动作落在第二行最后一格。这一格没有标签，故用 flex-end 让它与其它格的**控件**底边对齐，
+   而不是与标签顶边对齐（否则两个按钮会浮在行的上半部）。 */
+.lx-filterpanel__actions {
+  grid-column: span 3;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* 「查询」是这一格里唯一让条件生效的动作，做成主色实心；
+   「重置」是逆向动作，走描边幽灵，避免两个实心按钮抢注意力。 */
+.lx-filterpanel__submit {
+  height: 32px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-primary);
+  color: #fff;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.lx-filterpanel__submit:hover {
+  background: var(--lx-color-primary-deep);
+  box-shadow: var(--lx-shadow-primary);
+}
+
+.lx-filterpanel__reset {
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-sm);
+  background: transparent;
+  color: var(--lx-color-slate);
+  font-family: inherit;
+  font-size: 12.5px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.lx-filterpanel__reset:hover {
+  background: var(--lx-color-frost);
+  color: var(--lx-color-ink);
+}
+
+/* 窄屏兜底：两行放不下时先降到每行两格，再降到每行一格。
+   12 栏网格的好处是这里只改 span、不用重排 DOM 顺序（DOM 顺序即阅读顺序）。 */
+@media (max-width: 1180px) {
+  .lx-filterpanel__cell,
+  .lx-filterpanel__actions {
+    grid-column: span 6;
+  }
+
+  .lx-filterpanel__actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 720px) {
+  .lx-filterpanel__cell,
+  .lx-filterpanel__actions {
+    grid-column: span 12;
+  }
+}
+
+/* --- ④ 客户列表（横跨整宽；用户 2026-09-23 撤下了右栏的跟进队列与结构分布）--- */
+.lx-listblock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-4);
+  min-width: 0;
+}
+
+/* 表格单元格：标题 + 副行竖排（不写这条会变成并排两段文本，英文态还会黏成一句） */
+.lx-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.lx-cell-title--sm {
+  font-size: 12.5px;
+  /* 联系人姓名（Camille Laurent）在 108px 列里会被折成两行 —— 人名是原子单位，
+     宁可省略也不该断成「Camille / Laurent」。 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 名称 + 分级徽标同行：徽标后于名称、名称承担省略。
+   不写成两个并排 span 自由伸展 —— 名称长的客户（Rheinland Speicher AG）会把徽标顶出行外。 */
+.lx-cell-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lx-cell-name .lx-cell-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-cell-name .lx-custier {
+  flex-shrink: 0;
+}
+
+/* 名称类单元格的内容宽度上界 —— 2026-09-24 起**不再需要**，故整条撤掉。
+
+   原先这里写 `max-width: 340px`，理由是「LxTable 给表格设的是 `width: max-content`，
+   每列实际宽度 = max(声明列宽, 单元格 max-content)，名称超长会把整表推过容器」——
+   那个理由成立，但**解法选错了层**：在叶子元素上一个一个量"实测可用宽度"当上界，
+   既会随视口/语言漂移（同一个类在 1440 与 1682 下算出的上界不同），
+   又会提前截断（列拿到富余宽度时，上界仍卡在老值上，白丢几十像素）。
+
+   现在这些表走 `LxTable` 的 `fit`（`table-layout: fixed` + 百分比列宽），
+   列宽的权威只有列定义里的 `width`，单元格自己就是上界 ——
+   叶子上再挂 `max-width` 只会**比单元格更早**截断，故一律撤掉。
+   省略号与 nowrap 已被 `styles/lingxi-ui.css` 的 `.lx-table--fit` 块统一接管。 */
+
+/* AntD 给单元格默认设了 `word-break: break-word`，于是表头会在**词中间**断行 ——
+   英文态「Lifecycle stage」被断成「Lifecycle st / age」，比折行难看得多。
+   改成只在空格处折行；只有整个词确实放不下时才允许硬断（overflow-wrap 兜底）。 */
+.lx-listblock .ant-table-cell,
+.lx-p360__opp .ant-table-cell,
+.lx-p360__follow .ant-table-cell {
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+/* --- 价值分层徽标（客户本体属性 S/A/B/C/D；与商机意向等级刻意不成套）--- */
+.lx-custier {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.lx-custier__code {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  font-family: var(--lx-font-display);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.lx-custier__name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11.5px;
+  color: var(--lx-color-slate);
+  text-overflow: ellipsis;
+}
+
+.lx-custier--s .lx-custier__code {
+  background: var(--lx-color-accent-soft);
+  color: var(--lx-color-amber-ink);
+}
+
+.lx-custier--a .lx-custier__code {
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+}
+
+.lx-custier--b .lx-custier__code {
+  background: var(--lx-color-secondary-soft);
+  color: var(--lx-color-secondary);
+}
+
+.lx-custier--c .lx-custier__code {
+  background: var(--lx-color-success-soft);
+  color: var(--lx-color-success);
+}
+
+/* 休眠层走中性灰：它是"暂停投入"而不是某一维语义，给彩色反而会读成某种正向状态 */
+.lx-custier--d .lx-custier__code {
+  background: var(--lx-color-frost);
+  color: var(--lx-color-muted);
+}
+
+/* --- 商机生命周期阶段徽标（商机属性；方角 + 另一套色，避免与分层混为一谈）--- */
+.lx-oppstage {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+/* 阶段徽标作为下钻按钮的形态（商机中心列表 /opportunity/:id）。
+   `<button>` 的 UA 默认样式（padding / background / border / font）会把这列的宽度
+   吃掉 —— 与 `.lx-cell-link` 同一处置（见 lingxi-ui.css 同名类的注释）。
+   这里只清残留，**不写 background / color**：那三种由下面的 `--open/--won/--lost`
+   决定，写在这里会因为后定义而把它们盖掉，等于白做一套配色。 */
+.lx-oppstage--btn {
+  font-family: inherit;
+  border: 0;
+  cursor: pointer;
+}
+
+.lx-oppstage--open {
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+}
+
+.lx-oppstage--won {
+  background: var(--lx-color-success-soft);
+  color: var(--lx-color-success);
+}
+
+.lx-oppstage--lost {
+  background: var(--lx-color-frost);
+  color: var(--lx-color-muted);
+}
+
+/* ==========================================================================
+   客户360 档案页（/customer/360/:id）
+   ========================================================================== */
+
+/* 页面级返回链接的容器 —— 在 hero 卡**之外**、正文第一行（2026-09-25 从卡内提出来）。
+   `align-self: flex-start` 是给 `.lx-page__body` 那个 flex 列用的：不给就横向拉满，
+   链接的点击热区会横跨整屏（看着像条空白可点的横条）。 */
+.lx-p360__topbar {
+  display: flex;
+  align-items: center;
+  align-self: flex-start;
+}
+
+.lx-p360__hero {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px 18px;
+}
+
+.lx-p360__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--lx-color-muted);
+  cursor: pointer;
+}
+
+.lx-p360__back:hover {
+  color: var(--lx-color-primary);
+}
+
+.lx-p360__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--lx-space-4);
+}
+
+/* 页头右侧动作组（2026-10-07 加「编辑客户」后从单个按钮变两个）。
+   为什么要成组而不是让两个按钮各自直接挂在 .lx-p360__head 下：那样 space-between
+   会把它们分到左右两端（客户名贴左、编辑贴右、新建商机又回到中间附近），
+   读起来像三个互不相干的入口。成组后两个动作贴在一起、整体靠右，
+   「改这家客户」与「给这家客户加生意」的从属关系也一眼可见。
+   flex-shrink:0 —— 客户名很长时宁可让它省略，也不能把动作按钮压成两行。 */
+.lx-p360__acts {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-2);
+  flex-shrink: 0;
+}
+
+/* 次要动作：描边。刻意不给渐变底 —— 页面已有且只有一个主按钮（新建商机），
+   两个都上主色会让"先点哪个"失去优先级，而「编辑」在多数时候不是本页的主要意图。 */
+.lx-p360__act {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-card-solid);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--lx-color-slate);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.lx-p360__act:hover {
+  color: var(--lx-color-primary);
+  border-color: var(--lx-color-primary-line);
+  background: var(--lx-color-primary-soft);
+}
+
+.lx-p360__idblock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lx-p360__name {
+  margin: 0;
+  font-family: var(--lx-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--lx-color-ink);
+}
+
+.lx-p360__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.lx-p360__code {
+  font-family: var(--lx-font-display);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--lx-color-muted);
+}
+
+/* 页头下半段：客户主体字段表 + 联系人左右分栏。
+   2026-09-23 按用户要求，把原先右栏的这两块合并进页头 ——
+   页头本来就回答"这个客户是谁"，客户主体十字段是同一件事的后半段，
+   分居上下两块要多费一次视线跳跃（用户原话：和上面的客户基础信息合并）。
+   分两栏而不是把联系人拆成一格：联系人是"人"、字段是"账"，分开更好认。 */
+.lx-p360__profile {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(260px, 26%, 320px);
+  gap: var(--lx-space-4);
+  padding-top: 14px;
+  border-top: 1px solid var(--lx-color-border);
+}
+
+.lx-p360__block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* 字段表：标签在上、值在下，四列平铺（8 个字段 = 两行）。
+   不用「标签 | 值」两列对齐 —— 标签列宽度由最长那条决定
+   （英文「Customer value tier」约 110px），在 860px 的栏里白占一整列。 */
+.lx-p360__specs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.lx-p360__spec dt {
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-p360__spec dd {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--lx-color-ink);
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 1180px) {
+  .lx-p360__profile {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lx-p360__specs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .lx-p360__specs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.lx-p360__facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--lx-space-3);
+  margin: 0;
+  padding-top: 13px;
+  border-top: 1px solid var(--lx-color-border);
+}
+
+.lx-p360__fact dt {
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-p360__fact dd {
+  margin: 3px 0 0;
+  font-family: var(--lx-font-display);
+  font-size: 19px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--lx-color-ink);
+}
+
+/* --- 商机 / 跟进记录 页签条 ---
+   两块内容互斥且都吃满整宽，用一组页签在同一位置切换（用户要求"商机列表可以切换到跟进记录"）。
+   布局沿用「标题与行内动作 nowrap、只让副说明承担压缩」的定式：
+   页签不可折行、被压缩的是右侧那句说明（放不下时整句下沉到第二行撑满）。 */
+.lx-p360__tabhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px var(--lx-space-3);
+}
+
+.lx-tabbar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-card-solid);
+}
+
+.lx-tabbar__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: var(--lx-radius-sm);
+  background: transparent;
+  color: var(--lx-color-slate);
+  font-family: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.lx-tabbar__item:hover {
+  background: var(--lx-color-frost);
+  color: var(--lx-color-ink);
+}
+
+.lx-tabbar__item.is-active {
+  background: var(--lx-color-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* 计数胶囊：两块内容的条数一眼可比，省得点进去才知道有几条跟进。
+   选中态是"白底 + 主色深字"而不是"半透明白底"——后者与主色混出的底色
+   对比度只有 3.3:1，11px 的字压在下面读不清。 */
+.lx-tabbar__count {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--lx-color-frost);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--lx-color-slate);
+}
+
+.lx-tabbar__item.is-active .lx-tabbar__count {
+  background: #fff;
+  color: var(--lx-color-primary-deep);
+}
+
+.lx-p360__tabsub {
+  flex: 1 1 240px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--lx-color-muted);
+}
+
+/* 商机表 / 跟进表都吃满整宽（撤下右栏之后的直接结果）。`min-width: 0` 保证
+   表格的横向滚动只发生在 .ant-table-content 里，不把外层撑开。 */
+.lx-p360__opp,
+.lx-p360__follow {
+  min-width: 0;
+}
+
+/* --- 商机表 / 跟进表的文本列（2026-09-25 换列；2026-09-24 换固定布局）---
+   这里原先给「商品名 / 人名 / BANT 散文 / 跟进小结」各挂了一个 `max-width`（186 / 104 /
+   112 / 620），口径是"按实测可用宽度给的兜底"。**整套已撤掉**：这些表现在走
+   `LxTable` 的 `fit`，列宽由列定义里的百分比决定、单元格自己就是上界，
+   叶子上再挂 px 上界只会比单元格更早截断。省略号与 nowrap 统一见
+   `styles/lingxi-ui.css` 的 `.lx-table--fit` 块（那里也解释了"上界必须按实测可用宽度定"
+   这条旧口径为什么是在错的层上解题）。 */
+
+/* BANT · 增换购窄列：BANT 散文让出压缩、徽标固定在右侧不被挤走。
+   徽标（「复购/增购」/「Repeat / upsell」）自带 nowrap，是这一列的 min-content 大头。 */
+.lx-p360__flags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lx-p360__bant {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.lx-p360__flags .lx-tag {
+  flex-shrink: 0;
+}
+
+/* 「跟进小结」原先挂 `max-width: 620px`，同上一并撤掉（固定布局下单元格即上界）。 */
+
+/* `min-width: 0` + 图标不缩：值可折而图标不动。
+   `overflow-wrap: anywhere` 是给**用户自填**值兜底的 —— 演示种子里的邮箱
+   最长 32 字符（约 206px），而编辑抽屉允许任意长度，不给 anywhere
+   一个不带断点的长串会溢出卡片（父级是 flex，没有 max-width 兜底）。 */
+.lx-p360__channel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--lx-color-slate);
+}
+
+.lx-p360__channel .anticon {
+  flex-shrink: 0;
+  color: var(--lx-color-muted);
+}
+
+.lx-p360__channel > *:not(.anticon) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* 联系人清单（2026-10-07 由单人块改清单）。
+   原先的 `.lx-p360__contact` / `__channels`（一列两段：姓名职务 / 电话邮箱）
+   随之撤下 —— 它们描述的是"一个人有两行"，而现在要表达"几个人各一行"。
+
+   每行两栏：左栏姓名 + 主联系人徽标 + 职务，右栏联系方式。
+   `min-width: 0` 是硬约束 —— 右栏的邮箱是自由文本，不设的话
+   长邮箱会把整行顶宽，而这一区在 hero 卡右半边、可容宽度有限。 */
+.lx-p360__contacts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 单列纵向堆叠（2026-10-07 由 `minmax(0,1fr) minmax(0,auto)` 两列改来）。
+
+   为什么不能用两列：`auto` 列按内容自然宽撑开，而邮箱
+   `j.brandt@nordwind-energie.de` 在 14px 下要206px —— 容器（360 页右栏）
+   实测只有 299px，`1fr` 那侧就被压到 44.8px。后果是姓名「Monika Weber」
+   折两行、职务「Procurement director」折三行，行高涨到 102~124px，
+   **相邻两行的文字直接叠在一起**（截图里 Katrin Hoffmann 压着下一行的邮箱）。
+
+   两害相权：299px 塞不下"姓名+职务"与"长邮箱"并排，那就上下排 ——
+   每一项都能占满整宽，且邮箱不必再靠省略号截断。
+   纵向堆叠还顺带解决了一个隐患：邮箱是用户自己填的，长度不可控，
+   两列布局下超长邮箱会把左列压到 0，两列布局永远防不住这个。 */
+.lx-p360__contactrow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--lx-color-frost);
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-frost);
+}
+
+/* 主联系人那一条给一层浅主色底 + 主色左边框：
+   纯靠一枚「主」文字徽标不够 —— 用户扫联系人区时找的是"哪个是要找的人"，
+   底色与左边框让它在余光里就能被认出来，徽标只负责说清"为什么是它"。 */
+.lx-p360__contactrow.is-primary {
+  border-color: var(--lx-color-primary-line);
+  background: var(--lx-color-primary-soft);
+  box-shadow: inset 2px 0 0 var(--lx-color-primary);
+}
+
+.lx-p360__contactmain {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  min-width: 0;
+}
+
+/* 姓名与主徽标同行、职务另起一行（不是三个元素挤在一个 wrap 行里）：
+   「姓名 · 职务」才是一个人是谁，徽标是状态而不是身份的一部分，
+   混在一行里读作「Monika Weber [主] Procurement director」需要再解析一次。 */
+.lx-p360__contactname {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lx-color-ink);
+}
+
+.lx-p360__contactrole {
+  /* `flex-basis: 100%` 强制另起一行：父级是 wrap flex，不给这个基准的话
+     「姓名 主徽标 职务」会挤在同一行，读作
+     「Monika Weber [主] Procurement director」得再解析一次才分得清姓名与职务。
+     姓名与徽标同一行才是对的 —— 那两个说的是"是谁、是不是主"。 */
+  flex: 0 0 100%;
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-p360__contactbadge {
+  padding: 0 5px;
+  border-radius: 3px;
+  background: var(--lx-color-primary);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.lx-p360__contactchannels {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* 跟进记录 2026-09-25 由卡片网格改成 LxTable（用户指定四列：跟进时间 / 跟进人 /
+   跟进小结 / 下次跟进时间）。原先 `.lx-follow` 一族（网格 + `.lx-follow__card` /
+   `__time` / `__title` / `__note`）随之整个删掉 —— 留着就是没人维护的死样式。
+   卡片版的取舍记录在 profile.tsx 的文件头注释里。 */
+
+/* --------------------------------------------------------------------------
+   线索中心 / 商机中心（2026-09-24：三层对象落到前端两个新分区）
+   三页（客户 / 线索 / 商机）共用 lx-entrybar / lx-facetbar / lx-filterpanel /
+   lx-listblock 四组布局类，这里只补各页**自己的**内容级规则。
+   -------------------------------------------------------------------------- */
+
+/* 线索 / 商机两页的文本列上界，2026-09-24 起**整组撤掉**。
+
+   这里原有五条 `max-width`：`.lx-oppcust` 166px、`.lx-oppprod` 152px、`.lx-oppowner`
+   104px、`.lx-leadlist .lx-oppprod` 168px、`.lx-leadlist .lx-cell-code` 102px，
+   口径都是"按本列**实测可用宽度**定上界"（而不是按声明列宽反推）。
+   那条口径本身没错 —— 在一个 `width: max-content` 的表格里只能这么办。
+   但现在这些表走 `LxTable` 的 `fit`（固定布局 + 百分比列宽），
+   "实测可用宽度"就是单元格宽度本身、且随视口连续变化，
+   在叶子上钉一个 px 数只会**比单元格更早截断**，故全部撤掉。
+   省略号 / nowrap / `max-width: 100%` 统一由 `styles/lingxi-ui.css` 的
+   `.lx-table--fit` 块接管；每个会被截断的单元格自己在 render 里带 `title` 兜全文。 */
+
+/* 「所属客户」是**按钮**而不是普通文本 —— 省略必须落在按钮自身：
+   放进内层 span 的话，按钮仍按内容撑宽，省略号不会出现。
+   （`text-align: left` 要留着：按钮默认居中，名称短时会被推到格子中间。） */
+.lx-opplist .lx-oppcust {
+  text-align: left;
+}
+
+/* 操作列的动作同行，**允许换行**是有意的：
+   固定布局（`fit`）下动作折行已经不会再顶宽整表了，但留着 `flex-wrap` 仍是对的 ——
+   列宽给窄了时宁可折两行，也不去改列宽、更不去横滚。
+
+   2026-09-25 补一条：**清掉按钮残留的 UA 默认 padding**。
+   `.lx-cell-link` 是自定义类，却没写 `padding`，于是浏览器给 `<button>` 的
+   `padding: 1px 6px` 一直留着 —— 每个动作凭空多出 12px。
+   清了之后英文「Follow up / Close」从 123px 降到 99px、
+   「Claim / Follow up / Discard」从 187px 降到 159px，换算成百分比列宽就少要 2–3 个百分点，
+   而这几格在 9–10 列的列表里是稀缺资源 —— 属于"修因不修表"：
+   把当年为了绕开 padding 而多留的宽度还回去，而不是去砍真正要看的列。
+
+   作用域只给 `.lx-oppops` 里的链接：单元格里的主体链接（客户名、商机名）保留原生
+   padding —— 那些是"点进去看详情"的主目标，热区不该跟着缩。 */
+.lx-oppops {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.lx-oppops .lx-cell-link {
+  padding: 0;
+}
+
+/* 线索评分：分值 + 分级同行。分级是分值的派生值、不是第二个指标，
+   故弱化处理（小字 + 次级色），避免被读成两把尺子。 */
+.lx-leadscore {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.lx-leadscore__grade {
+  color: var(--lx-color-muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+/* 商机阶段：只有「成交侧 / 输单侧」上色，中间阶段保持中性文本 ——
+   "某阶段数量多"本身不是好坏，上色只用来表达业务结论。 */
+.lx-oppstage--won {
+  color: var(--lx-color-success);
+  font-weight: 600;
+}
+
+.lx-oppstage--lost {
+  color: var(--lx-color-danger);
+}
+
+/* 跟进逾期（按意向等级 SLA 判定：A 级 7 天 / B 级 30 天；C、D 未定义不判）。 */
+.lx-oppdue {
+  color: var(--lx-color-danger);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .lx-entrybar {
+    flex-wrap: wrap;
+  }
+
+  .lx-entrybar__search {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .lx-p360__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ===== 跟进记录（/customer/follow，2026-09-27）=====
+ * 全页只有"超期红"一个强调色。跟进的失败永远发生在"忘了"，
+ * 所以这一页的所有注意力都要留给右侧超期队列，其余一律中性。
+ */
+.lx-cusfollow__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--lx-gap-md, 16px);
+  align-items: start;
+}
+
+.lx-cusfollow__tpl {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.lx-cusfollow__tpllabel {
+  color: var(--lx-color-muted);
+  font-size: 12.5px;
+  margin-right: 2px;
+}
+
+.lx-cusfollow__tplbtn,
+.lx-cusfollow__chip {
+  border: 1px solid var(--lx-color-border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  background: var(--lx-color-card-solid);
+  color: var(--lx-color-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.lx-cusfollow__chip.is-active,
+.lx-cusfollow__tplbtn.is-active {
+  border-color: var(--lx-color-primary);
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+}
+
+.lx-cusfollow__chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lx-cusfollow__next {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.lx-cusfollow__next.is-overdue {
+  color: var(--lx-color-danger);
+}
+
+.lx-cusfollow__days {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--lx-color-muted);
+}
+
+.lx-cusfollow__next.is-overdue .lx-cusfollow__days {
+  color: var(--lx-color-danger);
+}
+
+/* ── SLA 超期队列 ── */
+.lx-cusfollow__slalist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lx-cusfollow__slaitem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  border: 1px solid var(--lx-color-border);
+  border-left: 3px solid var(--lx-color-danger);
+  border-radius: var(--lx-radius-md);
+  padding: 8px;
+  background: var(--lx-color-card-solid);
+}
+
+.lx-cusfollow__slatop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.lx-cusfollow__slaname {
+  font-size: 12.5px;
+  color: var(--lx-color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lx-cusfollow__sladays {
+  font-size: 12px;
+  color: var(--lx-color-danger);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.lx-cusfollow__slameta {
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+  overflow-wrap: anywhere;
+}
+
+.lx-cusfollow__slabtn {
+  margin-top: 2px;
+  border: 1px solid var(--lx-color-primary-line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--lx-color-primary);
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.lx-cusfollow__slabtn:hover {
+  background: var(--lx-color-primary-soft);
+}
+
+.lx-cusfollow__hint {
+  color: var(--lx-color-muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+  margin: 10px 0 0;
+}
+
+@media (max-width: 1280px) {
+  .lx-cusfollow__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

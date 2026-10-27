@@ -10,15 +10,18 @@
 ```bash
 pnpm install
 
-pnpm dev            # 开发（需 VITE_API_BASE_URL 指向后端网关）
-pnpm build          # 生产构建（apps/lingxi-web 内为 tsc --noEmit && vite build）
+pnpm dev            # 开灵犀工作台（需 VITE_API_BASE_URL 指向后端网关）
+pnpm dev:console    # 开元枢管理台（端口 LX_CONSOLE_PORT，默认 5174）
+pnpm build          # 递归构建两 app（`pnpm -r build`，各自内为 tsc --noEmit && vite build）
+pnpm build:web      # 只构 lingxi-web
+pnpm build:console  # 只构 yuanshu-console
 pnpm preview        # 预览构建产物
 
 pnpm lint           # eslint .（含附录 D 规则 10/12 的 restricted 规则）
 pnpm lint:fix       # eslint . --fix
 pnpm typecheck      # pnpm -r --parallel exec tsc --noEmit（全包类型检查）
 pnpm format         # prettier --write
-pnpm test:unit      # vitest
+pnpm test:unit      # vitest（递归两 app；骨架期无单测时 passWithNoTests）
 pnpm test:e2e       # playwright
 pnpm gen:types      # 由后端 OpenAPI 契约生成 @lingxi/types
 

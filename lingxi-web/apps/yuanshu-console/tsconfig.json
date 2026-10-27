@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@lingxi/ui": ["../../packages/lingxi-ui/src/index.ts"],
+      "@lingxi/request": ["../../packages/lingxi-request/src/index.ts"],
+      "@lingxi/types": ["../../packages/lingxi-types/src/index.ts"],
+      "@lingxi/utils": ["../../packages/lingxi-utils/src/index.ts"],
+      "@lingxi/i18n": ["../../packages/lingxi-i18n/src/index.ts"]
+    },
+    "types": ["vite/client", "vitest/globals"]
+  },
+  "include": ["src", "vite.config.ts"]
+}

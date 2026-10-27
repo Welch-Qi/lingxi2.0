@@ -46,7 +46,7 @@ build:frontend:
     - pnpm -s run typecheck
     - pnpm -s run build
   artifacts:
-    paths: [lingxi-web/apps/lingxi-web/dist]
+    paths: [lingxi-web/apps/lingxi-web/dist, lingxi-web/apps/yuanshu-console/dist]
     expire_in: 1 day
 
 # ---------------------------------------------------------------- 2. 架构边界（强制）
@@ -56,9 +56,10 @@ arch-check:
   needs: [build:backend]
   script:
     - cd lingxi-server
-    - mvn $MAVEN_CLI_OPTS -pl lingxi-platform test -Dtest=ArchitectureRuleTest
+    - mvn $MAVEN_CLI_OPTS -pl :yuanshu-platform test -Dtest=ArchitectureRuleTest
   allow_failure: false
   # 规则：domain 不依赖框架 / api 不依赖实现 / infra 不依赖 app / Starter 不反向依赖业务
+  #       + 跨产品方向：元枢不依赖灵犀业务包 / 灵犀只依赖元枢 api 包（一底两翼硬约束 1/2）
 
 # ---------------------------------------------------------------- 3. 单测
 test:backend:
@@ -88,7 +89,7 @@ test:contract:
   needs: [build:backend]
   script:
     - cd lingxi-server
-    - mvn $MAVEN_CLI_OPTS -pl lingxi-platform -am verify -Pcontract-test
+    - mvn $MAVEN_CLI_OPTS -pl :yuanshu-platform -am verify -Pcontract-test
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
@@ -151,7 +152,7 @@ package:
   needs: [coverage, isolation, security:sast]
   script:
     - cd lingxi-server && mvn $MAVEN_CLI_OPTS -DskipTests package
-    - mkdir -p dist && cp lingxi-platform/target/*.jar dist/
+    - mkdir -p dist && cp yuanshu/yuanshu-platform/target/*.jar dist/
   artifacts:
     paths: [ dist/ ]
   rules:

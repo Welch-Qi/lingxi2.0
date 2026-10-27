@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.lingxi</groupId>
+    <artifactId>lingxi-server</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+    <relativePath>../..</relativePath>
+  </parent>
+
+  <artifactId>yuanshu-data</artifactId>
+  <packaging>jar</packaging>
+  <name>yuanshu-data</name>
+  <description>元枢 L1 大数据底座（DT- / GM-）：数据源接入 · 企业实体中心 · 数据资产 · 数据质量 · 即时沉淀 · 公域数据（指标口径 DT-05 能力已迁 yuanshu-semantic）</description>
+
+  <dependencies>
+    <!-- L0 公共能力（禁止自行实现，技术规约2.0 §4.8.1） -->
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>yuanshu-starter-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>yuanshu-starter-observability</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>yuanshu-starter-mybatis</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>yuanshu-starter-security</artifactId>
+    </dependency>
+
+    <!-- Web 与校验 -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+
+    <!-- 接口契约：OpenAPI 3.0 由代码注解产出，供文档库与前端类型生成（§4.3.2） -->
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+    </dependency>
+
+    <!-- 业务规则配置化执行（分配/分层/公海/OTD/SLA，§3.5 F5） -->
+    <dependency>
+      <groupId>com.yomahub</groupId>
+      <artifactId>liteflow-spring-boot-starter</artifactId>
+    </dependency>
+
+    <!-- 状态流转统一声明，禁止散落 if (status == ...)（§4.1.6） -->
+    <dependency>
+      <groupId>org.springframework.statemachine</groupId>
+      <artifactId>spring-statemachine-starter</artifactId>
+    </dependency>
+
+    <!-- 定时任务单实例执行（ShedLock，替代 XXL-Job） -->
+    <dependency>
+      <groupId>net.javacrumbs.shedlock</groupId>
+      <artifactId>shedlock-spring</artifactId>
+    </dependency>
+  </dependencies>
+</project>

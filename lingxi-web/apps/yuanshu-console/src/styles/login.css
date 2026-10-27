@@ -1,0 +1,55 @@
+/* ============================================================================
+   登录中转页样式（极光通感 Aurora Sense）
+   仅承载「跳转中 / 降级提示」两种状态，不含任何账号表单（凭据由身份平台承载）
+   ========================================================================== */
+
+.lx-login {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lx-space-5);
+  min-height: 100vh;
+  padding: var(--lx-space-6);
+  background:
+    radial-gradient(1100px 620px at 12% -10%, rgba(14, 124, 134, 0.18), transparent 62%),
+    radial-gradient(900px 520px at 92% 108%, rgba(46, 107, 230, 0.16), transparent 60%),
+    var(--lx-color-bg);
+}
+
+.lx-login__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--lx-space-3);
+  padding: var(--lx-space-6) var(--lx-space-6) var(--lx-space-5);
+  min-width: 320px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-lg);
+  background: var(--lx-color-surface);
+  box-shadow: var(--lx-shadow-card);
+  backdrop-filter: blur(16px);
+}
+
+.lx-login__mark {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--lx-radius);
+  background: conic-gradient(from 210deg, var(--lx-color-primary), var(--lx-color-info), var(--lx-color-purple), var(--lx-color-primary));
+  box-shadow: 0 0 0 6px rgba(14, 124, 134, 0.1);
+  animation: lx-login-breathe 3.6s ease-in-out infinite;
+}
+
+.lx-login__title {
+  margin: 0 !important;
+  letter-spacing: 2px;
+}
+
+@keyframes lx-login-breathe {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.94); opacity: 0.82; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-login__mark { animation: none; }
+}

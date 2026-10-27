@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.lingxi</groupId>
+    <artifactId>lingxi-server</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+    <relativePath>../..</relativePath>
+  </parent>
+
+  <artifactId>yuanshu-agent-factory</artifactId>
+  <packaging>jar</packaging>
+  <name>yuanshu-agent-factory</name>
+  <description>元枢 智能体工厂（③类公共能力）：智能体配置/调度/监控（AC-01~03）· 模型与技能与MCP治理（AC-04~09）· 协作总线/自主度/边界拦截（AG-07~09）· 提示词资产（KC-16~19/22）· 效能评估（OP-AG-01 / OP-BA-02）；灵犀六智能体与开物五场景智能体均须注册到本工厂</description>
+
+  <dependencies>
+    <!-- L0 公共能力（禁止自行实现，技术规约2.0 §4.8.1） -->
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>yuanshu-starter-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>yuanshu-starter-observability</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>yuanshu-starter-mybatis</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.lingxi</groupId>
+      <artifactId>yuanshu-starter-security</artifactId>
+    </dependency>
+
+    <!-- Web 与校验 -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+
+    <!-- 接口契约：OpenAPI 3.0 由代码注解产出，供文档库与前端类型生成（§4.3.2） -->
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+    </dependency>
+  </dependencies>
+</project>

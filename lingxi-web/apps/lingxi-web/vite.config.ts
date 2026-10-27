@@ -90,6 +90,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // 前端骨架期尚无单测文件：空测试视为通过（与 yuanshu-console 一致，避免 `pnpm -r test:unit` 误红）
+    passWithNoTests: true,
     coverage: { provider: 'v8', reporter: ['text', 'json'] },
   },
 });

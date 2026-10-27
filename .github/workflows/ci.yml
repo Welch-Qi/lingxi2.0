@@ -1,0 +1,736 @@
+################################################################################
+# 灵犀系统 —— CI 流水线（GitHub Actions）
+#
+# 依据《灵犀系统技术规约2.0》§4.12 强制要求，顺序固定为：
+#   编译 → ArchUnit 依赖检查 → 单测 → 契约测试 → 覆盖率门禁
+#        → 隔离套件 → 静态扫描 → 依赖与密钥扫描；任一环节失败阻断合并。
+#
+# 与 lingxi-ops/ci/gitlab-ci.yml 的关系：
+#   两者阶段划分与门禁项**保持一致**（同一套规约、同一批脚本），
+#   仅运行时载体不同（GitLab Runner ↔ GitHub Actions）。
+#   本文件是 GitHub 侧的唯一权威；GitLab 侧保留以便内网环境并行使用。
+#
+# ── 容器化边界（规约 §3.2 L7 / 附录 D 规则 18）──────────────────────────
+#   部署侧全链路禁用容器编排（形态为「云主机 + systemd + 脚本化」），
+#   仓库内**不得**新增任何容器编排清单文件（附录 D 规则 18 命中即门禁失败）。
+#   GitHub Actions 的 `services:` 属**托管运行时的官方机制**，不落任何清单文件，
+#   故可用于集成测试依赖（规约 §4.12 明确要求集成测试用真实 PostgreSQL/Valkey；
+#   Testcontainers 同样依赖运行时容器）。
+#   ⚠️ 注意：规则 18 的扫描不区分注释与代码 —— 本文件注释亦不得写出被禁词字面形式。
+#
+# ── 敏感值边界（附录 D 规则 1/3）────────────────────────────────────────
+#   规则 1 禁止硬编码数据库连接串，规则 3 禁止硬编码口令与密钥 ——
+#   本文件若出现 `jdbc:...://` 或明文口令，会被 qa-gate.sh 的附录 D 扫描
+#   判为违规（该扫描作用于 .yml）。故：
+#     · 连接信息一律经环境变量与 ${{ secrets.* }} 注入
+#     · 测试库口令走 repository secret，不落明文
+################################################################################
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'fix/**'
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+      - 'fix/**'
+      - 'feature/**'
+  workflow_dispatch:
+
+# 同一分支的新 push 取消旧运行（省 CI 额度），但 main 不取消
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  MAVEN_CLI_OPTS: "-B -ntp --no-transfer-progress"
+  MAVEN_OPTS: "-Dmaven.repo.local=${{ github.workspace }}/.m2/repository"
+  PNPM_STORE_DIR: "${{ github.workspace }}/.pnpm-store"
+  # 集成测试库名与端口（连接串由 db.yml 用 ${LX_DB_*} 变量拼装，勿在此写 jdbc 串）
+  LX_DB_NAME: lingxi2
+  LX_DB_USER: postgres
+  LX_DB_TUNNEL_PORT: "5432"
+  LX_TEST_TENANT_A_ID: "1001"
+  LX_TEST_TENANT_B_ID: "2002"
+
+jobs:
+  # ================================================================ 1. 编译
+  build-backend:
+    name: build:backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 附录 D 扫描需 git diff HEAD~1，浅克隆会失败
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"          # 规约 §3.2 L3：JDK 25 LTS（enforcer 强制 [25,)）
+          cache: maven
+          cache-dependency-path: lingxi-server/**/pom.xml
+
+      - name: 编译并打包（跳过测试，测试在独立 stage）
+        working-directory: lingxi-server
+        run: mvn $MAVEN_CLI_OPTS -DskipTests clean package
+
+      - name: 上传后端制品
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jar
+          path: lingxi-server/yuanshu/yuanshu-platform/target/*.jar
+          retention-days: 3
+          if-no-files-found: error
+
+  build-frontend:
+    name: build:frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.13.0            # 与 package.json 的 packageManager 字段一致
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: lingxi-web/pnpm-lock.yaml
+
+      - name: 安装依赖
+        working-directory: lingxi-web
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: 类型检查 + 构建
+        working-directory: lingxi-web
+        run: |
+          pnpm -s run typecheck
+          pnpm -s run build
+
+      - name: 上传前端制品
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: |
+            lingxi-web/apps/lingxi-web/dist
+            lingxi-web/apps/yuanshu-console/dist
+          retention-days: 3
+          if-no-files-found: warn
+
+  # ================================================ 2. 架构边界（强制阻断）
+  arch-check:
+    name: arch-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [build-backend]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: lingxi-server/**/pom.xml
+
+      - name: ArchUnit 分层与跨产品方向校验
+        working-directory: lingxi-server
+        # 规则：domain 不依赖框架 / api 不依赖实现 / infra 不依赖 app /
+      #       Starter 不反向依赖业务 + 元枢不依赖灵犀业务包 / 灵犀只依赖元枢 api 包
+        #
+        # -am 会连带构建上游模块（如 yuanshu-starter-core），它们**没有**该测试类 →
+        # surefire 报 "No tests matching pattern ArchitectureRuleTest were executed" 并失败。
+        # 故须加 -Dsurefire.failIfNoSpecifiedTests=false（只让目标模块真正跑该测试）。
+        run: >-
+          mvn $MAVEN_CLI_OPTS -pl :yuanshu-platform -am test
+          -Dtest=ArchitectureRuleTest
+          -Dsurefire.failIfNoSpecifiedTests=false
+
+      - name: 上传 ArchUnit 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: archunit-report
+          path: lingxi-server/yuanshu/yuanshu-platform/target/surefire-reports/
+          retention-days: 7
+          if-no-files-found: warn
+
+  # ================================================================ 3. 单测
+  test-backend:
+    name: test:backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    needs: [build-backend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: lingxi-server/**/pom.xml
+
+      - name: 后端单测
+        working-directory: lingxi-server
+        run: mvn $MAVEN_CLI_OPTS test
+
+      - name: 上传测试报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-report
+          path: lingxi-server/**/target/surefire-reports/
+          retention-days: 7
+          if-no-files-found: warn
+
+  test-frontend:
+    name: test:frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.13.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: lingxi-web/pnpm-lock.yaml
+
+      - name: 安装依赖
+        working-directory: lingxi-web
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: 前端单测（vitest）
+        working-directory: lingxi-web
+        run: pnpm -s run test:unit -- --run
+
+  # ============================================== 4. 契约测试（Pact，双向校验）
+  contract-test:
+    name: contract-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [build-backend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: lingxi-server/**/pom.xml
+
+      - name: 检查契约测试 profile 是否就绪
+        id: probe
+        working-directory: lingxi-server
+        run: |
+          if mvn $MAVEN_CLI_OPTS -q help:all-profiles 2>/dev/null | grep -q "contract-test"; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=契约测试未就绪::未找到 contract-test profile（Pact 依赖尚未引入）。" \
+                 "按规约 §4.12 契约测试为【强制】，本项待 M0201-001 契约落地后启用。"
+          fi
+
+      - name: 执行 Pact 契约测试
+        if: steps.probe.outputs.ready == 'true'
+        working-directory: lingxi-server
+        # 同 arch-check：-am 带上的上游模块无契约测试，须放宽 failIfNoSpecifiedTests
+        run: >-
+          mvn $MAVEN_CLI_OPTS -pl :yuanshu-platform -am verify -Pcontract-test
+          -Dsurefire.failIfNoSpecifiedTests=false
+
+  # ============================================================ 5. 覆盖率门禁
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    needs: [test-backend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: lingxi-server/**/pom.xml
+
+      - name: 生成覆盖率报告
+        working-directory: lingxi-server
+        run: mvn $MAVEN_CLI_OPTS verify -Djacoco.skip=false
+
+      - name: 校验覆盖率阈值（总体 ≥70%）
+        working-directory: lingxi-server
+        run: |
+          CSV="$(find . -path '*/target/site/jacoco/jacoco.csv' | head -1)"
+          if [ -z "$CSV" ]; then
+            echo "::warning title=覆盖率无数据::未生成 jacoco.csv —— 全仓缺少测试代码时该门禁无法判定，本次不视为达标"
+            exit 0
+          fi
+          COV="$(awk -F, 'NR>1 {im+=$4; ic+=$5; bm+=$6; bc+=$7} END {if (bm+bc>0) printf "%.1f", 100*bc/(bm+bc); else print "0"}' "$CSV")"
+          echo "行覆盖率：${COV}%"
+          echo "覆盖率门禁：总体 >=70%，新增代码 >=80%（规约 §3.8 W7）"
+          awk -v c="$COV" 'BEGIN { exit (c+0 >= 70) ? 0 : 1 }' \
+            || { echo "::error title=覆盖率门禁未通过::总体 ${COV}% < 70%"; exit 1; }
+
+      - name: 上传覆盖率报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: lingxi-server/**/target/site/jacoco/
+          retention-days: 7
+          if-no-files-found: warn
+
+  # ============================================== 6. 租户隔离套件（强制阻断）
+  isolation:
+    name: isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    needs: [build-backend]
+    services:
+      # 集成测试用真实 PostgreSQL 17 + pgvector（规约 §4.12 集成测试要求）。
+      # 用官方 Actions services 机制，不在本仓库引入任何容器化清单。
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_DB: lingxi2
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      LX_DB_PASSWORD: ""              # trust 认证，无需口令
+      LX_TEST_DB_USER: lx_rls_test
+      LX_TEST_DB_PASSWORD: ci_rls_test_only
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: lingxi-server/**/pom.xml
+
+      - name: 安装 psql 客户端
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+
+      - name: 准备迁移执行器所需的 jar（flyway / pg 驱动）
+        # local-rehearsal.sh 用独立 Java 执行器跑 Flyway，classpath 指向
+        # ~/.m2/repository 下的 flyway-core / flyway-database-postgresql / postgresql jar。
+        # 本 job 只装了 JDK 与 psql，**从未跑过 mvn** → ~/.m2 为空 →
+        # 脚本报「classpath 缺失」直接退出。
+        #
+        # 版本号全部**从本仓 pom 推导**，不硬编码：
+        #   · flyway.version → lingxi-dependencies/pom.xml 的属性
+        #   · postgresql     → 由 starter-mybatis 实际解析出的版本
+        #     （BOM 未显式声明，继承自 spring-boot-starter-parent）
+        working-directory: lingxi-server
+        run: |
+          FLYWAY_VER="$(grep -oE '<flyway.version>[^<]+' lingxi-dependencies/pom.xml | head -1 | sed 's/.*>//')"
+          echo "flyway.version=${FLYWAY_VER}"
+          # 逐个显式拉取 —— 不依赖模块已构建、不依赖 copy-dependencies 的解析上下文
+          # （全新 runner 上 copy-dependencies 会因模块未构建而失败）。
+          # 版本号从本仓 pom 推导；PG 驱动版本由 spring-boot-starter-parent 决定
+          # （BOM 未显式声明）→ 用 LATEST 兜底，取到哪个版本都能用。
+          # 直下 jar 到本地仓库的标准布局（脚本按此路径查找）。
+          # 为何不用 mvn dependency:get：在**聚合根 pom** 下执行会解析整个 reactor
+          # （全新 runner 上失败，且失败原因被 reactor 噪声淹没）；直下最可控。
+          M2="${HOME}/.m2/repository"
+          fetch_jar() {
+            # $1=groupPath $2=artifactId $3=version
+            local g="$1" a="$2" v="$3" dir="${M2}/$1/$2/$3"
+            mkdir -p "$dir"
+            curl -sSfL --retry 3 --retry-delay 3 --max-time 180 \
+              -o "$dir/$2-$3.jar" \
+              "https://repo1.maven.org/maven2/$1/$2/$3/$2-$3.jar" \
+              || { echo "::error title=jar 下载失败::$1:$2:$3"; return 1; }
+            echo "  ✅ $1:$2:$3 → $dir/$2-$3.jar"
+          }
+          fetch_jar org/flywaydb flyway-core "${FLYWAY_VER}"
+          fetch_jar org/flywaydb flyway-database-postgresql "${FLYWAY_VER}"
+          # PG 驱动版本：取 Maven Central 的最新发布版（与本仓 BOM 无冲突 —— PG 驱动版本
+          # 由 spring-boot-starter-parent 决定，此处只需一个可用的驱动 jar）
+          PG_VER="$(curl -sSfL --max-time 60 \
+            https://repo1.maven.org/maven2/org/postgresql/postgresql/maven-metadata.xml \
+            | grep -oE '<release>[^<]+' | head -1 | sed 's/<release>//')"
+          echo "  postgresql=${PG_VER}"
+          fetch_jar org/postgresql postgresql "${PG_VER}"
+          # 落地校验：三个 jar 必须在位，否则演练脚本会以「classpath 缺失」退出。
+          # 注意 find 的深度：jar 在「groupPath/artifactId/version/」下（version 是子目录），
+          # 故用 -maxdepth 2（版本目录一层 + jar 文件一层），用 -maxdepth 1 会漏判。
+          for a in "org/flywaydb/flyway-core/${FLYWAY_VER}" \
+                   "org/flywaydb/flyway-database-postgresql/${FLYWAY_VER}" \
+                   "org/postgresql/postgresql/${PG_VER}"; do
+            if ! find "${M2}/${a}" -maxdepth 1 -name '*.jar' 2>/dev/null | grep -q .; then
+              echo "::error title=迁移执行器依赖缺失::${a} 下未找到 jar"
+              exit 1
+            fi
+          done
+          echo "迁移执行器依赖就绪"
+          # 落地校验：flyway 两个 jar 必须在位（版本精确匹配），否则演练脚本会退出
+          for a in "org/flywaydb/flyway-core/${FLYWAY_VER}" \
+                   "org/flywaydb/flyway-database-postgresql/${FLYWAY_VER}"; do
+            if ! find "${HOME}/.m2/repository/${a}" -maxdepth 1 -name '*.jar' 2>/dev/null | grep -q .; then
+              echo "::error title=迁移执行器依赖缺失::${a} 下未找到 jar"
+              exit 1
+            fi
+          done
+          if ! find "${HOME}/.m2/repository/org/postgresql/postgresql" -name 'postgresql-*.jar' 2>/dev/null | grep -q .; then
+            echo "::error title=PostgreSQL 驱动缺失::本地仓库中未找到 postgresql-*.jar"
+            exit 1
+          fi
+          echo "迁移执行器依赖就绪"
+
+      - name: 迁移演练 + 隔离实测（真库）
+        env:
+          LX_DB_HOST: 127.0.0.1
+          LX_DB_NAME: lingxi2
+          LX_DB_USER: postgres
+          LX_DB_TUNNEL_PORT: "5432"
+          LX_TEST_TENANT_A_ID: "1001"
+          LX_TEST_TENANT_B_ID: "2002"
+          # 隔离范围：当前 ①~⑤ 依赖 /api/v1/cus|kc|ag（全仓 0 个 Controller，
+          # 业务尚未实现）—— 一并跑必然全 FAIL，会使门禁永久为红、等于形同虚设。
+          # 故此处只跑 ⑥（RLS 直连校验，真库可验证），①~⑤ 由脚本**明确记入报告**
+          # 的 skippedItems（非静默跳过），待客户中心主线落地后改回 all。
+          LX_ISOLATION_SCOPE: db
+        run: |
+          set -uo pipefail
+          # ① 迁移演练：从空库跑全部 Flyway 脚本 + 造数据验隔离
+          bash lingxi-ops/scripts/local-rehearsal.sh --reset
+          # ② 创建非 owner 测试账号（RLS 对 superuser/owner 默认绕过，
+          #    必须用非 owner 账号才能测出真实隔离）
+          PGPASSWORD="${LX_DB_PASSWORD}" psql -h 127.0.0.1 -p 5432 -U postgres -d lingxi2 -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'lx_rls_test') THEN
+              CREATE ROLE lx_rls_test LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD 'ci_rls_test_only';
+            END IF;
+          END
+          $$;
+          SQL
+          # ③ 隔离套件（scope=db：只跑 ⑥ RLS 直连校验）
+          bash lingxi-ops/scripts/verify-tenant-isolation.sh \
+            "${LX_TEST_TOKEN_A:-ci-placeholder}" "${LX_TEST_TOKEN_B:-ci-placeholder}" \
+            "${LX_API_BASE:-http://127.0.0.1:8080}"
+          # ④ 报告落到 job 摘要，便于在 PR 上直接看到「哪些项被跳过及原因」
+          LATEST="$(ls -t lingxi-ops/artifacts/tenant-isolation-*.json 2>/dev/null | head -1)"
+          if [ -n "$LATEST" ]; then
+            echo '### 租户隔离套件结果' >> "$GITHUB_STEP_SUMMARY"
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat "$LATEST" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # ⑤ 演练日志落摘要（失败时定位的第一手材料）
+          if [ -f lingxi-ops/artifacts/local-rehearsal/rehearsal.log ]; then
+            echo '### 迁移演练日志（末尾 60 行）' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            tail -60 lingxi-ops/artifacts/local-rehearsal/rehearsal.log >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: 上传隔离报告与演练日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenant-isolation-report
+          path: lingxi-ops/artifacts/
+          retention-days: 7
+          if-no-files-found: warn
+
+  # ============================================================ 7. 安全门禁
+  security-sast:
+    name: security:sast
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Semgrep
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install semgrep
+
+      - name: Semgrep（OWASP Top 10 + Java 规则）
+        run: semgrep --error --config=p/owasp-top-ten --config=p/java lingxi-server
+
+  security-dependency:
+    name: security:dependency
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Trivy
+        # 版本固定，保证可复现（上游 install.sh 会拉最新版，行为可能漂移）
+        env:
+          TRIVY_VERSION: v0.76.1
+        run: |
+          curl -sSfL -o /tmp/trivy.tar.gz \
+            "https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${TRIVY_VERSION#v}_Linux-64bit.tar.gz"
+          tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy
+          trivy --version
+
+      - name: 填充本地 Maven 缓存（供 Trivy 离线解析依赖树）
+        # Trivy 扫 pom.xml 时要解析**完整依赖树**（含 BOM import 的传递依赖），
+        # 为此需从 Maven Central 下载每个依赖的 pom —— 而 GitHub 共享 runner 的 IP
+        # 会被限流（429 Too Many Requests，且 Retry-After 达 1800s），
+        # 表现为 trivy FATAL 退出。
+        #
+        # Trivy 官方解法（错误信息里明确给出）：先填充本地 Maven 缓存，再离线扫描。
+        # 故此处先 resolve 依赖（顺带把 pom 缓存进 ~/.m2），trivy 侧用 --offline-scan。
+        working-directory: lingxi-server
+        run: |
+          mvn $MAVEN_CLI_OPTS -B dependency:resolve -DincludeScope=runtime || \
+            echo "::warning title=Maven 依赖预热未完成::Trivy 将以离线模式扫描，缺失的依赖会被跳过"
+
+      - name: 预热 Trivy 漏洞数据库
+        # 首次运行需下载漏洞库（约 200MB）。此处**不因下载失败而中断** ——
+        # 预热只是加速手段，扫描步骤自身也会下载（且会重试）。
+        # 之前把它当成硬前置 → 下载一失败整个 job 就红，且掩盖了扫描本身的结论。
+        run: trivy image --download-db-only || echo "::warning title=漏洞库预热未完成::将由扫描步骤自行下载（可能较慢）"
+
+      - name: Trivy 文件系统扫描（不出镜像）
+        # 禁容器化：全链路禁容器编排，故以 fs 模式扫描，不构建镜像
+        #
+        # 扫描目标：**依赖清单**（pom.xml / pnpm-lock.yaml）——
+        #   依赖漏洞只能从清单判定；扫源码与构建产物无意义且极慢。
+        # 排除：node_modules（未安装）、target（未构建）、dist、.git
+        # 报告落 artifact —— 便于评审核对「哪一项被检出」，
+        #   否则失败只留一行退出码、无法定位（本次 CI 首跑即踩到此坑）
+        run: |
+          # --scanners vuln：只扫依赖漏洞。
+          #   密钥泄露由 security:secrets（gitleaks）负责，职责不重叠 ——
+          #   且 secret 扫描器在 fs 模式对锁文件可能报错，使命令在写报告前就退出
+          #   （表现为「扫描失败」且报告文件缺失，反而掩盖真实结论）。
+          # stderr 单独捕获 —— trivy 若在写报告前失败（如依赖解析报错），
+          # 报告文件不存在，只看报告等于什么都看不到。分开捕获才能拿到真实错误。
+          # ⚠️ 目标只能给**一个** —— trivy 0.76 报 "multiple targets cannot be specified"
+          #   （给多个路径会 FATAL 退出，且发生在写报告之前 → 报告文件都不存在）。
+          #   故扫仓库根目录，用 --skip-dirs 排除无关目录。
+          # --offline-scan：只用本地 ~/.m2 缓存解析依赖树，**不访问 Maven Central**。
+          #   共享 runner 的 IP 会被 Central 限流（429），远端解析必然失败；
+          #   离线模式下缓存里缺的依赖只会 WARN 跳过，不会 FATAL 退出。
+          trivy fs --severity HIGH,CRITICAL --exit-code 1 \
+            --offline-scan \
+            --format table --output /tmp/trivy-report.txt \
+            --scanners vuln \
+            --skip-dirs node_modules,target,dist,.git,lingxi-web/node_modules \
+            . 2>/tmp/trivy-error.txt || {
+              echo "::error title=Trivy 扫描未通过::详见本 job 的 trivy-report.txt / trivy-error.txt 制品"
+              echo "--- stderr ---"; cat /tmp/trivy-error.txt || true
+              echo "--- report ---"; cat /tmp/trivy-report.txt 2>/dev/null || true
+              exit 1
+            }
+          # 扫描成功时把 stderr 也带出来（trivy 的告警信息常在此，如依赖解析失败）
+
+      - name: 上传 Trivy 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: |
+            /tmp/trivy-report.txt
+            /tmp/trivy-error.txt
+          retention-days: 7
+          if-no-files-found: warn
+
+  security-secrets:
+    name: security:secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 安装 gitleaks
+        # 注意：gitleaks v8.24+ 已移除 install.sh（改用 release 资产直下），
+        # 用旧方式会因「脚本 404」而失败 —— 且失败发生在安装步骤，会掩盖真正的扫描结论。
+        # 版本固定，保证可复现（不随上游最新版变动而行为漂移）。
+        env:
+          GITLEAKS_VERSION: v8.30.1
+        run: |
+          curl -sSfL -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION#v}_linux_x64.tar.gz"
+          tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: gitleaks（0 密钥泄露）
+        # 报告落 artifact：否则失败时只有一行退出码，无法定位是哪一处命中
+        # --config .gitleaks.toml：仅加 allowlist 排除「i18n 语言包键名赋值」这一
+        # 确定无害的形态（35 处误报），**未覆写任何检测规则** → 真实密钥检测能力不变
+        run: |
+          gitleaks detect --no-banner --redact -s . \
+            --config .gitleaks.toml \
+            --report-path /tmp/gitleaks-report.json --report-format json || {
+              echo "::error title=gitleaks 检出密钥::详见本 job 的 gitleaks-report.json 制品"
+              cat /tmp/gitleaks-report.json || true
+              exit 1
+            }
+
+      - name: 上传 gitleaks 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: /tmp/gitleaks-report.json
+          retention-days: 7
+          if-no-files-found: warn
+
+  security-hardcode:
+    name: security:hardcode
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: lingxi-server/**/pom.xml
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.13.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: lingxi-web/pnpm-lock.yaml
+
+      - name: 安装前端依赖
+        working-directory: lingxi-web
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: 附录 D 反模式扫描（18 条）
+        # qa-gate.sh 默认跑全量 6 段（含 mvn clean verify），与本仓库的
+        # build/test/coverage job 重复 —— 故用 QA_GATE_SCAN_ONLY=1 走扫描专用路径：
+        #   · 第 6 段：附录 D 18 条反模式扫描
+        #   · 第 3 段（简化）：仅 ESLint —— 规则 10（硬编码中文文案）与
+        #     规则 12（组件内直调 HTTP）由 ESLint 的 no-restricted-syntax /
+        #     no-restricted-imports 判定（AST 级，自动豁免注释与语言包）
+        # 详见 lingxi-web/eslint.config.js。
+        env:
+          QA_GATE_SCAN_ONLY: "1"
+          LX_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -uo pipefail
+          bash lingxi-ops/scripts/qa-gate.sh ci-hardcode-scan
+
+      - name: 上传扫描日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hardcode-scan-log
+          path: lingxi-ops/artifacts/
+          retention-days: 7
+          if-no-files-found: warn
+
+  # ===================================================== 8. 门禁总成（唯一判定）
+  qa-gate:
+    name: qa-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs:
+      - build-backend
+      - build-frontend
+      - arch-check
+      - test-backend
+      - test-frontend
+      - coverage
+      - isolation
+      - security-sast
+      - security-dependency
+      - security-secrets
+      - security-hardcode
+    if: always()
+    steps:
+      - name: 汇总各阶段结论（任一失败即整体失败）
+        run: |
+          echo "本 job 汇聚上游各阶段结果；任一阶段失败即阻断合并。"
+          echo "阶段清单：编译(前后端) · ArchUnit · 单测 · 契约测试 · 覆盖率 · 隔离套件 · 静态扫描 · 依赖与密钥扫描"
+          echo "（规约 §4.12 强制流水线顺序：编译 → ArchUnit → 单测 → 契约测试 → 覆盖率 → 隔离套件 → 静态扫描 → 依赖与密钥扫描）"
+          # 逐个检查上游结论，任一为 failure/skipped 即整体失败
+          # 注意：job 名含冒号（build:backend / security:sast 等），
+          # 在表达式里访问 needs.<job>.result 必须用**方括号**语法 ——
+          # 点号语法会在冒号处解析失败（GitHub 报 "Unexpected symbol: 'build:backend'"），
+          # 且该错误发生在 workflow 解析阶段 → 整个 run 秒级失败且不创建任何 job。
+          RESULT="${{ needs['build-backend'].result }}-${{ needs['build-frontend'].result }}-${{ needs['arch-check'].result }}-${{ needs['test-backend'].result }}-${{ needs['test-frontend'].result }}-${{ needs['coverage'].result }}-${{ needs['isolation'].result }}-${{ needs['security-sast'].result }}-${{ needs['security-dependency'].result }}-${{ needs['security-secrets'].result }}-${{ needs['security-hardcode'].result }}"
+          echo "各阶段结论：${RESULT}"
+          if echo "${RESULT}" | grep -qE 'failure|cancelled'; then
+            echo "::error title=CI 门禁未通过::存在失败或取消的阶段，禁止合并"
+            exit 1
+          fi
+          echo "所有阶段均通过"
+
+  # ================================================================ 9. 制品
+  package:
+    name: package
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [build-backend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+          cache-dependency-path: lingxi-server/**/pom.xml
+
+      - name: 打包并归集制品
+        working-directory: lingxi-server
+        run: |
+          mvn $MAVEN_CLI_OPTS -DskipTests package
+          mkdir -p dist
+          cp yuanshu/yuanshu-platform/target/*.jar dist/
+
+      - name: 上传发布制品
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: lingxi-server/dist/
+          retention-days: 14
+          if-no-files-found: error

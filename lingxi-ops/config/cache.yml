@@ -22,7 +22,7 @@ spring:
           max-wait: 3000ms
         shutdown-timeout: 200ms
 
-lingxi:
+yuanshu:
   cache:
     # 缓存键统一格式 lx:{域}:{业务}:{tenantId}:{标识}（§4.4.4 附录C）
     key-prefix: lx

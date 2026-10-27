@@ -6,7 +6,43 @@
 #
 # 为什么这样设计：模型可随时替换与升降级，无需改业务代码、无需回归全部场景。
 ################
-lingxi:
+spring:
+  # ---------------------------------------------------------------- Spring AI 标准连接参数
+  # 必配：spring-ai-starter-model-openai 在 classpath 上会自动装配
+  #   chat / embedding / audio-speech / image / transcription / moderation 六类客户端，
+  #   缺 api-key 时**启动即失败**：
+  #     "At least one credential source must be specified: credential (apiKey), ..."
+  #   故本段与下方 yuanshu.model.gateway（业务侧模型注册表）必须同时存在：
+  #     - spring.ai.openai.*  → 框架连接参数（客户端装配用）
+  #     - yuanshu.model.*     → 业务场景路由（哪个场景用哪个模型、怎么降级）
+  ai:
+    openai:
+      # 统一 OpenAI 兼容出口；地址与 Key 走环境变量（禁止入库明文，§3.5 F4）
+      base-url: ${LX_MODEL_BASE_URL}
+      api-key: ${LX_MODEL_API_KEY}
+      # 各模型类型的默认模型名同样由环境变量注入（§3.6 G6：模型名不入代码）
+      chat:
+        options:
+          model: ${LX_MODEL_PRIMARY}
+      embedding:
+        options:
+          model: ${LX_MODEL_EMBEDDING}
+    # ---------------------------------------------------------------- 关闭未使用的模型类型
+    # spring-ai-starter-model-openai 会自动装配 6 类客户端（chat / embedding / image /
+    # audio.speech / audio.transcription / moderation），任一缺 credential 即启动失败。
+    # 本系统只使用 chat 与 embedding（§4.6.1），其余显式关闭，避免为不用的能力配 Key。
+    model:
+      image:
+        enabled: false
+      audio:
+        speech:
+          enabled: false
+        transcription:
+          enabled: false
+      moderation:
+        enabled: false
+
+yuanshu:
   model:
     gateway:
       # 统一 OpenAI 兼容出口；地址与 Key 走环境变量（禁止入库明文，§3.5 F4）

@@ -1,0 +1,1487 @@
+/* ==========================================================================
+   lingxi-ui 业务组件样式（Aurora Sense）
+   基准：《灵犀系统前端改造指引-AuroraSense1.0》第 4 章
+   组件实现位于 packages/lingxi-ui，样式统一在此登记，避免样式与实现两处漂移
+   ========================================================================== */
+
+/* 卡片类组件可能被渲染为 button（可点击态），需抹平浏览器默认按钮样式 */
+.lx-kpi,
+.lx-insight,
+.lx-quick,
+.lx-agent {
+  width: 100%;
+  font-family: inherit;
+  text-align: left;
+}
+
+/* --------------------------------------------------------------------------
+   栅格（响应式：≤1100px 降档，≤768px 单列）
+   -------------------------------------------------------------------------- */
+.lx-grid {
+  display: grid;
+  gap: var(--lx-space-4);
+}
+
+.lx-grid--kpi {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.lx-grid--kpi-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.lx-grid--agent {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.lx-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .lx-grid--kpi {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .lx-grid--kpi-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lx-grid--agent {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lx-grid--3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .lx-grid--kpi,
+  .lx-grid--kpi-4,
+  .lx-grid--agent {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* --------------------------------------------------------------------------
+   LxKpi 指标卡（4.3）
+   -------------------------------------------------------------------------- */
+.lx-kpi {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.lx-kpi__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--lx-color-muted);
+}
+
+/* 指标名不折行。折行会把同一行的卡片撑成不同高度，整排栅格就散了。
+   真装不下时退化为省略号而不是溢出去压到隔壁卡上（7 列窄卡下宁可截断也不破版）。 */
+.lx-kpi__name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 时点标签（如「今日」）：挂在数值行右端，与左边的大字拉开距离。
+   底色走 frost 令牌：亮色下比白卡略深、暗色下比卡底略深，两态都可见且不引入新色相。 */
+.lx-kpi__badge {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--lx-color-frost);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--lx-color-slate);
+}
+
+.lx-kpi__tick {
+  width: 3px;
+  height: 11px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  background: var(--lx-color-primary);
+}
+
+.lx-kpi__tick--primary {
+  background: var(--lx-color-primary);
+}
+
+.lx-kpi__tick--secondary {
+  background: var(--lx-color-secondary);
+}
+
+.lx-kpi__tick--accent {
+  background: var(--lx-color-accent);
+}
+
+.lx-kpi__tick--success {
+  background: var(--lx-color-success);
+}
+
+.lx-kpi__tick--violet {
+  background: var(--lx-color-violet);
+}
+
+/* 数值行：大字 + 时点标签。
+   用 baseline 对齐让胶囊贴着数字的基线，而不是与 24px 的字框垂直居中。 */
+.lx-kpi__valuerow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.lx-kpi__value {
+  font-family: var(--lx-font-display);
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--lx-color-ink);
+}
+
+/* 行间距由 .lx-kpi__valuerow 统一给，值自身不再重复撑开 */
+.lx-kpi__valuerow .lx-kpi__value {
+  margin-top: 0;
+}
+
+.lx-kpi__value--sm {
+  font-size: 22px;
+}
+
+.lx-kpi__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-2);
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-kpi__sub {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lx-kpi__spark {
+  display: block;
+  width: 100%;
+  height: 18px;
+  margin-top: var(--lx-space-2);
+}
+
+/* 指标卡选中态：作为"筛选 / 切换列表"入口时高亮当前生效的卡片。
+   用主色描边 + 极淡主色底，不引入新色相，与五维色域一致。 */
+.lx-kpi--active {
+  border-color: var(--lx-color-primary);
+  box-shadow: 0 0 0 1px var(--lx-color-primary) inset;
+  background-image: linear-gradient(180deg, var(--lx-color-primary-soft), transparent 70%);
+}
+
+/* 涨跌胶囊：绿涨 / 红跌 / 灰平（中国市场惯例） */
+.lx-trend {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-family: var(--lx-font-display);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.lx-trend--up {
+  background: var(--lx-color-success-soft);
+  color: var(--lx-color-success);
+}
+
+.lx-trend--dn {
+  background: var(--lx-color-danger-soft);
+  color: var(--lx-color-danger);
+}
+
+.lx-trend--fl {
+  background: var(--lx-color-frost);
+  color: var(--lx-color-slate);
+}
+
+/* --------------------------------------------------------------------------
+   LxAgentCard 智能体卡片（4.4）
+   -------------------------------------------------------------------------- */
+.lx-agent {
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius-md);
+  background: var(--lx-color-frost);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lx-agent:hover {
+  transform: translateY(-2px);
+  border-color: var(--lx-color-primary-line);
+  box-shadow: var(--lx-shadow-pop);
+}
+
+/* busy 态：主色描边 + 浅青渐变底（正在执行任务） */
+.lx-agent.is-busy {
+  border-color: var(--lx-color-primary-line);
+  background: linear-gradient(0deg, var(--lx-color-primary-soft), var(--lx-color-frost));
+}
+
+.lx-agent__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lx-agent__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  box-shadow: var(--lx-shadow-agent);
+  color: #fff;
+  font-size: 16px;
+}
+
+/* 有形象图时用圆形头像（沿用高保真原型的视觉意图），描边随 busy 态变主色 */
+.lx-agent__avatar {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: var(--lx-shadow-agent);
+  outline: 2px solid var(--lx-color-card-solid);
+}
+
+.lx-agent__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.lx-agent.is-busy .lx-agent__avatar {
+  outline-color: var(--lx-color-primary-line);
+}
+
+/* 智能体色系固定为 青/蓝/紫/黄/绿 五维，不新增任意色相（禁忌 8） */
+.lx-agent__icon--sage {
+  background: linear-gradient(135deg, #0e7c86, #2e6be6);
+}
+
+.lx-agent__icon--atlas {
+  background: linear-gradient(135deg, #2e6be6, #7a5ac0);
+}
+
+.lx-agent__icon--muse {
+  background: linear-gradient(135deg, #f0a91a, #e4644c);
+}
+
+.lx-agent__icon--echo {
+  background: linear-gradient(135deg, #3d9a6e, #0e7c86);
+}
+
+.lx-agent__ident {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lx-agent__name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-agent__role {
+  font-size: 10.5px;
+  color: var(--lx-color-muted);
+}
+
+.lx-agent__grade {
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-family: var(--lx-font-display);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.lx-agent__grade--gold {
+  background: var(--lx-color-accent-soft);
+  color: var(--lx-color-amber-ink);
+}
+
+.lx-agent__grade--silver {
+  border: 1px solid var(--lx-color-border);
+  background: var(--lx-color-frost);
+  color: var(--lx-color-muted);
+}
+
+.lx-agent__grade--bronze {
+  background: var(--lx-color-bronze-bg);
+  color: var(--lx-color-bronze-ink);
+}
+
+.lx-agent__task {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--lx-color-slate);
+}
+
+.lx-agent__progress {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-2);
+  margin-top: 10px;
+}
+
+.lx-agent__bar {
+  flex: 1;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--lx-color-border);
+}
+
+.lx-agent__bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--lx-color-primary), var(--lx-color-secondary));
+}
+
+.lx-agent__bar--good > i {
+  background: linear-gradient(90deg, var(--lx-color-success), var(--lx-color-primary));
+}
+
+.lx-agent__bar--warn > i {
+  background: linear-gradient(90deg, var(--lx-color-accent), var(--lx-color-danger));
+}
+
+.lx-agent__pct {
+  font-family: var(--lx-font-display);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--lx-color-slate);
+}
+
+.lx-agent__stats {
+  display: flex;
+  gap: var(--lx-space-4);
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--lx-color-border);
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-agent__stats b {
+  font-family: var(--lx-font-display);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--lx-color-ink);
+}
+
+/* 智能体协作网络。
+   不画贯穿全行的横线——横线从卡片背后穿过，卡片多时像被划了一道，
+   而「谁和谁在协作」这个信息横线本身也表达不了。改为相邻两张卡之间嵌一个链接图标，
+   连接关系变成一个个具体的相邻关系。 */
+.lx-agentnet {
+  display: flex;
+  align-items: stretch;
+}
+
+.lx-agentnet > .lx-agent {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.lx-agentnet__link {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  font-size: 14px;
+  /* 用 slate 而非 muted：muted（#94a3b8）在浅底上几乎看不见，
+     图标存在但读不出来就等于没加。slate 在亮/暗两态都清晰，又不至于抢过卡片本身。 */
+  color: var(--lx-color-slate);
+}
+
+@media (max-width: 1100px) {
+  /* 降到两列后卡与卡不再左右相邻，链接图标失去指向对象：隐藏并退回等距栅格 */
+  .lx-agentnet {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--lx-space-4);
+  }
+
+  .lx-agentnet__link {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .lx-agentnet {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   LxInsightCard 决策卡 / 今日要点（4.5）
+   -------------------------------------------------------------------------- */
+.lx-insight {
+  display: flex;
+  flex-direction: column;
+  padding: var(--lx-space-4);
+  border-left: 3px solid var(--lx-color-accent);
+  cursor: pointer;
+}
+
+.lx-insight--accent {
+  border-left-color: var(--lx-color-accent);
+}
+
+.lx-insight--success {
+  border-left-color: var(--lx-color-success);
+}
+
+.lx-insight--primary {
+  border-left-color: var(--lx-color-primary);
+}
+
+.lx-insight__type {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--lx-color-muted);
+}
+
+.lx-insight__text {
+  margin-top: 6px;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--lx-color-ink);
+}
+
+.lx-insight__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-2);
+  margin-top: 10px;
+}
+
+.lx-insight__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  color: #fff;
+  font-size: 11px;
+}
+
+.lx-insight__source {
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+/* 来源头像色与所属智能体一致 */
+.lx-insight__avatar--sage {
+  background: linear-gradient(135deg, #0e7c86, #2e6be6);
+}
+
+.lx-insight__avatar--atlas {
+  background: linear-gradient(135deg, #2e6be6, #7a5ac0);
+}
+
+.lx-insight__avatar--muse {
+  background: linear-gradient(135deg, #f0a91a, #e4644c);
+}
+
+.lx-insight__avatar--echo {
+  background: linear-gradient(135deg, #3d9a6e, #0e7c86);
+}
+
+/* --------------------------------------------------------------------------
+   LxBanner 问候 / 提示条（4.11）
+   -------------------------------------------------------------------------- */
+.lx-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: var(--lx-space-4) 20px;
+  border: 1px solid var(--lx-color-primary-line);
+  border-radius: var(--lx-radius-lg);
+  background: linear-gradient(
+    120deg,
+    var(--lx-color-primary-soft),
+    var(--lx-color-secondary-soft) 60%,
+    var(--lx-color-accent-soft)
+  );
+}
+
+.lx-banner__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: var(--lx-radius-md);
+  background: linear-gradient(135deg, #0e7c86, #2e6be6);
+  box-shadow: var(--lx-shadow-primary);
+  color: #fff;
+  font-size: 18px;
+}
+
+.lx-banner__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lx-banner__title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-banner__desc {
+  font-size: 12.5px;
+  color: var(--lx-color-slate);
+}
+
+.lx-banner__more {
+  margin-left: auto;
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--lx-color-primary);
+}
+
+.lx-banner__more:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   LxStepper 步骤条（4.9）
+   -------------------------------------------------------------------------- */
+.lx-stepper {
+  display: flex;
+  padding: var(--lx-space-2);
+}
+
+.lx-stepper__item {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: var(--lx-radius);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--lx-color-muted);
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.lx-stepper__item:hover {
+  background: var(--lx-color-frost);
+  color: var(--lx-color-slate);
+}
+
+.lx-stepper__item.is-active {
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+  font-weight: 500;
+}
+
+.lx-stepper__num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-color-frost);
+  font-family: var(--lx-font-display);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.lx-stepper__item.is-active .lx-stepper__num {
+  background: var(--lx-color-primary);
+  color: #fff;
+}
+
+.lx-stepper__arrow {
+  position: absolute;
+  right: -2px;
+  font-size: 12px;
+  color: var(--lx-color-faint);
+}
+
+@media (max-width: 768px) {
+  .lx-stepper {
+    flex-direction: column;
+  }
+
+  .lx-stepper__arrow {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   LxTable 容器与工具条（4.6）
+   -------------------------------------------------------------------------- */
+.lx-tablecard {
+  overflow: hidden;
+  border-radius: var(--lx-radius-lg);
+}
+
+.lx-tablecard__tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--lx-color-border);
+}
+
+.lx-tablecard__search {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--lx-space-2);
+  max-width: 280px;
+  padding: 0 14px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--lx-color-frost);
+}
+
+.lx-tablecard__search:focus-within {
+  border-color: var(--lx-color-primary-line);
+  background: #fff;
+}
+
+.lx-tablecard__search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--lx-color-ink);
+}
+
+.lx-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--lx-color-slate);
+  transition: all 0.15s ease;
+}
+
+.lx-filter:hover {
+  border-color: var(--lx-color-primary-line);
+  color: var(--lx-color-primary);
+}
+
+/* 表格单元格内的标题 + 编码双行 */
+.lx-cell-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-cell-code {
+  font-family: var(--lx-font-display);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--lx-color-muted);
+}
+
+.lx-cell-link {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  /* 行内动作链接不允许折行：中文没有词间空格，宽度差几像素就会断成「客户3 / 60」 */
+  white-space: nowrap;
+  color: var(--lx-color-primary);
+}
+
+.lx-cell-link:hover {
+  text-decoration: underline;
+}
+
+/* 单元格内的"缩略图 + 标题/编码"横排 */
+.lx-cell-media {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-3);
+}
+
+/* 工具条右侧同步提示 */
+.lx-tools-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--lx-color-success);
+}
+
+/* 内容缩略图（44×32 圆角 8px 渐变 + 白色图标） */
+.lx-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 32px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: var(--lx-radius-sm);
+  color: #fff;
+  font-size: 14px;
+}
+
+.lx-thumb--card {
+  width: 100%;
+  height: 132px;
+}
+
+.lx-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.lx-thumb--video {
+  background: linear-gradient(135deg, #2e6be6, #7a5ac0);
+}
+
+.lx-thumb--graphic {
+  background: linear-gradient(135deg, #0e7c86, #2e6be6);
+}
+
+.lx-thumb--stored {
+  background: linear-gradient(135deg, #94a3b8, #cbd5e1);
+}
+
+/* --------------------------------------------------------------------------
+   LxTag 标签色板（4.6）
+   -------------------------------------------------------------------------- */
+.lx-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.lx-tag--video {
+  background: var(--lx-color-secondary-soft);
+  color: var(--lx-color-secondary);
+}
+
+.lx-tag--graphic {
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+}
+
+.lx-tag--lang {
+  border: 1px solid var(--lx-color-border);
+  background: var(--lx-color-frost);
+  color: var(--lx-color-slate);
+}
+
+.lx-tag--done {
+  background: var(--lx-color-success-soft);
+  color: var(--lx-color-success);
+}
+
+.lx-tag--review {
+  background: var(--lx-color-accent-soft);
+  color: var(--lx-color-amber-ink);
+}
+
+.lx-tag--producing {
+  background: var(--lx-color-frost);
+  color: var(--lx-color-muted);
+}
+
+/* --------------------------------------------------------------------------
+   LxEmpty 空态（禁忌 9：数据为空必须有空态，风格与玻璃卡一致）
+   -------------------------------------------------------------------------- */
+.lx-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--lx-space-2);
+  padding: 48px var(--lx-space-5);
+  text-align: center;
+}
+
+.lx-empty__icon {
+  font-size: 28px;
+  color: var(--lx-color-faint);
+}
+
+.lx-empty__text {
+  font-size: 13px;
+  color: var(--lx-color-primary);
+}
+
+.lx-empty__hint {
+  font-size: 12px;
+  color: var(--lx-color-muted);
+}
+
+/* --------------------------------------------------------------------------
+   快捷操作入口（5.2 第 5 项）
+   -------------------------------------------------------------------------- */
+.lx-quick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.lx-quick__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  font-size: 16px;
+}
+
+.lx-quick__icon--primary {
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+}
+
+.lx-quick__icon--accent {
+  background: var(--lx-color-accent-soft);
+  color: var(--lx-color-amber-ink);
+}
+
+.lx-quick__icon--secondary {
+  background: var(--lx-color-secondary-soft);
+  color: var(--lx-color-secondary);
+}
+
+.lx-quick__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* 允许文本列在窄卡片里折行，而不是把图标挤出容器 */
+  min-width: 0;
+}
+
+.lx-quick__title {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-quick__desc {
+  display: block;
+  font-size: 11.5px;
+  color: var(--lx-color-muted);
+}
+
+/* --------------------------------------------------------------------------
+   协调条（5.3 第 1 项：Muse 协调条）
+   -------------------------------------------------------------------------- */
+.lx-coordbar {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-3);
+  padding: 14px 18px;
+  border: 1px solid rgba(240, 169, 26, 0.25);
+  border-radius: var(--lx-radius-lg);
+  background: linear-gradient(120deg, var(--lx-color-accent-soft), var(--lx-color-secondary-soft) 70%);
+}
+
+.lx-coordbar__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--lx-radius);
+  background: linear-gradient(135deg, #f0a91a, #e4644c);
+  color: #fff;
+  font-size: 15px;
+}
+
+.lx-coordbar__text {
+  font-size: 13px;
+  color: var(--lx-color-slate);
+}
+
+.lx-coordbar__text b {
+  color: var(--lx-color-amber-ink);
+  font-weight: 500;
+}
+
+.lx-coordbar__more {
+  margin-left: auto;
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--lx-color-primary);
+}
+
+/* --------------------------------------------------------------------------
+   AntD 覆写：让内置组件与极光通感一致
+   -------------------------------------------------------------------------- */
+.lx-tablecard .ant-table {
+  background: transparent;
+}
+
+.lx-tablecard .ant-table-thead > tr > th {
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--lx-color-border);
+  background: rgba(243, 247, 251, 0.6);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--lx-color-muted);
+}
+
+.lx-tablecard .ant-table-tbody > tr > td {
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--lx-color-border);
+  font-size: 13px;
+}
+
+.lx-tablecard .ant-table-tbody > tr:last-child > td {
+  border-bottom: 0;
+}
+
+.lx-tablecard .ant-table-tbody > tr:hover > td {
+  background: var(--lx-color-frost);
+}
+
+.lx-tablecard .ant-table-placeholder:hover > td {
+  background: transparent;
+}
+
+/* 无权限时不渲染（LxPermission），无需禁用态样式 */
+.lx-tablecard .ant-pagination {
+  padding: 0 18px 14px;
+}
+
+/* --------------------------------------------------------------------------
+   LxTable · fit 模式 —— 固定列宽 / 永不横滚 / 截断 + 悬停看全
+   （组件侧开关见 packages/lingxi-ui/src/LxTable.tsx 的 `fit`）
+
+   为什么要有这一套：默认的 `scroll={{ x: 'max-content' }}` 让表格宽 =
+   max(容器, **内容自然宽**)，于是只要内容比声明列宽长，整表就顶出容器、出现横向滚动条。
+   实测（zh-CN，2026-09-24）：商机中心十列自然宽 1123px、线索中心九列 1092px、
+   客户 360 商机九列 1118px —— 而内容区在 1280 视口只有 998px、1366 视口 1084px，
+   三张表**在 ≤1366 必滚**；1440 视口容器 1158px 不过是"恰好跨过临界点"，
+   所以此前只跑 1440/1682 的探针全部报 0，而用户天天看见滚动条。
+
+   开了 fit 之后列宽的权威只有一处：**列定义里的 `width`（百分比，合计 100%）**。
+   内容反过来不能再撑宽列，超出的部分按"截断 + `title` 悬停看全"处理 ——
+   即用户要的"每列固定宽度，文字显示不全采用截断，鼠标放置后显示全"。
+
+   三条规则各自不可省：
+   ① 表格 width:100% + table-layout:fixed —— 结构上排除横向溢出（这是"不横滚"的根因修复，
+      不是拿 overflow:hidden 把滚动条盖住）；
+   ② 单元格 nowrap + 省略号 —— 允许折行的话列宽就又不是"固定"的了；
+   ③ 走 render 的列必须给**叶子元素**单独上省略号：`td` 上的 text-overflow 只管
+      **行内内容**，对块/弹性子元素（`.lx-oppprod`、`.lx-cell-title` 等）无效，
+      不补这一条它们会被 td 的 overflow:hidden **硬裁**——硬裁不给任何提示，
+      正是探针里 CLIP 那一类硬缺陷。
+   -------------------------------------------------------------------------- */
+.lx-tablecard .lx-table--fit .ant-table-content > table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* 注意：**这里故意不写 `padding`**。实测 antd `size="middle"` 的
+   `.ant-table.ant-table-middle .ant-table-tbody > tr > td { padding: 12px 8px }`
+   与 `.lx-tablecard .ant-table-tbody > tr > td` 特异性相同（0,3,2），而 antd 的样式后注入
+   → 单元格左右内边距**实际是 8px（合计 16px）**，不是 12px。
+   列宽的预算必须按"列宽 − 16px"算（各路由 columns 里的注释用的就是这个数）；
+   若在此处强行写 12px 并提权，只会白丢每列 8px 的内容空间、把截断推得更早。 */
+.lx-tablecard .lx-table--fit .ant-table-thead > tr > th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 正文字号 13px → 12px（用户要求"字体调小一点"）。 */
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 叶子级省略号：`display: block` 不是装饰 —— 对 inline 的 span，overflow 与
+   text-overflow 一律无效，必须先把它们变成块级（或弹性项）才截得断。
+   为什么把"单元格的直接子元素"逐个列出来、而不写 `td > *`：列里既有胶囊
+   （`.lx-tag` 依赖 inline-flex）也有弹性动作组（`.lx-oppops` 依赖 flex-wrap），
+   一条通配规则会把它们一起改成 `display: block`，把布局改坏。
+   `.lx-cell-text` = 纯文本单元格（线索来源 / 国家地区这类"值就是一段文案"的列）。 */
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-cell-title,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-cell-code,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-cell-text,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-cell-link,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-num,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-oppprod,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-oppowner,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-p360__prod,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-p360__owner,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-p360__bant,
+.lx-tablecard .lx-table--fit .ant-table-tbody > tr > td .lx-p360__summary {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 操作列的动作**不许在动作内部断行**（"Follow up" 断成两行比换行更难看）。
+   整块仍允许 flex-wrap —— 真放不下时两个动作换行，也不去顶宽列。 */
+.lx-tablecard .lx-table--fit .lx-oppops .lx-cell-link {
+  white-space: nowrap;
+}
+
+
+/* --------------------------------------------------------------------------
+   LxChart 图表容器（技术规约2.0 §4.6）
+   -------------------------------------------------------------------------- */
+.lx-chart {
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   面板（带表头的玻璃卡）：看板上的图表卡 / 列表卡共用
+   -------------------------------------------------------------------------- */
+.lx-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.lx-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lx-space-3);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--lx-color-border);
+}
+
+.lx-panel__title {
+  font-family: var(--lx-font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--lx-color-ink);
+}
+
+.lx-panel__sub {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-panel__badge {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-family: var(--lx-font-display);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.lx-panel__badge--success {
+  background: var(--lx-color-success-soft);
+  color: var(--lx-color-success);
+}
+
+.lx-panel__badge--danger {
+  background: var(--lx-color-danger);
+  color: #fff;
+}
+
+.lx-panel__body {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 18px;
+}
+
+/* 看板双栏：主图占宽，侧栏列表占窄 */
+.lx-grid--split {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+}
+
+@media (max-width: 1100px) {
+  .lx-grid--split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   待人工决策清单
+   -------------------------------------------------------------------------- */
+.lx-decision {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-2);
+}
+
+.lx-decision__item {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-3);
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius);
+  background: transparent;
+  text-align: left;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.lx-decision__item:hover {
+  border-color: var(--lx-color-border-strong);
+  background: var(--lx-color-frost);
+}
+
+.lx-decision__icon {
+  display: flex;
+  flex-shrink: 0;
+  font-size: 18px;
+}
+
+.lx-decision__icon--danger {
+  color: var(--lx-color-danger);
+}
+
+.lx-decision__icon--accent {
+  color: var(--lx-color-accent);
+}
+
+.lx-decision__icon--primary {
+  color: var(--lx-color-primary);
+}
+
+.lx-decision__icon--muted {
+  color: var(--lx-color-muted);
+}
+
+.lx-decision__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.lx-decision__title {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-decision__meta {
+  display: block;
+  margin-top: 1px;
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}
+
+.lx-decision__arrow {
+  flex-shrink: 0;
+  color: var(--lx-color-muted);
+}
+
+/* --------------------------------------------------------------------------
+   业务实时流（智能体之间的任务交接）
+   -------------------------------------------------------------------------- */
+/* 事件卡网格：一次摆 3 张，左右各留一个切换按钮的位置（`.lx-dyn`）。 */
+.lx-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .lx-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .lx-flow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* 轮播视窗：左按钮 ｜ 事件卡 ｜ 右按钮。
+   切换用手动「载入前序 / 后序」，到边界即置灰，不做无限循环——
+   「实时动态」的语义里，最早一条之前确实没有内容可看。 */
+.lx-dyn {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 0 14px;
+}
+
+.lx-dyn__stage {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.lx-dyn__nav {
+  align-self: center;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: 50%;
+  background: var(--lx-color-card-solid);
+  font-size: 13px;
+  color: var(--lx-color-slate);
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+}
+
+.lx-dyn__nav:hover:not(:disabled) {
+  border-color: var(--lx-color-primary);
+  color: var(--lx-color-primary);
+}
+
+.lx-dyn__nav:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.lx-dyn__nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* 换页方向决定滑入侧，让人看出这批事件是从哪边来的 */
+@keyframes lx-dyn-in-next {
+  from {
+    opacity: 0;
+    transform: translateX(26px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes lx-dyn-in-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-26px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lx-dyn__stage[data-dir='next'] {
+  animation: lx-dyn-in-next 320ms ease;
+}
+
+.lx-dyn__stage[data-dir='prev'] {
+  animation: lx-dyn-in-prev 320ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-dyn__stage[data-dir] {
+    animation: none;
+  }
+}
+
+.lx-flow__cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-3);
+  padding: 16px 18px;
+  border-top: 1px solid var(--lx-color-border);
+}
+
+.lx-flow__cell:first-child {
+  border-top: 0;
+}
+
+@media (min-width: 1101px) {
+  .lx-flow__cell {
+    border-top: 0;
+    border-left: 1px solid var(--lx-color-border);
+  }
+
+  .lx-flow__cell:first-child {
+    border-left: 0;
+  }
+}
+
+.lx-flow__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lx-flow__time {
+  padding: 1px 8px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: 999px;
+  font-family: var(--lx-font-display);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--lx-color-slate);
+}
+
+.lx-flow__icon {
+  color: var(--lx-color-muted);
+  font-size: 15px;
+}
+
+.lx-flow__icon--done {
+  color: var(--lx-color-primary);
+}
+
+.lx-flow__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-flow__desc {
+  margin-top: 4px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--lx-color-muted);
+}
+
+.lx-flow__result {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--lx-color-primary);
+}
+
+/* --------------------------------------------------------------------------
+   素材卡片（内容营销预览墙）
+   -------------------------------------------------------------------------- */
+.lx-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--lx-space-4);
+}
+
+@media (max-width: 1100px) {
+  .lx-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .lx-gallery {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.lx-gallery__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lx-space-2);
+  overflow: hidden;
+  padding: 0;
+  text-align: left;
+}
+
+.lx-gallery__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--lx-space-2);
+  padding: 0 14px 14px;
+}
+
+.lx-gallery__title {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--lx-color-ink);
+}
+
+.lx-gallery__sub {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--lx-color-muted);
+}

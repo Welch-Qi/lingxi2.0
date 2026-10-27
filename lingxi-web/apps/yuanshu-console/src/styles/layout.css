@@ -1,0 +1,453 @@
+/* ==========================================================================
+   全局外壳布局：侧边栏 + 顶栏 + 内容区 + 状态栏
+   基准：《灵犀系统前端改造指引-AuroraSense1.0》3.2 / 4.1 / 4.2 / 4.10
+   ========================================================================== */
+
+.lx-shell {
+  display: grid;
+  grid-template-columns: var(--lx-sidenav-width) 1fr;
+  min-height: 100vh;
+  /* 让出顶部极光色带，使 sticky 元素不遮挡签名元素 */
+  padding-top: var(--lx-aurora-height);
+}
+
+.lx-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lx-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--lx-content-gap);
+  width: 100%;
+  max-width: var(--lx-content-max-width);
+  margin: 0 auto;
+  padding: var(--lx-space-2) var(--lx-content-padding-x) var(--lx-space-5);
+}
+
+/* --------------------------------------------------------------------------
+   侧边栏（4.1）
+   -------------------------------------------------------------------------- */
+.lx-sidenav {
+  position: sticky;
+  top: var(--lx-aurora-height);
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--lx-aurora-height));
+  padding: 20px 14px;
+  overflow-y: auto;
+  border-right: 1px solid var(--lx-color-border);
+  background: rgba(255, 255, 255, 0.86);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+.lx-sidenav__logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+  margin-bottom: 22px;
+}
+
+.lx-sidenav__logomark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: var(--lx-radius-sm);
+  background: var(--lx-grad-brand);
+  color: #fff;
+}
+
+.lx-sidenav__name {
+  font-family: var(--lx-font-display);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--lx-color-ink);
+}
+
+.lx-sidenav__tagline {
+  font-family: var(--lx-font-display);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lx-color-muted);
+}
+
+.lx-sidenav__group {
+  margin: 14px 0 6px;
+  padding: 0 10px;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lx-color-muted);
+}
+
+.lx-sidenav__group:first-of-type {
+  margin-top: 0;
+}
+
+.lx-sidenav__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--lx-radius);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--lx-color-slate);
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.lx-sidenav__item:hover {
+  background: var(--lx-color-frost);
+  color: var(--lx-color-ink);
+}
+
+.lx-sidenav__item.is-active {
+  background: var(--lx-color-primary-soft);
+  color: var(--lx-color-primary);
+  font-weight: 500;
+}
+
+.lx-sidenav__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  font-size: 16px;
+  opacity: 0.75;
+}
+
+.lx-sidenav__item.is-active .lx-sidenav__icon {
+  opacity: 1;
+}
+
+.lx-sidenav__label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lx-sidenav__badge {
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--lx-color-danger);
+  color: #fff;
+  font-family: var(--lx-font-display);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.lx-sidenav__foot {
+  margin-top: auto;
+  padding-top: var(--lx-space-3);
+}
+
+.lx-sidenav__logout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: var(--lx-radius);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--lx-color-muted);
+  transition: all 0.15s ease;
+}
+
+.lx-sidenav__logout:hover {
+  background: var(--lx-color-danger-soft);
+  color: var(--lx-color-danger);
+}
+
+/* --------------------------------------------------------------------------
+   顶栏（4.2）
+   -------------------------------------------------------------------------- */
+.lx-topbar {
+  position: sticky;
+  top: var(--lx-aurora-height);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: var(--lx-topbar-height);
+  padding: 0 var(--lx-content-padding-x);
+  border-bottom: 1px solid var(--lx-color-border);
+  background: rgba(255, 255, 255, 0.86);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+.lx-topbar__titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lx-topbar__title {
+  font-family: var(--lx-font-display);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--lx-color-ink);
+}
+
+.lx-topbar__sub {
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--lx-color-muted);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lx-search {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--lx-space-2);
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 0 14px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--lx-color-frost);
+  transition: all 0.15s ease;
+}
+
+.lx-search:hover {
+  border-color: var(--lx-color-border);
+}
+
+.lx-search:focus-within {
+  border-color: var(--lx-color-primary-line);
+  background: #fff;
+  box-shadow: 0 0 0 3px var(--lx-color-primary-soft);
+}
+
+.lx-search__icon {
+  display: flex;
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--lx-color-muted);
+}
+
+.lx-search__input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--lx-color-ink);
+}
+
+.lx-search__input::placeholder {
+  color: var(--lx-color-muted);
+}
+
+.lx-topbar__tools {
+  display: flex;
+  align-items: center;
+  gap: var(--lx-space-2);
+  margin-left: auto;
+}
+
+.lx-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--lx-color-border-strong);
+  border-radius: 999px;
+  background: var(--lx-color-card);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--lx-color-slate);
+  transition: all 0.15s ease;
+}
+
+.lx-chip:hover {
+  border-color: var(--lx-color-primary-line);
+  color: var(--lx-color-primary);
+}
+
+.lx-chip__caret {
+  font-size: 10px;
+  color: var(--lx-color-muted);
+}
+
+/*
+  语言切换胶囊：与租户、角色同用 .lx-chip（三者视觉上成一族），
+  只收窄横向占用——顶栏右侧本来就要放租户、角色、铃铛、语言、头像五个元素。
+  单独给修饰类而不是直接改 .lx-chip，否则会连带压缩另外两个胶囊。
+*/
+.lx-chip--lang {
+  padding: 0 10px;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.lx-iconbtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--lx-color-border);
+  border-radius: var(--lx-radius);
+  background: var(--lx-color-card);
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--lx-color-slate);
+  transition: all 0.15s ease;
+}
+
+.lx-iconbtn:hover {
+  border-color: var(--lx-color-primary-line);
+  color: var(--lx-color-primary);
+}
+
+.lx-iconbtn__dot {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lx-color-danger);
+}
+
+.lx-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--lx-radius);
+  background: var(--lx-grad-brand);
+  cursor: pointer;
+  color: #fff;
+  font-family: var(--lx-font-display);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   状态栏（4.10）
+   -------------------------------------------------------------------------- */
+.lx-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: var(--lx-statusbar-height);
+  padding: 0 var(--lx-content-padding-x);
+  border-top: 1px solid var(--lx-color-border);
+  background: rgba(255, 255, 255, 0.86);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  font-size: 12px;
+  color: var(--lx-color-muted);
+}
+
+.lx-statusbar__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--lx-color-muted);
+}
+
+.lx-statusbar__item.is-online {
+  color: var(--lx-color-success);
+  font-weight: 500;
+}
+
+.lx-statusbar__item.is-warn {
+  color: var(--lx-color-accent);
+  font-weight: 500;
+}
+
+.lx-statusbar__sep {
+  width: 1px;
+  height: 12px;
+  background: var(--lx-color-border-strong);
+}
+
+.lx-statusbar__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+/* --------------------------------------------------------------------------
+   响应式：≤768px 隐藏侧边栏、内容单列（7.5）
+   -------------------------------------------------------------------------- */
+@media (max-width: 1100px) {
+  .lx-search {
+    max-width: 280px;
+  }
+}
+
+@media (max-width: 768px) {
+  .lx-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .lx-sidenav {
+    display: none;
+  }
+
+  .lx-topbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding-top: var(--lx-space-2);
+    padding-bottom: var(--lx-space-2);
+  }
+
+  .lx-search {
+    order: 3;
+    max-width: none;
+    margin: 0;
+    width: 100%;
+  }
+
+  .lx-statusbar__right {
+    display: none;
+  }
+}

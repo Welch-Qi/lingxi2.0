@@ -1,0 +1,727 @@
+/* ==========================================================================
+   配置中心（/config）专用版式 —— 用户管理 / 角色权限 / 业务字典
+   ==========================================================================
+   为什么单独一块而不并进 pages.css：本轮新增了三样全站此前没有的东西 ——
+     ① 抽屉式编辑器（.lx-cc-mask / .lx-cc-drawer）
+     ② 权限授予矩阵（.lx-cc-domain / .lx-cc-resource / .lx-cc-check）
+     ③ 五档数据范围选择器（.lx-cc-scope）
+   三者都是"配置类"控件，与业务页的列表/看板版式没有交集，
+   放进 pages.css 会让那一个已经很长的文件再长 300 行且互相污染。
+
+   命名空间统一 `lx-cc-`，与营销日历的 `lx-mcal-` 同约定：只给自己的前缀写规则，
+   放到 main.tsx 的最后加载，不覆盖上面任何一块。
+   ========================================================================== */
+
+/* ---------- 筛选下拉：与 LxFilterButton 同高，工具条里对齐 ---------- */
+.lx-cc-filter {
+  min-width: 132px;
+}
+
+/* ---------- 行内操作区：动作多了会换行，但不允许被挤成两行截断 ---------- */
+.lx-cc-actions {
+  row-gap: 2px !important;
+  line-height: 1.4;
+}
+
+.lx-cc-actions .lx-cell-link--danger {
+  color: var(--lx-danger, #c0392b);
+}
+
+/* 不可删的行内按钮（内置字典取值、硅基员工账号、内置订单阶段/渠道）：
+   刻意做成**灰的**而不是"暗红"。暗红 + hover 下划线看着像"点了会被拦"，
+   实际它是彻底不响应 —— 每次点都以为是系统坏了。灰化把"这个动作不存在"
+   直接画出来，与旁边可点的红色形成对照。
+   这条规则必须放在 `--danger` 之后（同特异性，靠顺序覆盖 color）。 */
+.lx-cc-actions .lx-cell-link:disabled,
+.lx-cc-actions button.lx-cell-link[disabled] {
+  color: var(--lx-text-3, #8a94a6);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.lx-cc-actions .lx-cell-link:disabled:hover {
+  text-decoration: none;
+}
+
+.lx-cc-actions .lx-cell-link--muted {
+  color: var(--lx-text-3, #8a94a6);
+  cursor: not-allowed;
+}
+
+/* ---------- 标签组：角色 / 权限域 ---------- */
+.lx-cc-rolechips,
+.lx-cc-domchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  min-width: 0;
+}
+
+/* ==========================================================================
+   抽屉式编辑器
+   ==========================================================================
+   版式契约（与探针判据对齐）：
+     - 抽屉固定在右侧 720px（角色矩阵用 880px），左侧遮罩不透明度沿用既有玻璃风格；
+     - 抽屉自身是**唯一滚动容器**，故 flex 子项必须 min-width:0，
+       否则长文本（邮箱、角色名）会把抽屉撑宽并压出横向滚动；
+     - 底部操作条固定在抽屉底部，不随内容滚动 —— 改长表单时"保存"始终可点。
+   ========================================================================== */
+.lx-cc-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(12, 18, 32, 0.42);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.lx-cc-drawer {
+  width: 720px;
+  max-width: 94vw;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--lx-bg, #fff);
+  border-left: 1px solid var(--lx-border, #e3e8f0);
+  box-shadow: -12px 0 32px rgba(12, 18, 32, 0.12);
+  min-width: 0;
+}
+
+.lx-cc-drawer--wide {
+  width: 880px;
+}
+
+.lx-cc-drawer__head {
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--lx-border, #e3e8f0);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.lx-cc-drawer__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--lx-text-1, #1f2733);
+}
+
+.lx-cc-drawer__sub {
+  font-size: 12px;
+  color: var(--lx-text-3, #8a94a6);
+}
+
+.lx-cc-drawer__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lx-cc-drawer__foot {
+  flex: 0 0 auto;
+  padding: 10px 18px;
+  border-top: 1px solid var(--lx-border, #e3e8f0);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  background: var(--lx-bg, #fff);
+}
+
+/* ---------- 抽屉内字段 ---------- */
+.lx-cc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.lx-cc-fieldrow {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.lx-cc-fieldrow > .lx-cc-field {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.lx-cc-field__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--lx-text-2, #4a5568);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.lx-cc-field__required {
+  color: var(--lx-danger, #c0392b);
+}
+
+.lx-cc-field__control {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 13px;
+  color: var(--lx-text-1, #1f2733);
+  background: var(--lx-bg, #fff);
+  border: 1px solid var(--lx-border, #e3e8f0);
+  border-radius: 6px;
+  font-family: inherit;
+}
+
+textarea.lx-cc-field__control {
+  height: auto;
+  padding: 7px 10px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.lx-cc-field__control:focus {
+  outline: 2px solid var(--lx-primary, #2e6be6);
+  outline-offset: -1px;
+}
+
+.lx-cc-field__hint {
+  font-size: 11px;
+  color: var(--lx-text-3, #8a94a6);
+  line-height: 1.5;
+}
+
+.lx-cc-empty {
+  font-size: 12px;
+  color: var(--lx-text-3, #8a94a6);
+}
+
+/* ==========================================================================
+   权限授予矩阵
+   ==========================================================================
+   两层结构：域（可通配） → 资源（列出具体权限码）。
+
+   为什么不用一张扁平表（资源 × 动作 的 100 多行）：
+     逐行勾选在评审场景里没人愿意用，而现实授权是按域给的。
+     两层结构让"快速授权（点域）"和"细粒度控制（进资源）"同时可达。
+
+   通配态（.is-wildcard）的视觉约定：
+     通配生效时，下方资源行的复选框置灰但**保持可见且勾上** ——
+     全隐藏会让用户以为"授权失效了"，而置灰勾上才是"这一片由通配覆盖"的正确表达。
+   ========================================================================== */
+.lx-cc-perm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lx-cc-perm__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--lx-border, #e3e8f0);
+}
+
+.lx-cc-perm__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lx-text-1, #1f2733);
+}
+
+.lx-cc-perm__sub {
+  font-size: 11px;
+  color: var(--lx-text-3, #8a94a6);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.lx-cc-perm__count {
+  font-size: 11px;
+  color: var(--lx-primary, #2e6be6);
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.lx-cc-domain {
+  border: 1px solid var(--lx-border, #e3e8f0);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.lx-cc-domain.is-wildcard {
+  border-color: var(--lx-primary, #2e6be6);
+  background: rgba(46, 107, 230, 0.04);
+}
+
+.lx-cc-domain__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: rgba(0, 0, 0, 0.02);
+  border-bottom: 1px solid var(--lx-border, #e3e8f0);
+}
+
+.lx-cc-domain__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--lx-text-1, #1f2733);
+  text-align: left;
+}
+
+.lx-cc-domain__code {
+  font-size: 11px;
+  color: var(--lx-text-3, #8a94a6);
+  font-weight: 400;
+}
+
+.lx-cc-domain__meta {
+  font-size: 11px;
+  color: var(--lx-text-3, #8a94a6);
+  flex: 0 0 auto;
+}
+
+.lx-cc-domain__body {
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.lx-cc-resource {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.lx-cc-resource__name {
+  flex: 0 0 96px;
+  font-size: 12px;
+  color: var(--lx-text-2, #4a5568);
+  line-height: 1.6;
+}
+
+.lx-cc-resource__codes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ---------- 单个权限码复选 ---------- */
+.lx-cc-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--lx-text-2, #4a5568);
+  cursor: pointer;
+  /* 权限码本身可能较长，窄屏下宁可换行也不截断 —— 截掉的码等于配错权限 */
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.lx-cc-check input {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.lx-cc-check__label {
+  flex: 0 0 auto;
+}
+
+.lx-cc-check__code {
+  font-size: 10.5px;
+  color: var(--lx-text-3, #8a94a6);
+  flex: 0 0 auto;
+}
+
+.lx-cc-check.is-on .lx-cc-check__code {
+  color: var(--lx-primary, #2e6be6);
+}
+
+.lx-cc-check input:disabled {
+  cursor: not-allowed;
+}
+
+.lx-cc-check:has(input:disabled) {
+  cursor: not-allowed;
+}
+
+.lx-cc-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  padding: 7px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--lx-text-2, #4a5568);
+  background: rgba(240, 169, 26, 0.1);
+  border: 1px solid rgba(240, 169, 26, 0.35);
+  border-radius: 6px;
+}
+
+/* ==========================================================================
+   五档数据范围选择器
+   ==========================================================================
+   五个选项横排、每格两行（档位名 + 一句语义）。
+   语义必须常驻可见而不是 tooltip：用户在这里做的是**授权决策**，
+   「DEPT 含不含下级」这种差别猜错的后果是数据越权，不是显示问题。
+   ========================================================================== */
+.lx-cc-scope {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lx-cc-scope__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 6px;
+}
+
+.lx-cc-scope__opt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 9px;
+  text-align: left;
+  background: var(--lx-bg, #fff);
+  border: 1px solid var(--lx-border, #e3e8f0);
+  border-radius: 6px;
+  cursor: pointer;
+  min-width: 0;
+  font-family: inherit;
+}
+
+.lx-cc-scope__opt.is-active {
+  border-color: var(--lx-primary, #2e6be6);
+  background: rgba(46, 107, 230, 0.07);
+}
+
+.lx-cc-scope__opt:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.lx-cc-scope__name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--lx-text-1, #1f2733);
+}
+
+.lx-cc-scope__desc {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--lx-text-3, #8a94a6);
+}
+
+.lx-cc-scope__custom {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 10px;
+  border: 1px dashed var(--lx-border, #e3e8f0);
+  border-radius: 6px;
+  min-width: 0;
+}
+
+.lx-cc-scope__depts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+/* ---------- 角色多选 ---------- */
+.lx-cc-roles {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.lx-cc-roles__select {
+  width: 100%;
+}
+
+.lx-cc-roles__opt {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.lx-cc-roles__meta {
+  font-size: 10.5px;
+  color: var(--lx-text-3, #8a94a6);
+}
+
+/* ==========================================================================
+   视角提示条
+   ==========================================================================
+   非超管视角时置顶显示，否则用户会以为"侧边栏少了几个菜单是系统坏了"。
+   ========================================================================== */
+.lx-cc-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--lx-text-1, #1f2733);
+  background: rgba(240, 169, 26, 0.14);
+  border: 1px solid rgba(240, 169, 26, 0.4);
+  border-radius: 8px;
+  min-width: 0;
+}
+
+.lx-cc-banner__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lx-cc-banner__back {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  background: none;
+  border: 1px solid var(--lx-border, #e3e8f0);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--lx-text-1, #1f2733);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ==========================================================================
+   视角切换（配置中心首页）
+   ==========================================================================
+   横排一列身份胶囊：横向空间充裕时一眼看完所有身份，横向滚动条一次也不出现。
+   每个胶囊两行 —— 姓名 + 「部门 · 数据范围」，后者是切换后立刻会变化的量，
+   不写出来的话用户无法预判"换过去会看到什么"。
+   ========================================================================== */
+.lx-cc-viewswap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lx-cc-viewswap__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 6px;
+}
+
+.lx-cc-viewswap__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 9px;
+  text-align: left;
+  background: var(--lx-bg, #fff);
+  border: 1px solid var(--lx-border, #e3e8f0);
+  border-radius: 6px;
+  cursor: pointer;
+  min-width: 0;
+  font-family: inherit;
+}
+
+.lx-cc-viewswap__item.is-active {
+  border-color: var(--lx-primary, #2e6be6);
+  background: rgba(46, 107, 230, 0.07);
+}
+
+.lx-cc-viewswap__name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--lx-text-1, #1f2733);
+  /* 姓名最长也就六七个字，但中英混排时要能换行而不是溢出胶囊 */
+  overflow-wrap: anywhere;
+}
+
+.lx-cc-viewswap__meta {
+  font-size: 11px;
+  color: var(--lx-text-3, #8a94a6);
+  overflow-wrap: anywhere;
+}
+
+.lx-cc-viewswap__foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.lx-cc-viewswap__count {
+  font-size: 11px;
+  color: var(--lx-text-3, #8a94a6);
+}
+
+/* ==========================================================================
+   业务字典配置
+   ========================================================================== */
+.lx-cc-dict {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lx-cc-dict__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid var(--lx-border, #e3e8f0);
+  border-radius: 6px;
+  background: var(--lx-bg, #fff);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.lx-cc-dict__row.is-off {
+  opacity: 0.6;
+}
+
+/* 排序号：原来 46px 装不下「标签 + number input」，
+   input 被挤到只剩 2~3 位可见（用户反馈"排序号显示不全"）。
+   96px 是实测可用宽度：label 中文两字 + input 至少能显示 4~5 位三位数序号。
+   `min-width:0` 防 flex 收缩；input 自己 `width:100%` 跟随容器。 */
+.lx-cc-dict__order {
+  flex: 0 0 96px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lx-cc-dict__order .lx-cc-field__control {
+  width: 100%;
+  min-width: 0;
+}
+
+.lx-cc-dict__name {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.lx-cc-dict__key {
+  flex: 1 1 110px;
+  font-size: 11px;
+  color: var(--lx-text-3, #8a94a6);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lx-cc-dict__sla {
+  flex: 0 0 78px;
+}
+
+/* 只读列（阶段性质 / SLA）：锁图标让"看得见但改不了"这件事不必靠 tooltip 才发现。 */
+.lx-cc-dict__ro {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  cursor: help;
+}
+
+.lx-cc-dict__ro .anticon {
+  font-size: 11px;
+  color: var(--lx-text-3, #8a94a6);
+}
+
+.lx-cc-dict__foot {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* 说明型芯片：与 `.lx-chip` 的区别是**不可点**。
+   给它 cursor:pointer / hover 态会让人以为按下去有反应 ——
+   于是每次按了没反应都要重新怀疑一次是不是坏了。
+   这里只留一个问号图标作为"这里有解释"的暗示，交互全靠 Tooltip。 */
+.lx-cc-helpchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--lx-text-3, #8a94a6);
+  cursor: help;
+  white-space: nowrap;
+}
+
+/* 姓名右侧的硅基标签：只负责留白与基线对齐，色板由 LxTag 的 variant 决定。
+   `margin-left` 而非 gap —— 它插在 `.lx-cell-title` 的文本流里（那个类不是 flex 容器），
+   用 gap 不会生效。 */
+.lx-cc-usertype {
+  display: inline-flex;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+
+/* ---------- 类目树 ---------- */
+.lx-cc-cat {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.lx-cc-cat__node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  border: 1px solid var(--lx-border, #e3e8f0);
+  border-radius: 6px;
+  min-width: 0;
+  background: var(--lx-bg, #fff);
+}
+
+.lx-cc-cat__node--child {
+  margin-left: 26px;
+  background: rgba(0, 0, 0, 0.015);
+}
+
+.lx-cc-cat__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12.5px;
+}
+
+.lx-cc-cat__meta {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--lx-text-3, #8a94a6);
+}

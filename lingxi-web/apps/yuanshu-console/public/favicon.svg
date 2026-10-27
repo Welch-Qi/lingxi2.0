@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="灵犀系统">
+  <!--
+    灵犀系统站点图标。
+    造型：极光青圆角底 + 白点与向右扩散的信号弧，取「感知—洞察—传导」之意，
+    呼应「人机融合的数智化经营平台」。
+    只用一个品牌色（极光青 #0E7C86）+ 白色，不引入新色相（设计令牌禁忌 8）。
+
+    为什么只有两条弧、且刻意拉开间距：这个图标 99% 的时间以 16px 出现，
+    1 个 SVG 单位此时只有 0.5px。实测（见 artifacts 里的尺寸检查图）：
+    三条弧 + 白点挤在一起时，16px 下会糊成一团色块；白点右缘与首弧起点
+    留足 3 个单位（=1.5px）才分得开。这是做减法，不是漏画。
+
+    ⚠️ width/height 必须显式写死：SVG 缺这两个属性时，作为替换元素（<img>、
+    直接打开文件）会退回 300×150 的默认尺寸，用 viewBox 缩放填进去，
+    结果是比预期小一圈还偏在一角。写成 32×32 才能在任何容器里被正确缩放。
+  -->
+  <rect width="32" height="32" rx="7" fill="#0E7C86" />
+  <circle cx="10.4" cy="16" r="2.6" fill="#ffffff" />
+  <path d="M16 10.6a7 7 0 0 1 0 10.8" fill="none" stroke="#ffffff" stroke-width="2.7" stroke-linecap="round" />
+  <path d="M21.6 5.6a13 13 0 0 1 0 20.8" fill="none" stroke="#ffffff" stroke-width="2.7" stroke-linecap="round" opacity="0.6" />
+</svg>

@@ -78,7 +78,7 @@
   <dependencyManagement>
     <dependencies>
 
-      <!-- ---------- 1. 官方 BOM 导入（顺序有意义：后导入者优先） ---------- -->
+      <!-- ========== 1. 官方 BOM 导入（顺序有意义：后导入者优先） ========== -->
       <dependency>
         <groupId>org.springframework.cloud</groupId>
         <artifactId>spring-cloud-dependencies</artifactId>
@@ -122,7 +122,7 @@
         <scope>import</scope>
       </dependency>
 
-      <!-- ---------- 2. 数据访问 ---------- -->
+      <!-- ========== 2. 数据访问 ========== -->
       <!-- MyBatis-Plus：Boot 4 专用 starter（普通 boot3-starter 在 Boot 4 下不兼容） -->
       <dependency>
         <groupId>com.baomidou</groupId>
@@ -144,13 +144,24 @@
         <artifactId>flyway-database-postgresql</artifactId>
         <version>${flyway.version}</version>
       </dependency>
+      <!--
+        Spring Boot 4.1 把 Flyway 支持从 spring-boot-autoconfigure 拆到独立模块。
+        只引 flyway-core 不会触发自动迁移 —— 应用启动时 FlywayAutoConfiguration
+        根本不在 classpath，数据库永远不会被初始化（表现为「表不存在」）。
+        故必须显式引 spring-boot-flyway，版本由 spring-boot-starter-parent 统一管理。
+      -->
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-flyway</artifactId>
+        <version>${spring-boot.version}</version>
+      </dependency>
       <dependency>
         <groupId>com.pgvector</groupId>
         <artifactId>pgvector</artifactId>
         <version>${pgvector.version}</version>
       </dependency>
 
-      <!-- ---------- 3. 领域能力 ---------- -->
+      <!-- ========== 3. 领域能力 ========== -->
       <!-- 权限决策：功能 / 行级 / 字段三层（技术规约2.0 §4.9.2） -->
       <dependency>
         <groupId>org.casbin</groupId>
@@ -181,14 +192,14 @@
         <version>${spring-statemachine.version}</version>
       </dependency>
 
-      <!-- ---------- 4. 接口与契约 ---------- -->
+      <!-- ========== 4. 接口与契约 ========== -->
       <dependency>
         <groupId>org.springdoc</groupId>
         <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         <version>${springdoc.version}</version>
       </dependency>
 
-      <!-- ---------- 5. 存储 ---------- -->
+      <!-- ========== 5. 存储 ========== -->
       <!-- 主路径：云对象存储（S3 兼容），文件走预签名 URL 直传（§3.4 C10） -->
       <dependency>
         <groupId>software.amazon.awssdk</groupId>
@@ -202,7 +213,7 @@
         <version>${minio.version}</version>
       </dependency>
 
-      <!-- ---------- 6. 测试与架构校验 ---------- -->
+      <!-- ========== 6. 测试与架构校验 ========== -->
       <dependency>
         <groupId>com.tngtech.archunit</groupId>
         <artifactId>archunit-junit5</artifactId>
@@ -210,35 +221,130 @@
         <scope>test</scope>
       </dependency>
 
-      <!-- ---------- 7. 内部模块（业务模块引用 Starter 时不写版本） ---------- -->
+      <!-- ========== 7. 内部模块（业务模块引用 Starter 时不写版本） ========== -->
       <dependency>
         <groupId>com.lingxi</groupId>
-        <artifactId>lingxi-starter-core</artifactId>
+        <artifactId>yuanshu-starter-core</artifactId>
         <version>${lingxi.version}</version>
       </dependency>
       <dependency>
         <groupId>com.lingxi</groupId>
-        <artifactId>lingxi-starter-security</artifactId>
+        <artifactId>yuanshu-starter-security</artifactId>
         <version>${lingxi.version}</version>
       </dependency>
       <dependency>
         <groupId>com.lingxi</groupId>
-        <artifactId>lingxi-starter-mybatis</artifactId>
+        <artifactId>yuanshu-starter-mybatis</artifactId>
         <version>${lingxi.version}</version>
       </dependency>
       <dependency>
         <groupId>com.lingxi</groupId>
-        <artifactId>lingxi-starter-llm</artifactId>
+        <artifactId>yuanshu-starter-llm</artifactId>
         <version>${lingxi.version}</version>
       </dependency>
       <dependency>
         <groupId>com.lingxi</groupId>
-        <artifactId>lingxi-starter-observability</artifactId>
+        <artifactId>yuanshu-starter-observability</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+
+      <!-- 元枢 L0 平台公共服务（启动模块） -->
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>yuanshu-platform</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+
+      <!-- 元枢 L1 大数据底座 -->
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>yuanshu-data</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+
+      <!-- 元枢 语义管理（本体 / 术语编码 / 指标口径 / 行业包托管）与 智能体工厂（配置 / 调度 / 监控 / 提示词） -->
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>yuanshu-semantic</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>yuanshu-agent-factory</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+
+      <!-- 灵犀营销服集群 L2 业务模块（11 个业务域，承载 9 个一级菜单） -->
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-workbench</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-customer</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-product</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-order</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-service</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-marketing</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-intel</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-analytics</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-agent</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-knowledge</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>lingxi-configcenter</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+
+      <!-- 独立部署进程（元枢，不计入单体模块口径） -->
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>yuanshu-agent-runtime</artifactId>
+        <version>${lingxi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.lingxi</groupId>
+        <artifactId>yuanshu-data-jobs</artifactId>
         <version>${lingxi.version}</version>
       </dependency>
 
       <!--
-        ---------- 8. 待接入（暂不锁定，避免引入未验证的 release train） ----------
+        ========== 8. 待接入（暂不锁定，避免引入未验证的 release train） ==========
 
         Nacos 2.x（注册与配置，Apache-2.0，§3.3）：
           <dependency><groupId>com.alibaba.cloud</groupId>

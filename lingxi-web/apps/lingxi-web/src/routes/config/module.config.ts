@@ -5,8 +5,11 @@ import type { ModuleConfig } from '@/app/router/types';
  *
  * 功能编号对应《功能清单V2.1》十三、配置中心（CC-）。
  *
- * 首页主体是"用户与数据权限范围"：功能权限、字段权限最终都归结为
- * "这个人在这个租户里能看到哪些行、哪些列"。
+ * 首页主体是"业务字典与配置"：本分区只保留 CC-09~12 业务配置与企业公约。
+ *
+ * ⚠️ 三产品升级（元枢归口）：users / roles / audit / global 四项属元枢管理台
+ *   （CC-13~18 权限用户角色、CC-05~08 审计与全局），已 git mv 迁至 apps/yuanshu-console/routes/iam，
+ *   本分区不再登记这些路由（不留死链）。
  * 数据权限范围口径统一为 SELF / DEPT / DEPT_AND_SUB / CUSTOM / ALL，
  * 由平台统一定义，各模块不得自定义（技术规约2.0 §4.8.2）。
  *
@@ -27,22 +30,8 @@ const config: ModuleConfig = {
     {
       path: '/config',
       element: () => import('./index'),
-      permCode: 'cc:user:view',
+      permCode: 'cc:biz:view',
       titleKey: 'cc.menu.home',
-    },
-    {
-      path: '/config/users',
-      element: () => import('./users'),
-      permCode: 'cc:user:view',
-      titleKey: 'cc.users.title',
-      hideInMenu: true,
-    },
-    {
-      path: '/config/roles',
-      element: () => import('./roles'),
-      permCode: 'cc:role:view',
-      titleKey: 'cc.roles.title',
-      hideInMenu: true,
     },
     {
       path: '/config/business',
@@ -114,24 +103,10 @@ const config: ModuleConfig = {
       hideInMenu: true,
     },
     {
-      path: '/config/audit',
-      element: () => import('./audit'),
-      permCode: 'cc:audit:view',
-      titleKey: 'cc.audit.title',
-      hideInMenu: true,
-    },
-    {
       path: '/config/charter',
       element: () => import('./charter'),
       permCode: 'cc:charter:view',
       titleKey: 'cc.charter.title',
-      hideInMenu: true,
-    },
-    {
-      path: '/config/global',
-      element: () => import('./global'),
-      permCode: 'cc:global:view',
-      titleKey: 'cc.global.title',
       hideInMenu: true,
     },
   ],

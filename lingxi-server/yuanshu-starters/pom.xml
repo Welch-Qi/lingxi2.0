@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.lingxi</groupId>
+    <artifactId>lingxi-server</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>yuanshu-starters</artifactId>
+  <packaging>pom</packaging>
+  <name>yuanshu-starters</name>
+  <description>灵犀系统公共 Starter 组（5 个）：约定优于配置，业务模块只引依赖不做装配</description>
+
+  <modules>
+    <module>yuanshu-starter-core</module>
+    <module>yuanshu-starter-observability</module>
+    <module>yuanshu-starter-mybatis</module>
+    <module>yuanshu-starter-security</module>
+    <module>yuanshu-starter-llm</module>
+  </modules>
+
+</project>

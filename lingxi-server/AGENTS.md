@@ -14,8 +14,10 @@ mvn -q verify                         # 全量门禁：测试 + 覆盖率 + Spot
 ## 本仓库特有约束
 
 1. **版本号只写在 `lingxi-dependencies/pom.xml`**。子模块 `pom.xml` 出现 `<version>` 即驳回。
-2. **模块计数口径固定**：14 个 Maven 模块 = 11 业务 + `lingxi-data` + `lingxi-platform` + `lingxi-dependencies`。
-   `lingxi-starters`（5 个 starter）为公共组件组；`lingxi-agent-runtime` / `lingxi-data-jobs` 为独立进程，均**不计入**。
+2. **模块计数口径（三产品）**：单体 15 = **元枢 4**（`yuanshu-platform`/`yuanshu-data`/`yuanshu-semantic`/`yuanshu-agent-factory`）+ **灵犀 11**；另 BOM `lingxi-dependencies`。
+   `yuanshu-starters`（5 个底座 starter）与 `lingxi-starters`（灵犀业务域通用件，一期空缺）为公共组件组；`yuanshu-agent-runtime` / `yuanshu-data-jobs` 为独立进程，均**不计入**。
+   目录：`lingxi-server/yuanshu/**`（元枢）与 `lingxi-server/lingxi/**`（灵犀）。**groupId 统一 `com.lingxi`**，底座四模块 Java 包为 `com.yuanshu.*`。
+   【跨产品硬约束】`com.yuanshu..` 禁依赖 `com.lingxi.{业务域}..`；灵犀各域禁依赖元枢非 `api` 包——ArchUnit 强制。
 3. **五层分层不可越界**：`api` / `app` / `domain` / `infra` / `starter`。
    依赖方向 `app → domain ← infra`，跨模块只依赖对方 `api` 包，`domain` 层禁止出现框架类型——**由 ArchUnit 在 CI 强制**。
 4. **MyBatis-Plus 必须用 `mybatis-plus-spring-boot4-starter`**（`boot3-starter` 在 Spring Boot 4 下不兼容）。
@@ -26,5 +28,5 @@ mvn -q verify                         # 全量门禁：测试 + 覆盖率 + Spot
 
 ## 红线（命中即冻结合并，转人工 Review）
 
-`lingxi-platform/auth/**` · `*SecurityConfig*` · `*TokenService*` · `*LoginController*` ·
+`yuanshu-platform/auth/**` · `*SecurityConfig*` · `*TokenService*` · `*LoginController*` ·
 `*TenantInterceptor*` · `*DataScope*` · `*PermissionEvaluator*` · `*Casbin*` · `billing/**` · `quota/**` · `payment/**`
